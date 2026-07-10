@@ -1,7 +1,29 @@
+import ColorBends from '../../components/ColorBends';
+
 export default function Footer() {
   return (
-    <footer className="w-full bg-[#0B213E] text-white py-16 px-6 md:px-16" style={{ fontFamily: "'Montserrat', sans-serif" }}>
-      <div className="max-w-[1400px] mx-auto">
+    <footer className="relative isolate overflow-hidden w-full bg-[#0B213E] text-white py-16 px-6 md:px-16" style={{ fontFamily: "'Montserrat', sans-serif" }}>
+      <div className="absolute inset-0 z-0">
+        <ColorBends
+          colors={["#500cd0", "#8a5cff", "#00ffd1"]}
+          rotation={90}
+          speed={0.2}
+          scale={1}
+          frequency={1}
+          warpStrength={1}
+          mouseInfluence={1}
+          noise={0.15}
+          parallax={0.5}
+          iterations={1}
+          intensity={1.5}
+          bandWidth={6}
+          transparent
+          autoRotate={0}
+          color="#06aad4"
+        />
+      </div>
+      <div className="absolute inset-0 z-10 bg-slate-950/70" />
+      <div className="relative z-20 max-w-[1400px] mx-auto">
         
         {/* Main Footer Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-12 lg:gap-8 mb-16">

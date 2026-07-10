@@ -1,9 +1,5 @@
 import { useEffect, useState, type MouseEvent } from 'react';
 import { Menu, X } from 'lucide-react';
-import { gsap } from 'gsap';
-import { ScrollToPlugin } from 'gsap/ScrollToPlugin';
-
-gsap.registerPlugin(ScrollToPlugin);
 
 const navLinks = [
     { label: 'Home', href: '#home' },
@@ -26,10 +22,11 @@ export default function Navbar() {
             return;
         }
 
-        gsap.to(window, {
-            duration: 0.7,
-            ease: 'power2.inOut',
-            scrollTo: { y: target, offsetY: 0 },
+        const rect = target.getBoundingClientRect();
+        const top = rect.top + window.scrollY ;;
+        window.scrollTo({
+            top,
+            behavior: 'smooth',
         });
     };
 
@@ -44,7 +41,7 @@ export default function Navbar() {
     return (
         <>
             <nav 
-                className={`fixed top-4 md:top-6 left-1/2 -translate-x-1/2 z-50 flex items-center justify-between rounded-full transition-all duration-1000 ease-[cubic-bezier(0.25,1,0.5,1)] overflow-hidden px-6 md:px-8 py-3 md:py-4
+                className={`fixed top-4 md:top-6 left-1/2 -translate-x-1/2 z-50 flex items-center justify-between rounded-full transition-all duration-300 ease-out overflow-hidden px-6 md:px-8 py-3 md:py-4
                 ${isScrolled 
                     ? 'w-[95%] md:w-[85%] max-w-6xl bg-white text-black shadow-lg' 
                     : 'w-[200px] md:w-[260px] bg-white/60 backdrop-blur-md border border-white/50 shadow-sm text-black'
@@ -52,7 +49,7 @@ export default function Navbar() {
             >
                 <a 
                     href="#home"
-                    className={`flex items-center justify-center flex-shrink-0 relative z-10 transition-all duration-1000 ease-[cubic-bezier(0.25,1,0.5,1)]
+                    className={`flex items-center justify-center flex-shrink-0 relative z-10 transition-all duration-300 ease-out
                     ${isScrolled ? 'w-[140px] md:w-[180px]' : 'w-[152px] md:w-[196px]'}`}
                 >
                     <img 
@@ -63,11 +60,11 @@ export default function Navbar() {
                 </a>
 
                 <div 
-                    className={`hidden md:flex items-center overflow-hidden transition-all duration-1000 ease-[cubic-bezier(0.25,1,0.5,1)]
+                    className={`hidden md:flex items-center overflow-hidden transition-all duration-300 ease-out
                     ${isScrolled ? 'max-w-[800px] opacity-100' : 'max-w-0 opacity-0'}`}
                 >
                     <div 
-                        className={`flex items-center gap-8 pl-8 text-sm font-medium transition-transform duration-1000 ease-[cubic-bezier(0.25,1,0.5,1)] delay-75
+                        className={`flex items-center gap-8 pl-8 text-sm font-medium transition-transform duration-300 ease-out
                         ${isScrolled ? 'translate-x-0' : 'translate-x-32'}`}
                     >
                         {navLinks.map((link) => (
@@ -84,11 +81,11 @@ export default function Navbar() {
                 </div>
 
                 <div 
-                    className={`md:hidden flex items-center overflow-hidden transition-all duration-1000 ease-[cubic-bezier(0.25,1,0.5,1)]
+                    className={`md:hidden flex items-center overflow-hidden transition-all duration-300 ease-out
                     ${isScrolled ? 'max-w-[50px] opacity-100' : 'max-w-0 opacity-0'}`}
                 >
                     <div 
-                        className={`flex items-center pl-4 transition-transform duration-1000 ease-[cubic-bezier(0.25,1,0.5,1)]
+                        className={`flex items-center pl-4 transition-transform duration-300 ease-out
                         ${isScrolled ? 'translate-x-0' : 'translate-x-8'}`}
                     >
                         <button 
