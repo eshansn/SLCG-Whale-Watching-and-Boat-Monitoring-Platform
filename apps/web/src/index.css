@@ -6,6 +6,20 @@
 
 @custom-variant dark (&:is(.dark *));
 
+
+html,
+body,
+#root {
+  width: 100%;
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: "Montserrat", sans-serif;
+  background: #000;
+}
+
 html {
   scroll-behavior: smooth;
   scroll-padding-top: 90px;

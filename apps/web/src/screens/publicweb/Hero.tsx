@@ -1,4 +1,8 @@
+import { useNavigate } from 'react-router-dom';
+
 export default function Hero() {
+  const navigate = useNavigate();
+
   return (
     <div 
       id="home"
@@ -36,7 +40,7 @@ export default function Hero() {
             Browser, Making It Easy To Stay Connected And Continue Your<br className="hidden md:block" />
             Activities From Virtually Anywhere.
           </p>
-          <ShineButton text="Login to Web Portal" />
+          <ShineButton text="Login to Web Portal" onClick={() => navigate('/login')} />
         </div>
 
       </div>
@@ -45,9 +49,10 @@ export default function Hero() {
 }
 
 // Reusable Button Component with Metallic Shine Hover Effect
-const ShineButton = ({ text }: { text: string }) => {
+const ShineButton = ({ text, onClick }: { text: string; onClick?: () => void }) => {
   return (
     <button 
+      onClick={onClick}
       className="group relative overflow-hidden bg-[#6FFFE9] text-black px-8 py-3 rounded font-bold text-sm md:text-base transition-all duration-300 hover:shadow-[0_0_20px_rgba(111,255,233,0.4)]"
     >
       {/* Button Text */}

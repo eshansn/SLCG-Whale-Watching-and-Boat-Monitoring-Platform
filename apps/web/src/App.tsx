@@ -6,6 +6,9 @@ import About from './screens/publicweb/About';
 import Gallery from './screens/publicweb/Gallery';
 import Contact from './screens/publicweb/Contact';
 import Footer from './screens/publicweb/Footer';
+import AuthLanding from './screens/publicweb/AuthLanding';
+import Login from './screens/publicweb/Login';
+import SignUp from './screens/publicweb/SignUp';
 
 const UserPortalLayout = () => (
   <div className="p-8 text-white">
@@ -49,6 +52,9 @@ export default function App() {
           {/* Use the /* to allow for nested routing within the portals later */}
           <Route path="/user-portal/*" element={<UserPortalLayout />} />
           <Route path="/owner-portal/*" element={<OwnerPortalLayout />} />
+          <Route path="/auth" element={<AuthLanding />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<SignUp />} />
           
           {/* 404 Fallback Route */}
           <Route 
