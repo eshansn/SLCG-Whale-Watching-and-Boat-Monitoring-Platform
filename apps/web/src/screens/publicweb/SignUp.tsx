@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence, Variants } from 'framer-motion';
 import { Icon } from '../../components/ui/icon';
-import ShineButton from '../../components/ShineButton'; // Added ShineButton import
+import ShineButton from '../../components/ShineButton';
 
 const SignUp = () => {
   const [step, setStep] = useState(1);
@@ -27,13 +27,13 @@ const SignUp = () => {
     setStep(2);
   };
 
-  const handleFinalSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  // Fixed: Made the event parameter optional so ShineButton can call it safely
+  const handleFinalSubmit = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     console.log("Form Submitted:", formData);
     // Add your API submission logic here
   };
 
-  // Strictly typed variants to keep TypeScript happy
   const stepVariants: Variants = {
     hidden: { opacity: 0, y: 20 },
     visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: "easeOut" as const } },
@@ -203,9 +203,10 @@ const SignUp = () => {
                 </div>
 
                 <div className="mt-2 w-full">
+                  {/* Fixed: Wrapped the function call in an anonymous arrow function */}
                   <ShineButton
                     text="Create Account"
-                    onClick={handleFinalSubmit}
+                    onClick={() => handleFinalSubmit()}
                     className="w-full py-3"
                   />
                 </div>
