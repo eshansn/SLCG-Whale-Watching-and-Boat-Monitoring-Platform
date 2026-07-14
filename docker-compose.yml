@@ -1,0 +1,71 @@
+name: whale-watching
+
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: whale-watching-sqlserver
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: "Developer"
+      MSSQL_SA_PASSWORD: "${MSSQL_SA_PASSWORD:?Set MSSQL_SA_PASSWORD in your .env file}"
+    volumes:
+      - sqlserver-data:/var/opt/mssql
+    networks:
+      - backend
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$$MSSQL_SA_PASSWORD"
+          -C -Q "SELECT 1" -b -o /dev/null || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+
+  api:
+    container_name: whale-watching-api
+    build:
+      context: .
+      dockerfile: docker/development.dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_HTTP_PORTS: "8080"
+      ConnectionStrings__SqlServer: >-
+        Server=sqlserver,1433;Database=WhaleWatching;
+        User Id=sa;Password=${MSSQL_SA_PASSWORD};
+        Encrypt=True;TrustServerCertificate=True;
+      Jwt__SigningKey: "${JWT_SIGNING_KEY:?Set JWT_SIGNING_KEY in your .env file}"
+      IdentitySeed__AdminEmail: "${INITIAL_ADMIN_EMAIL:-}"
+      IdentitySeed__AdminPassword: "${INITIAL_ADMIN_PASSWORD:-}"
+      IdentitySeed__OpsEmail: "${INITIAL_OPS_EMAIL:-}"
+      IdentitySeed__OpsPassword: "${INITIAL_OPS_PASSWORD:-}"
+    ports:
+      - "${API_PORT:-8080}:8080"
+    volumes:
+      - api-data-protection:/home/app/.aspnet/DataProtection-Keys
+    networks:
+      - backend
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          curl --fail --silent http://localhost:8080/health/live > /dev/null
+          || exit 1
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped
+
+networks:
+  backend:
+    driver: bridge
+
+volumes:
+  sqlserver-data:
+  api-data-protection:

@@ -1,11 +1,14 @@
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../../auth/useAuth';
 import { Icon } from '../../../components/ui/icon';
 
 const OPS_HOME_PATH = '/ops'; 
 
 export default function Navbar() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { logout } = useAuth();
   const currentPath = location.pathname;
 
   // The core navigation destinations (use full /ops paths)
@@ -62,7 +65,14 @@ export default function Navbar() {
         })}
 
         {/* Log Out Button */}
-        <button className="ml-2 bg-[#1A2B4C] text-white px-6 py-2 rounded-md shadow-sm hover:bg-[#111C33] hover:shadow transition-all text-sm font-semibold tracking-wide flex items-center">
+        <button
+          type="button"
+          onClick={() => {
+            logout();
+            navigate('/login', { replace: true });
+          }}
+          className="ml-2 bg-[#1A2B4C] text-white px-6 py-2 rounded-md shadow-sm hover:bg-[#111C33] hover:shadow transition-all text-sm font-semibold tracking-wide flex items-center"
+        >
           Log Out
         </button>
         

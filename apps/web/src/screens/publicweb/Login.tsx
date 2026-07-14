@@ -1,33 +1,40 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { AuthApiError } from '../../auth/authApi';
+import { useAuth } from '../../auth/useAuth';
 import { Icon } from '../../components/ui/icon';
 
-interface LoginProps {
-  onLogin: () => void;
-}
-
-const DEMO_OPS_CREDENTIALS = {
-  email: 'ops@whalewatch.com',
-  password: 'ops1234',
-};
-
-const Login = ({ onLogin }: LoginProps) => {
+const Login = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { login } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
+    setIsSubmitting(true);
 
-    if (email.trim().toLowerCase() === DEMO_OPS_CREDENTIALS.email && password === DEMO_OPS_CREDENTIALS.password) {
-      onLogin();
-      navigate('/ops');
-      return;
+    try {
+      const session = await login({ email: email.trim(), password });
+      if (!session.roles.includes('OPS')) {
+        navigate('/access-denied', { replace: true });
+        return;
+      }
+
+      const requestedPath = (location.state as { from?: string } | null)?.from;
+      navigate(requestedPath?.startsWith('/ops') ? requestedPath : '/ops', { replace: true });
+    } catch (loginError) {
+      setError(loginError instanceof AuthApiError
+        ? loginError.message
+        : 'Unable to contact the authentication service.');
+    } finally {
+      setIsSubmitting(false);
     }
-
-    setError('Invalid email or password. Use the demo OPS credentials.');
   };
 
   return (
@@ -100,9 +107,10 @@ const Login = ({ onLogin }: LoginProps) => {
             {/* Functional Login Button */}
             <button
               type="submit"
-              className="w-full sm:w-44 px-4 py-3 bg-teal-500 hover:bg-teal-600 text-white font-semibold rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-teal-400 focus:ring-offset-2 focus:ring-offset-gray-900 shadow-lg"
+              disabled={isSubmitting}
+              className="w-full sm:w-44 px-4 py-3 bg-teal-500 hover:bg-teal-600 disabled:cursor-not-allowed disabled:opacity-60 text-white font-semibold rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-teal-400 focus:ring-offset-2 focus:ring-offset-gray-900 shadow-lg"
             >
-              Login
+              {isSubmitting ? 'Signing in…' : 'Login'}
             </button>
 
             {/* Optional: Sign Up Redirect */}
