@@ -1,15 +1,33 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Icon } from '../../components/ui/icon';
-// Removed ShineButton import as requested
 
-const Login = () => {
+interface LoginProps {
+  onLogin: () => void;
+}
+
+const DEMO_OPS_CREDENTIALS = {
+  email: 'ops@whalewatch.com',
+  password: 'ops1234',
+};
+
+const Login = ({ onLogin }: LoginProps) => {
+  const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
 
-  // This is where your actual login logic will go later
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Login submitted!");
-    // Add API call here
+
+    if (email.trim().toLowerCase() === DEMO_OPS_CREDENTIALS.email && password === DEMO_OPS_CREDENTIALS.password) {
+      onLogin();
+      navigate('/ops');
+      return;
+    }
+
+    setError('Invalid email or password. Use the demo OPS credentials.');
   };
 
   return (
@@ -36,8 +54,13 @@ const Login = () => {
             {/* Email/Username Input */}
             <div className="mb-4">
               <input 
-                type="text" 
-                placeholder="Enter email or user name" 
+                type="email"
+                value={email}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  setError('');
+                }}
+                placeholder="Enter email or user name"
                 className="w-full px-4 py-3 rounded-md bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-400"
                 required
               />
@@ -46,8 +69,13 @@ const Login = () => {
             {/* Password Input */}
             <div className="relative mb-2">
               <input 
-                type={showPassword ? "text" : "password"} 
-                placeholder="Password" 
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  setError('');
+                }}
+                placeholder="Password"
                 className="w-full px-4 py-3 rounded-md bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-400 pr-12"
                 required
               />
@@ -66,6 +94,8 @@ const Login = () => {
                 Forgot password?
               </a>
             </div>
+
+            {error && <p className="mb-4 text-sm text-red-300">{error}</p>}
 
             {/* Functional Login Button */}
             <button
