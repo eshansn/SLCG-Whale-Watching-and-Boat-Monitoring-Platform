@@ -14,6 +14,14 @@ export default defineConfig({
       },
     }),
   ],
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+      },
+    },
+  },
   // Add this build block to increase the chunk size warning limit to 1MB (1000kB)
   build: {
     chunkSizeWarningLimit: 1000, 
