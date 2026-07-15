@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import whaleBackground from "../../assets/PassengerBG.png";
 import slcgLogo from "../../assets/slcg-logo.png";
-import { clearPassengers } from "../../services/passengerStorage";
+import { clearPassengers } from "./store/passengerStorage";
 
 function PassengerLandingPage() {
   const navigate = useNavigate();
