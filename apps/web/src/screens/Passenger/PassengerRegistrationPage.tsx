@@ -1,8 +1,9 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import whaleBackground from "../../assets/PassengerBG.png";
-import slcgLogo from "../../assets/slcg-logo.png";
-import { addPassenger } from "../../services/passengerStorage";
+import { addPassenger } from "./store/passengerStorage";
+
+const whaleBackground = "/Hero.png";
+const slcgLogo = "/SLCGicon.png";
 
 interface RegistrationFormData {
   name: string;
@@ -69,7 +70,7 @@ function PassengerRegistrationPage() {
 };
 
   return (
-    <main className="flex min-h-screen w-full items-start justify-center overflow-hidden bg-black p-0 min-[1024px]:items-stretch">
+    <main className="passenger-screen passenger-entry-screen passenger-registration-screen flex min-h-screen w-full items-start justify-center overflow-hidden bg-black p-0 min-[1024px]:items-stretch">
       <section className="flex min-h-screen w-full flex-col overflow-hidden bg-black min-[1024px]:h-screen min-[1024px]:min-h-0">
         <div className="relative h-[clamp(390px,60svh,525px)] w-full shrink-0 overflow-hidden bg-black min-[600px]:max-[1023px]:h-[46%] min-[1024px]:h-[46%] min-[1024px]:min-h-0 min-[1024px]:basis-[46%]">
           <img
@@ -78,7 +79,7 @@ function PassengerRegistrationPage() {
             alt="Whale rising above the ocean"
           />
 
-          <div className="absolute inset-0 bg-[linear-gradient(to_bottom,transparent_55%,rgba(0,0,0,.25)_75%,rgba(0,0,0,.8)_92%,#000_100%)]" aria-hidden="true" />
+          <div className="absolute inset-0 bg-[linear-gradient(to_bottom,transparent_76%,rgba(0,0,0,.1)_86%,rgba(0,0,0,.45)_95%,#000_100%)]" aria-hidden="true" />
         </div>
 
         <div className="relative flex min-h-0 flex-1 flex-col items-center overflow-y-auto bg-black px-[22px] pb-[10px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden max-[599px]:px-8 max-[599px]:pt-3 min-[600px]:max-[1023px]:px-8 min-[600px]:max-[1023px]:pt-3 min-[1024px]:overflow-hidden min-[1024px]:px-10 min-[1024px]:pt-3">

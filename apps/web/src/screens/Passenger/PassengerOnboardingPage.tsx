@@ -6,13 +6,14 @@ import {
 } from "react";
 import { ArrowRight, Camera, UserPlus, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import slcgLogo from "../../assets/slcg-logo.png";
-import whaleBackground from "../../assets/PassengerBG.png";
 import {
   addPassenger,
   getPassengers,
-} from "../../services/passengerStorage";
-import type { PassengerData } from "../../types/passenger";
+} from "./store/passengerStorage";
+import type { PassengerData } from "./store/passenger";
+
+const whaleBackground = "/Hero.png";
+const slcgLogo = "/SLCGicon.png";
 
 type FamilyFormData = Omit<PassengerData, "id">;
 
@@ -223,7 +224,7 @@ function PassengerOnboardingPage() {
 
   if (!primaryPassenger) {
     return (
-      <main className="flex min-h-screen w-full justify-center bg-[#202020] p-6 text-white max-[599px]:bg-black max-[599px]:p-0">
+      <main className="passenger-screen flex min-h-screen w-full justify-center bg-[#202020] p-6 text-white max-[599px]:bg-black max-[599px]:p-0">
         <section className="grid place-items-center gap-3 text-center">
           <h1>No passenger information found</h1>
 
@@ -245,7 +246,7 @@ function PassengerOnboardingPage() {
   }
 
   return (
-    <main className="flex min-h-screen w-full justify-center bg-[#202020] p-6 max-[599px]:bg-black max-[599px]:p-0 min-[600px]:max-[1199px]:p-5 min-[1200px]:bg-black min-[1200px]:p-0">
+    <main className="passenger-screen passenger-onboarding-screen flex min-h-screen w-full justify-center bg-[#202020] p-6 max-[599px]:bg-black max-[599px]:p-0 min-[600px]:max-[1199px]:p-5 min-[1200px]:bg-black min-[1200px]:p-0">
       <section
         className="relative min-h-[calc(100dvh-48px)] w-[min(100%,430px)] overflow-hidden bg-black shadow-[0_12px_35px_rgba(0,0,0,.4)] max-[599px]:min-h-dvh max-[599px]:w-full min-[600px]:max-[1199px]:w-[min(100%,760px)] min-[1200px]:min-h-dvh min-[1200px]:w-full min-[1200px]:shadow-none"
       >

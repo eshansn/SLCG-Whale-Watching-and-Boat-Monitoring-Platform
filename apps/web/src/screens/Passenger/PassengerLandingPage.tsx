@@ -1,7 +1,8 @@
 import { useNavigate } from "react-router-dom";
-import whaleBackground from "../../assets/PassengerBG.png";
-import slcgLogo from "../../assets/slcg-logo.png";
-import { clearPassengers } from "./store/passengerStorage";
+import { beginPassengerRegistration } from "./store/passengerStorage";
+
+const whaleBackground = "/Hero.png";
+const slcgLogo = "/SLCGicon.png";
 
 function PassengerLandingPage() {
   const navigate = useNavigate();
@@ -11,12 +12,12 @@ function PassengerLandingPage() {
   };
 
   const handleRegister = (): void => {
-  clearPassengers();
+  beginPassengerRegistration();
   navigate("/passenger/register");
   };
   
   return (
-    <main className="flex min-h-screen w-full items-start justify-center overflow-hidden bg-black p-0 min-[1024px]:items-center">
+    <main className="passenger-screen passenger-entry-screen passenger-landing-screen flex min-h-screen w-full items-start justify-center overflow-hidden bg-black p-0 min-[1024px]:items-center">
       <section className="flex min-h-screen w-full min-w-0 flex-col overflow-hidden bg-black shadow-none min-[1024px]:h-screen min-[1024px]:min-h-[650px]">
         <div className="relative h-[clamp(420px,62svh,540px)] w-full shrink-0 overflow-hidden max-[374px]:h-[430px] max-[599px]:max-h-none max-[599px]:[@media(max-height:700px)]:h-[400px] min-[600px]:max-[1023px]:h-[57svh] min-[600px]:max-[1023px]:min-h-[430px] min-[600px]:max-[1023px]:max-h-[550px] min-[1024px]:h-[56%] min-[1024px]:min-h-0 min-[1024px]:basis-[58%]">
           <img
@@ -25,7 +26,7 @@ function PassengerLandingPage() {
             alt="Whale rising above the ocean"
           />
 
-          <div className="absolute inset-0 bg-[linear-gradient(to_bottom,transparent_60%,rgba(0,0,0,0.25)_76%,rgba(0,0,0,0.8)_92%,#000_100%)]" aria-hidden="true" />
+          <div className="absolute inset-0 bg-[linear-gradient(to_bottom,transparent_76%,rgba(0,0,0,0.1)_86%,rgba(0,0,0,0.45)_95%,#000_100%)]" aria-hidden="true" />
         </div>
 
         <div className="relative flex min-h-[38svh] flex-1 flex-col items-center bg-black px-5 pb-3 min-[600px]:max-[1023px]:min-h-[43svh] min-[600px]:max-[1023px]:px-10 min-[1024px]:min-h-0 min-[1024px]:px-[60px] min-[1024px]:pb-[14px]">

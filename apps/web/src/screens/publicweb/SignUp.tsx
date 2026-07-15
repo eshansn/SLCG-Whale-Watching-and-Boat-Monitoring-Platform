@@ -71,7 +71,7 @@ const SignUp = () => {
               </p>
 
               <div className="w-full flex flex-col gap-4">
-                {['Boat Owner', 'Crew Member', 'Passenger'].map((role) => (
+                {['Boat Owner', 'Crew Member'].map((role) => (
                   <ShineButton
                     key={role}
                     text={role}

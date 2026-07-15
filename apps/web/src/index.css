@@ -29,6 +29,156 @@ section {
   scroll-margin-top: 90px;
 }
 
+/* Passenger pages retain their visual design while adapting to short phones,
+   tablets in either orientation, and desktop browser chrome. */
+.passenger-screen {
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.passenger-entry-screen > section {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+.passenger-registration-screen > section > div:last-child {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+@media (max-width: 63.9375rem) {
+  .passenger-entry-screen,
+  .passenger-entry-screen > section {
+    height: auto;
+    overflow: visible;
+  }
+
+  .passenger-entry-screen > section > div:first-child {
+    height: clamp(17.5rem, 48svh, 30rem);
+    min-height: 0;
+  }
+
+  .passenger-entry-screen > section > div:last-child {
+    min-height: 24rem;
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+
+  .passenger-registration-screen > section > div:first-child {
+    height: clamp(14rem, 34svh, 24rem);
+  }
+
+  .passenger-registration-screen > section > div:last-child {
+    min-height: auto;
+    overflow: visible;
+  }
+}
+
+@media (max-width: 23.4375rem) {
+  .passenger-entry-screen > section > div:first-child {
+    height: clamp(15rem, 42svh, 21rem);
+  }
+}
+
+@media (min-width: 64rem) and (max-height: 46.875rem) {
+  .passenger-entry-screen,
+  .passenger-entry-screen > section {
+    height: auto;
+    overflow: visible;
+  }
+
+  .passenger-entry-screen > section > div:first-child {
+    height: 22rem;
+    flex-basis: auto;
+  }
+
+  .passenger-entry-screen > section > div:last-child {
+    min-height: 31rem;
+    overflow-y: visible;
+  }
+}
+
+/* The first three Passenger steps are single-viewport experiences. */
+.passenger-entry-screen {
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.passenger-entry-screen > section {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.passenger-entry-screen > section > div:last-child {
+  min-height: 0;
+  overflow: visible;
+}
+
+@media (max-width: 63.9375rem) {
+  .passenger-entry-screen,
+  .passenger-entry-screen > section {
+    height: 100vh;
+    height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .passenger-landing-screen > section > div:first-child,
+  .passenger-verification-screen > section > div:first-child {
+    height: clamp(14rem, 46dvh, 28rem);
+    min-height: 0;
+  }
+
+  .passenger-landing-screen > section > div:last-child,
+  .passenger-verification-screen > section > div:last-child {
+    min-height: 0;
+    padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+  }
+
+  .passenger-registration-screen > section > div:first-child {
+    height: clamp(7rem, 22dvh, 14rem);
+    min-height: 0;
+  }
+
+  .passenger-registration-screen > section > div:last-child {
+    min-height: 0;
+    overflow: visible;
+    padding-top: 0.25rem;
+    padding-bottom: max(0.35rem, env(safe-area-inset-bottom));
+  }
+
+  .passenger-registration-screen form {
+    margin-top: 0.5rem;
+    gap: 0.4rem;
+  }
+
+  .passenger-registration-screen form input,
+  .passenger-registration-screen form select {
+    height: clamp(2.25rem, 5.5dvh, 2.75rem);
+  }
+}
+
+@media (max-height: 43.75rem) {
+  .passenger-landing-screen > section > div:first-child,
+  .passenger-verification-screen > section > div:first-child {
+    height: 40dvh;
+  }
+
+  .passenger-registration-screen > section > div:first-child {
+    height: 16dvh;
+  }
+
+  .passenger-registration-screen form input,
+  .passenger-registration-screen form select {
+    height: 2.15rem;
+  }
+}
+
 /*
  * Keep the admin workspace comfortably sized on high-resolution displays.
  * Zoom scales the complete interface as one system—including SVG icons,

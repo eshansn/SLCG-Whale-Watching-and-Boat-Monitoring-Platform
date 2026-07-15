@@ -1,7 +1,9 @@
 import { type FormEvent, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import whaleBackground from "../../assets/PassengerBG.png";
-import slcgLogo from "../../assets/slcg-logo.png";
+import { findPassengerAndActivate } from "./store/passengerStorage";
+
+const whaleBackground = "/Hero.png";
+const slcgLogo = "/SLCGicon.png";
 
 function PassengerVerificationPage() {
   const navigate = useNavigate();
@@ -39,22 +41,16 @@ function PassengerVerificationPage() {
       return;
     }
 
-    /*
-      The backend verification API will be called here later.
+    if (!findPassengerAndActivate(cleanNic || cleanPassport)) {
+      setErrorMessage("No passenger information was found for that identification number.");
+      return;
+    }
 
-      For now, this navigates to a temporary passenger details page.
-    */
-
-    navigate("/passenger/details", {
-      state: {
-        identificationType: cleanNic ? "nic" : "passport",
-        identificationNumber: cleanNic || cleanPassport,
-      },
-    });
+    navigate("/passenger/onboarding");
   };
 
   return (
-    <main className="flex min-h-screen w-full items-start justify-center overflow-hidden bg-black p-0 min-[1024px]:items-center">
+    <main className="passenger-screen passenger-entry-screen passenger-verification-screen flex min-h-screen w-full items-start justify-center overflow-hidden bg-black p-0 min-[1024px]:items-center">
       <section className="flex min-h-screen w-full flex-col overflow-hidden bg-black shadow-none min-[1024px]:h-screen min-[1024px]:min-h-[650px]">
         <div className="relative h-[clamp(420px,60svh,525px)] w-full shrink-0 overflow-hidden max-[374px]:h-[405px] min-[600px]:max-[1023px]:h-[56svh] min-[600px]:max-[1023px]:min-h-[430px] min-[600px]:max-[1023px]:max-h-[540px] min-[1024px]:h-[52%] min-[1024px]:min-h-0 min-[1024px]:basis-[52%]">
           <img
@@ -63,7 +59,7 @@ function PassengerVerificationPage() {
             alt="Whale rising above the ocean"
           />
 
-          <div className="absolute inset-0 bg-[linear-gradient(to_bottom,transparent_58%,rgba(0,0,0,0.25)_76%,rgba(0,0,0,0.82)_92%,#000_100%)]" aria-hidden="true" />
+          <div className="absolute inset-0 bg-[linear-gradient(to_bottom,transparent_76%,rgba(0,0,0,0.1)_86%,rgba(0,0,0,0.45)_95%,#000_100%)]" aria-hidden="true" />
         </div>
 
         <div className="relative flex min-h-[40svh] flex-1 flex-col items-center bg-black px-5 pb-3 min-[600px]:max-[1023px]:min-h-[44svh] min-[600px]:max-[1023px]:px-10 min-[1024px]:min-h-0 min-[1024px]:px-[60px]">

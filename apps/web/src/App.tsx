@@ -33,6 +33,10 @@ import ShoreDashboard from './screens/Shore/ShoreDashboard';
 import ShoreTrips from './screens/Shore/ShoreTrips';
 import ShoreTripInfo from './screens/Shore/ShoreTripInfo';
 import ShoreNavbar from './screens/Shore/components/ShoreNavbar';
+import PassengerLandingPage from './screens/Passenger/PassengerLandingPage';
+import PassengerVerificationPage from './screens/Passenger/PassengerVerificationPage';
+import PassengerRegistrationPage from './screens/Passenger/PassengerRegistrationPage';
+import PassengerOnboardingPage from './screens/Passenger/PassengerOnboardingPage';
 
 const OPS_ROLES = ['OPS'] as const;
 const ADMIN_ROLES = ['Admin'] as const;
@@ -93,6 +97,12 @@ export default function App() {
             <Route path="/auth" element={<AuthLanding />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<SignUp />} />
+
+            <Route path="/passenger" element={<PassengerLandingPage />} />
+            <Route path="/passenger/verification" element={<PassengerVerificationPage />} />
+            <Route path="/passenger/register" element={<PassengerRegistrationPage />} />
+            <Route path="/passenger/onboarding" element={<PassengerOnboardingPage />} />
+            <Route path="/passenger/details" element={<Navigate to="/passenger/onboarding" replace />} />
 
             <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
             <Route path="/admin/manage-users" element={<AdminRoute><ManageUsers /></AdminRoute>} />
