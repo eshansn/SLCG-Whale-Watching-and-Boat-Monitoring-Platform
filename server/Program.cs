@@ -97,6 +97,8 @@ builder.Services.AddAuthorizationBuilder()
         policy => policy.RequireRole(PortalRoles.Ops))
     .AddPolicy(PortalPolicies.ShoreCrew,
         policy => policy.RequireRole(PortalRoles.ShoreCrew))
+    .AddPolicy(PortalPolicies.Wildlife,
+        policy => policy.RequireRole(PortalRoles.Wildlife))
     .AddPolicy(PortalPolicies.Passenger,
         policy => policy.RequireRole(PortalRoles.Passenger))
     .AddPolicy(PortalPolicies.BoatOwner,

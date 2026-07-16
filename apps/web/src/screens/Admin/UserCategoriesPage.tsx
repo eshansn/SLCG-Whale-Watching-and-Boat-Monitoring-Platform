@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { Icon } from "../../components/ui/icon";
+import { useAuth } from "../../auth/useAuth";
 
 interface UserCategory {
   title: string;
@@ -30,12 +31,16 @@ const userCategories: UserCategory[] = [
 
 const SelectUsers = () => {
   const navigate = useNavigate();
+  const { session } = useAuth();
+  const visibleCategories = session?.roles.includes("Wildlife")
+    ? userCategories.filter((category) => category.title !== "Staff")
+    : userCategories;
 
   return (
     <div className="min-h-screen bg-[#F8F9FB] font-[Poppins] text-[#14223D]">
       <main className="mx-auto flex min-h-[calc(100vh-72px)] max-w-7xl items-center justify-center px-6 py-14 lg:px-10">
         <section className="grid w-full gap-6 md:grid-cols-2 xl:grid-cols-3">
-          {userCategories.map((category) => (
+          {visibleCategories.map((category) => (
             <button
               key={category.title}
               type="button"

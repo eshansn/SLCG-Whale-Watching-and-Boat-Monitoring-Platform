@@ -2,6 +2,7 @@ import { BrowserRouter, Link, Navigate, Route, Routes } from 'react-router-dom';
 import type { ReactElement } from 'react';
 
 import { AuthProvider } from './auth/AuthContext';
+import { useAuth } from './auth/useAuth';
 import { ProtectedRoute } from './auth/ProtectedRoute';
 import Navbar from './components/Navbar';
 import About from './screens/publicweb/About';
@@ -42,10 +43,12 @@ import PassengerLandingPage from './screens/Passenger/PassengerLandingPage';
 import PassengerVerificationPage from './screens/Passenger/PassengerVerificationPage';
 import PassengerRegistrationPage from './screens/Passenger/PassengerRegistrationPage';
 import PassengerOnboardingPage from './screens/Passenger/PassengerOnboardingPage';
+import WildlifeNavbar from './screens/Wildlife/WildlifeNavbar';
 
 const OPS_ROLES = ['OPS'] as const;
 const ADMIN_ROLES = ['Admin'] as const;
 const SHORE_ROLES = ['ShoreCrew'] as const;
+const WILDLIFE_ROLES = ['Wildlife'] as const;
 
 function PublicLandingPage() {
   return (
@@ -70,10 +73,12 @@ function OpsRoute({ children }: { children: ReactElement }) {
   );
 }
 
-function AdminRoute({ children }: { children: ReactElement }) {
+function AdminRoute({ children, adminOnly = false }: { children: ReactElement; adminOnly?: boolean }) {
+  const { session } = useAuth();
+  const isWildlife = session?.roles.includes('Wildlife') ?? false;
   return (
-    <ProtectedRoute allowedRoles={[...ADMIN_ROLES]}>
-      <div className="admin-portal min-h-screen overflow-x-hidden bg-[#f8f9fb] font-[Poppins] text-[#14223d]">
+    <ProtectedRoute allowedRoles={adminOnly ? [...ADMIN_ROLES] : ['Admin', 'Wildlife']}>
+      <div className={`${isWildlife ? 'wildlife-portal ' : ''}admin-portal min-h-screen overflow-x-hidden bg-[#f8f9fb] font-[Poppins] text-[#14223d]`}>
         <AdminNavbar />
         {children}
       </div>
@@ -90,6 +95,10 @@ function ShoreRoute({ children }: { children: ReactElement }) {
       </div>
     </ProtectedRoute>
   );
+}
+
+function WildlifeRoute({ children }: { children: ReactElement }) {
+  return <ProtectedRoute allowedRoles={[...WILDLIFE_ROLES]}><div className="wildlife-portal admin-portal min-h-screen bg-[#f8f9fb] font-[Poppins] text-[#14223d]"><WildlifeNavbar />{children}</div></ProtectedRoute>;
 }
 
 export default function App() {
@@ -113,8 +122,8 @@ export default function App() {
             <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
             <Route path="/admin/manage-users" element={<AdminRoute><ManageUsers /></AdminRoute>} />
             <Route path="/admin/select-users" element={<AdminRoute><UserCategoriesPage /></AdminRoute>} />
-            <Route path="/admin/manage-staff" element={<AdminRoute><StaffPage /></AdminRoute>} />
-            <Route path="/admin/staff-info/:staffId" element={<AdminRoute><StaffDetailsPage /></AdminRoute>} />
+            <Route path="/admin/manage-staff" element={<AdminRoute adminOnly><StaffPage /></AdminRoute>} />
+            <Route path="/admin/staff-info/:staffId" element={<AdminRoute adminOnly><StaffDetailsPage /></AdminRoute>} />
             <Route path="/admin/manage-boat-owners" element={<AdminRoute><BoatOwnersPage /></AdminRoute>} />
             <Route path="/admin/manage-boat-crew" element={<AdminRoute><BoatCrewPage /></AdminRoute>} />
             <Route path="/admin/boats" element={<AdminRoute><BoatsPage /></AdminRoute>} />
@@ -140,6 +149,18 @@ export default function App() {
             <Route path="/shore" element={<ShoreRoute><ShoreDashboard /></ShoreRoute>} />
             <Route path="/shore/trips" element={<ShoreRoute><ShoreTrips /></ShoreRoute>} />
             <Route path="/shore/trips/:tripId" element={<ShoreRoute><ShoreTripInfo /></ShoreRoute>} />
+            <Route path="/wildlife" element={<WildlifeRoute><AdminDashboard /></WildlifeRoute>} />
+            <Route path="/wildlife/manage-users" element={<WildlifeRoute><ManageUsers /></WildlifeRoute>} />
+            <Route path="/wildlife/select-users" element={<WildlifeRoute><UserCategoriesPage /></WildlifeRoute>} />
+            <Route path="/wildlife/manage-boat-owners" element={<WildlifeRoute><BoatOwnersPage /></WildlifeRoute>} />
+            <Route path="/wildlife/manage-boat-crew" element={<WildlifeRoute><BoatCrewPage /></WildlifeRoute>} />
+            <Route path="/wildlife/boats" element={<WildlifeRoute><BoatsPage /></WildlifeRoute>} />
+            <Route path="/wildlife/boats/:boatId" element={<WildlifeRoute><BoatDetailsPage /></WildlifeRoute>} />
+            <Route path="/wildlife/owners/:ownerId" element={<WildlifeRoute><OwnerDetailsPage /></WildlifeRoute>} />
+            <Route path="/wildlife/crew/:crewId" element={<WildlifeRoute><CrewDetailsPage /></WildlifeRoute>} />
+            <Route path="/wildlife/trips" element={<WildlifeRoute><Trips /></WildlifeRoute>} />
+            <Route path="/wildlife/trip-info/:tripId" element={<WildlifeRoute><TripInfo /></WildlifeRoute>} />
+            <Route path="/wildlife/complaints" element={<WildlifeRoute><ComplaintsInquiriesPage /></WildlifeRoute>} />
 
             <Route
               path="/access-denied"

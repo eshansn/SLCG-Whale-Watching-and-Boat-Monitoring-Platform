@@ -41,6 +41,8 @@ services:
       IdentitySeed__AdminPassword: "${INITIAL_ADMIN_PASSWORD:-}"
       IdentitySeed__OpsEmail: "${INITIAL_OPS_EMAIL:-}"
       IdentitySeed__OpsPassword: "${INITIAL_OPS_PASSWORD:-}"
+      IdentitySeed__WildlifeEmail: "${INITIAL_WILDLIFE_EMAIL:-}"
+      IdentitySeed__WildlifePassword: "${INITIAL_WILDLIFE_PASSWORD:-}"
       IdentitySeed__ShoreEmail: "${INITIAL_SHORE_EMAIL:-}"
       IdentitySeed__ShorePassword: "${INITIAL_SHORE_PASSWORD:-}"
     ports:

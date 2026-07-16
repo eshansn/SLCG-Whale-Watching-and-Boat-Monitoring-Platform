@@ -37,6 +37,11 @@ const Login = () => {
         return;
       }
 
+      if (session.roles.includes('Wildlife')) {
+        navigate(requestedPath?.startsWith('/wildlife') ? requestedPath : '/wildlife', { replace: true });
+        return;
+      }
+
       navigate('/access-denied', { replace: true });
     } catch (loginError) {
       setError(loginError instanceof AuthApiError

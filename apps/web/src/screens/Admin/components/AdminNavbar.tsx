@@ -39,7 +39,12 @@ const AdminNavbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { logout, session } = useAuth();
+  const isWildlife = session?.roles.includes("Wildlife") ?? false;
+  const homePath = isWildlife ? "/wildlife" : "/admin";
+  const navigationItems = adminNavigationItems
+    .filter((item) => !isWildlife || item.label !== "Staff")
+    .map((item) => isWildlife ? { ...item, path: item.path.replace("/admin", "/wildlife") } : item);
 
   const handleLogout = (): void => {
     logout();
@@ -49,7 +54,7 @@ const AdminNavbar = () => {
   return (
     <header className="sticky top-0 z-50 border-b border-slate-200/80 bg-white/95 shadow-sm backdrop-blur">
       <div className="mx-auto flex min-h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
-        <Link to="/admin" className="flex shrink-0 items-center" aria-label="Go to admin dashboard">
+        <Link to={homePath} className="flex shrink-0 items-center" aria-label="Go to portal dashboard">
           <img
             src="/SLCG.png"
             alt="Sri Lanka Coast Guard Logo"
@@ -66,12 +71,12 @@ const AdminNavbar = () => {
             <Icon name="notification" size={20} />
           </button>
 
-          {adminNavigationItems.map((item) => {
+          {navigationItems.map((item) => {
             const isActive = location.pathname === item.path || location.pathname.startsWith(`${item.path}/`);
             return (
               <Link
                 key={item.path}
-                to={isActive ? "/admin" : item.path}
+                to={isActive ? homePath : item.path}
                 className={`whitespace-nowrap font-medium tracking-wide transition-colors hover:text-[#14223d] ${
                   isActive ? "font-bold text-[#14223d]" : "text-slate-500"
                 }`}
@@ -106,12 +111,12 @@ const AdminNavbar = () => {
       {isMenuOpen && (
         <nav className="border-t border-slate-200 bg-white px-4 py-4 shadow-lg lg:hidden" aria-label="Mobile admin navigation">
           <div className="mx-auto grid max-w-7xl gap-1">
-            {adminNavigationItems.map((item) => {
+            {navigationItems.map((item) => {
               const isActive = location.pathname === item.path || location.pathname.startsWith(`${item.path}/`);
               return (
                 <Link
                   key={item.path}
-                  to={isActive ? "/admin" : item.path}
+                  to={isActive ? homePath : item.path}
                   onClick={() => setIsMenuOpen(false)}
                   className={`rounded-md px-3 py-3 text-sm font-medium transition-colors ${
                     isActive ? "bg-slate-100 text-[#14223d]" : "text-slate-600 hover:bg-slate-50 hover:text-[#14223d]"
