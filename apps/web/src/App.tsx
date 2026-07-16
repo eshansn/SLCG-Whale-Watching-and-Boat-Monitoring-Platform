@@ -13,15 +13,20 @@ import Hero from './screens/publicweb/Hero';
 import Login from './screens/publicweb/Login';
 import SignUp from './screens/publicweb/SignUp';
 import AdminDashboard from './screens/Admin/AdminDashboard';
-import ManageUsers from './screens/Admin/ManageUsers';
-import SelectUsers from './screens/Admin/selectusers';
-import ManageStaff from './screens/Admin/managestaff';
-import ManageBoatOwners from './screens/Admin/manageboatowners';
-import ManageBoatCrew from './screens/Admin/manageboatcrew';
-import ManageFleets from './screens/Admin/managefleets';
-import FleetInfo from './screens/Admin/fleetinfo';
-import Trips from './screens/Admin/Trips';
-import TripInfo from './screens/Admin/tripinfo';
+import ManageUsers from './screens/Admin/ManageUsersPage';
+import UserCategoriesPage from './screens/Admin/UserCategoriesPage';
+import StaffPage from './screens/Admin/StaffPage';
+import StaffDetailsPage from './screens/Admin/StaffDetailsPage';
+import BoatOwnersPage from './screens/Admin/BoatOwnersPage';
+import BoatCrewPage from './screens/Admin/BoatCrewPage';
+import BoatsPage from './screens/Admin/BoatsPage';
+import BoatDetailsPage from './screens/Admin/BoatDetailsPage';
+import OwnerDetailsPage from './screens/Admin/OwnerDetailsPage';
+import CrewDetailsPage from './screens/Admin/CrewDetailsPage';
+import { AdminRecordsProvider } from './screens/Admin/AdminRecordsContext';
+import ComplaintsInquiriesPage from './screens/Admin/ComplaintsInquiriesPage';
+import Trips from './screens/Admin/TripsPage';
+import TripInfo from './screens/Admin/TripDetailsPage';
 import OPSDashboard from './screens/OPS/OPSdashboard';
 import OPSMonitor from './screens/OPS/OPSmonitor';
 import OPSNotifications from './screens/OPS/OPSnotifications';
@@ -91,6 +96,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <AdminRecordsProvider>
         <div className="min-h-screen bg-slate-900 font-sans">
           <Routes>
             <Route path="/" element={<PublicLandingPage />} />
@@ -106,13 +112,22 @@ export default function App() {
 
             <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
             <Route path="/admin/manage-users" element={<AdminRoute><ManageUsers /></AdminRoute>} />
-            <Route path="/admin/select-users" element={<AdminRoute><SelectUsers /></AdminRoute>} />
-            <Route path="/admin/manage-staff" element={<AdminRoute><ManageStaff /></AdminRoute>} />
-            <Route path="/admin/manage-boat-owners" element={<AdminRoute><ManageBoatOwners /></AdminRoute>} />
-            <Route path="/admin/manage-boat-crew" element={<AdminRoute><ManageBoatCrew /></AdminRoute>} />
-            <Route path="/admin/manage-fleets" element={<AdminRoute><ManageFleets /></AdminRoute>} />
-            <Route path="/admin/fleet-info/:fleetId" element={<AdminRoute><FleetInfo /></AdminRoute>} />
+            <Route path="/admin/select-users" element={<AdminRoute><UserCategoriesPage /></AdminRoute>} />
+            <Route path="/admin/manage-staff" element={<AdminRoute><StaffPage /></AdminRoute>} />
+            <Route path="/admin/staff-info/:staffId" element={<AdminRoute><StaffDetailsPage /></AdminRoute>} />
+            <Route path="/admin/manage-boat-owners" element={<AdminRoute><BoatOwnersPage /></AdminRoute>} />
+            <Route path="/admin/manage-boat-crew" element={<AdminRoute><BoatCrewPage /></AdminRoute>} />
+            <Route path="/admin/boats" element={<AdminRoute><BoatsPage /></AdminRoute>} />
+            <Route path="/admin/manage-fleets" element={<Navigate to="/admin/boats" replace />} />
+            <Route path="/admin/boats/:boatId" element={<AdminRoute><BoatDetailsPage /></AdminRoute>} />
+            <Route path="/admin/owners/:ownerId" element={<AdminRoute><OwnerDetailsPage /></AdminRoute>} />
+            <Route path="/admin/crew/:crewId" element={<AdminRoute><CrewDetailsPage /></AdminRoute>} />
+            <Route path="/admin/fleet-info/:fleetId" element={<AdminRoute><BoatDetailsPage /></AdminRoute>} />
+            <Route path="/admin/boat-owner-info/:ownerId" element={<AdminRoute><OwnerDetailsPage /></AdminRoute>} />
+            <Route path="/admin/boat-crew-info/:crewId" element={<AdminRoute><CrewDetailsPage /></AdminRoute>} />
             <Route path="/admin/trips" element={<AdminRoute><Trips /></AdminRoute>} />
+            <Route path="/admin/complaints" element={<AdminRoute><ComplaintsInquiriesPage /></AdminRoute>} />
+            <Route path="/admin/complaints-inquiries" element={<Navigate to="/admin/complaints" replace />} />
             <Route path="/admin/trip-info/:tripId" element={<AdminRoute><TripInfo /></AdminRoute>} />
 
             <Route path="/ops" element={<OpsRoute><OPSDashboard /></OpsRoute>} />
@@ -145,6 +160,7 @@ export default function App() {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </div>
+        </AdminRecordsProvider>
       </AuthProvider>
     </BrowserRouter>
   );

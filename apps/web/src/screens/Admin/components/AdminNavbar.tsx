@@ -15,7 +15,7 @@ const adminNavigationItems: NavigationItem[] = [
   },
   {
     label: "Boats",
-    path: "/admin/manage-fleets",
+    path: "/admin/boats",
   },
   {
     label: "Trips",
@@ -28,6 +28,10 @@ const adminNavigationItems: NavigationItem[] = [
   {
     label: "Owners",
     path: "/admin/manage-boat-owners",
+  },
+  {
+    label: "Complaints",
+    path: "/admin/complaints",
   },
 ];
 

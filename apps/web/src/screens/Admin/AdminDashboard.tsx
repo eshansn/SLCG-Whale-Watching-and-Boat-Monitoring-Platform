@@ -40,7 +40,7 @@ const AdminDashboard = () => {
               <div className="mt-5 space-y-2 text-xs">
                 <p className="text-slate-400">10 New Users</p>
                 <p className="text-green-500">78 New Trips</p>
-                <p className="text-slate-400">05 New Inquiries</p>
+                <p className="text-slate-400">05 New Complaints</p>
               </div>
             </div>
           </section>
@@ -80,7 +80,7 @@ const AdminDashboard = () => {
               </div>
 
               <h2 className="mt-7 text-xl font-medium text-[#14223d]">
-                Manage Users &amp; Fleets
+                Manage Users &amp; Boats
               </h2>
 
               <p className="mt-4 max-w-xs text-sm leading-6 text-slate-400">
