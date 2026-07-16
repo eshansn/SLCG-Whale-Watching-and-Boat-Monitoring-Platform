@@ -328,3 +328,33 @@ section {
     @apply font-sans;
   }
 }
+/* Admin trip details are observational: OPS and response-team actions appear as a log. */
+.admin-trip-readonly textarea,
+.admin-trip-readonly textarea + button {
+  display: none;
+}
+
+.admin-trip-readonly h3:has(+ textarea)::after {
+  content: "09:04 AM · OPS Room\A Vessel contacted; captain confirmed a passenger health issue.\A\A 09:08 AM · Coast Guard Medical Unit\A First-aid guidance relayed to the vessel.\A\A 09:15 AM · OPS Room\A Passenger stable; vessel remains under monitoring.";
+  display: block;
+  margin-top: 0.5rem;
+  border-left: 2px solid #cbd5e1;
+  padding: 0.25rem 0 0.25rem 0.75rem;
+  white-space: pre-line;
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 400;
+  line-height: 1.45;
+}
+.wildlife-portal [title^="Delete"],
+.wildlife-portal [aria-label^="Delete"] {
+  display: none !important;
+}
+
+.wildlife-portal button[data-admin-action="delete"] {
+  display: none !important;
+}
+
+.wildlife-portal main > div:first-child > div:last-child:has(> button) {
+  display: none;
+}

@@ -1,8 +1,11 @@
 import { useNavigate } from "react-router-dom";
 import { Icon } from "../../components/ui/icon";
+import { useAuth } from "../../auth/useAuth";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
+  const { session } = useAuth();
+  const isWildlife = session?.roles.includes("Wildlife") ?? false;
 
   const handleManageUsers = (): void => {
     navigate("/admin/manage-users");
@@ -22,7 +25,7 @@ const AdminDashboard = () => {
             <p className="text-sm font-medium text-slate-700">Hello,</p>
 
             <h1 className="mt-1 text-3xl font-semibold text-[#14223d]">
-              Admin!
+              {isWildlife ? "Wildlife Authority!" : "Admin!"}
             </h1>
 
             <p className="mt-2 text-[10px] text-slate-400">

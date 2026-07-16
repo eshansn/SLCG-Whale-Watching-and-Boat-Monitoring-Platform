@@ -37,6 +37,11 @@ public sealed class IdentitySeeder(
             "IdentitySeed:ShorePassword",
             PortalRoles.ShoreCrew,
             "development shore officer");
+        await SeedPortalUserAsync(
+            "IdentitySeed:WildlifeEmail",
+            "IdentitySeed:WildlifePassword",
+            PortalRoles.Wildlife,
+            "development wildlife authority user");
     }
 
     private async Task SeedPortalUserAsync(
