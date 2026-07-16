@@ -11,6 +11,7 @@ import {
   getPassengers,
 } from "./store/passengerStorage";
 import type { PassengerData } from "./store/passenger";
+import PassengerSOSButton from "./components/PassengerSOSButton";
 
 const whaleBackground = "/Hero.png";
 const slcgLogo = "/SLCGicon.png";
@@ -80,6 +81,7 @@ function PassengerOnboardingPage() {
   const [acknowledged, setAcknowledged] = useState(false);
 
   const [message, setMessage] = useState("");
+  const [complaintType, setComplaintType] = useState("");
   const [evidenceFile, setEvidenceFile] = useState<File | null>(
     null,
   );
@@ -201,9 +203,9 @@ function PassengerOnboardingPage() {
   ): void => {
     event.preventDefault();
 
-    if (!message.trim()) {
+    if (!complaintType || !message.trim()) {
       setFormStatus(
-        "Please enter your inquiry or complaint.",
+        "Please select a complaint type and enter your message.",
       );
       return;
     }
@@ -217,6 +219,7 @@ function PassengerOnboardingPage() {
     */
 
     console.log({
+      complaintType,
       message,
       evidenceFile,
     });
@@ -351,18 +354,29 @@ function PassengerOnboardingPage() {
           </section>
 
           <section className="mt-[31px]">
-            <h2 className="m-0 font-montserrat text-[16px] leading-[150%] font-bold text-white min-[1200px]:text-[clamp(22px,1.4vw,30px)]">Inquiries &amp; Complaints</h2>
+            <h2 className="m-0 font-montserrat text-[16px] leading-[150%] font-bold text-white min-[1200px]:text-[clamp(22px,1.4vw,30px)]">Submit a Complaint</h2>
 
             <form
               className="mt-[9px]"
               onSubmit={handleComplaintSubmit}
             >
+              <label className="sr-only" htmlFor="complaintType">Complaint type</label>
+              <select id="complaintType" value={complaintType} onChange={(event)=>{setComplaintType(event.target.value);setFormStatus("")}} className="mb-[7px] h-[33px] w-full rounded-[4px] border border-white bg-black/30 px-[10px] font-poppins text-[9px] text-white outline-none focus:border-[#5cefdc] min-[1200px]:text-[clamp(12px,.85vw,17px)]" required>
+                <option value="">Choose complaint type</option>
+                <option value="Safety concern">Safety concern</option>
+                <option value="Crew conduct">Crew conduct</option>
+                <option value="Boat condition">Boat condition</option>
+                <option value="Service quality">Service quality</option>
+                <option value="Booking or payment">Booking or payment</option>
+                <option value="Environmental violation">Environmental violation</option>
+                <option value="Other">Other</option>
+              </select>
               <div className="relative flex w-full">
                 <label
                   className="sr-only"
                   htmlFor="complaintMessage"
                 >
-                  Inquiry or complaint
+                  Complaint details
                 </label>
 
                 <input
@@ -407,10 +421,7 @@ function PassengerOnboardingPage() {
               <div className="mt-[7px] grid grid-cols-[minmax(0,1fr)_105px] items-center gap-[10px] max-[374px]:grid-cols-1">
                 <p className="m-0 font-poppins text-[7px] leading-[150%] text-[#bcbcbc] min-[1200px]:text-[clamp(10px,.65vw,13px)]">
                   This portal is strictly for reporting
-                  safety violations, illicit maritime
-                  activities, and corruption. General
-                  service complaints will not be processed
-                  here.
+                  Your passenger identity and QR-linked boat details are attached automatically. Add an image when it helps explain the complaint.
                 </p>
 
                 <button className="min-h-[31px] rounded-[4px] border-0 bg-white font-poppins text-[10px] font-semibold text-[#111] max-[374px]:w-[110px] max-[374px]:justify-self-end min-[1200px]:text-[clamp(13px,.9vw,18px)]" type="submit">Submit</button>
@@ -434,6 +445,8 @@ function PassengerOnboardingPage() {
           </footer>
         </div>
       </section>
+
+      <PassengerSOSButton boatName="FV Mirissa King" passengerName={primaryPassenger.name} />
 
       {showFamilyModal && (
         <div

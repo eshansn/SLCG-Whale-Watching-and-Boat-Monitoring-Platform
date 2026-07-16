@@ -7,7 +7,7 @@ import type { ChangeEvent, FormEvent } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { Icon } from "../../components/ui/icon";
 
-type StaffRole =
+export type StaffRole =
   | "Admin"
   | "OPS Room"
   | "SLCG HQ"
@@ -23,7 +23,7 @@ type SortOption =
   | "newest"
   | "oldest";
 
-interface StaffMember {
+export interface StaffMember {
   id: number;
   username: string;
   role: StaffRole;
@@ -35,8 +35,9 @@ interface StaffMember {
 interface NewStaffForm {
   username: string;
   role: StaffRole;
-  phoneNumber: string;
   email: string;
+  password: string;
+  confirmPassword: string;
 }
 
 interface SpeechRecognitionAlternative {
@@ -55,7 +56,7 @@ interface SpeechRecognitionEvent {
   results: SpeechRecognitionResultList;
 }
 
-const initialStaffMembers: StaffMember[] = [
+export const initialStaffMembers: StaffMember[] = [
   {
     id: 1,
     username: "Nimal Perera",
@@ -141,8 +142,9 @@ const initialStaffMembers: StaffMember[] = [
 const emptyStaffForm: NewStaffForm = {
   username: "",
   role: "Admin",
-  phoneNumber: "",
   email: "",
+  password: "",
+  confirmPassword: "",
 };
 
 const ITEMS_PER_PAGE = 5;
@@ -150,8 +152,18 @@ const ITEMS_PER_PAGE = 5;
 const ManageStaff = () => {
   const navigate = useNavigate();
 
-  const [staffMembers, setStaffMembers] =
-    useState<StaffMember[]>(initialStaffMembers);
+  const [staffMembers, setStaffMembers] = useState<StaffMember[]>(() => {
+    try {
+      const saved = localStorage.getItem("admin-staff-records-v1");
+      return saved ? JSON.parse(saved) as StaffMember[] : initialStaffMembers;
+    } catch {
+      return initialStaffMembers;
+    }
+  });
+
+  useEffect(() => {
+    localStorage.setItem("admin-staff-records-v1", JSON.stringify(staffMembers));
+  }, [staffMembers]);
 
   const [searchValue, setSearchValue] = useState("");
   const [sortOption, setSortOption] =
@@ -339,11 +351,20 @@ const ManageStaff = () => {
     event.preventDefault();
 
     const username = newStaff.username.trim();
-    const phoneNumber = newStaff.phoneNumber.trim();
     const email = newStaff.email.trim();
 
-    if (!username || !phoneNumber || !email) {
+    if (!username || !email || !newStaff.password || !newStaff.confirmPassword) {
       setFormError("Please complete all fields.");
+      return;
+    }
+
+    if (newStaff.password.length < 8) {
+      setFormError("Password must contain at least 8 characters.");
+      return;
+    }
+
+    if (newStaff.password !== newStaff.confirmPassword) {
+      setFormError("Passwords do not match.");
       return;
     }
 
@@ -363,7 +384,7 @@ const ManageStaff = () => {
       id: Date.now(),
       username,
       role: newStaff.role,
-      phoneNumber,
+      phoneNumber: "Not provided",
       email,
       createdAt: new Date().toISOString(),
     };
@@ -747,7 +768,7 @@ const ManageStaff = () => {
 
       {/* Add Staff Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/40 px-4">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/45 px-4 backdrop-blur-sm" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) handleCloseModal(); }}>
           <div className="w-full max-w-lg rounded-xl bg-white p-7 shadow-2xl">
             <div className="flex items-start justify-between">
               <div>
@@ -820,18 +841,23 @@ const ManageStaff = () => {
                   htmlFor="phoneNumber"
                   className="mb-2 block text-xs font-medium text-slate-700"
                 >
-                  Phone number
+                  Password
                 </label>
 
                 <input
-                  id="phoneNumber"
-                  name="phoneNumber"
-                  type="tel"
-                  value={newStaff.phoneNumber}
+                  id="password"
+                  name="password"
+                  type="password"
+                  value={newStaff.password}
                   onChange={handleFormChange}
-                  placeholder="Enter phone number"
+                  placeholder="Minimum 8 characters"
                   className="h-11 w-full rounded-md border border-slate-200 px-4 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
                 />
+              </div>
+
+              <div>
+                <label htmlFor="confirmPassword" className="mb-2 block text-xs font-medium text-slate-700">Confirm password</label>
+                <input id="confirmPassword" name="confirmPassword" type="password" value={newStaff.confirmPassword} onChange={handleFormChange} placeholder="Re-enter password" className="h-11 w-full rounded-md border border-slate-200 px-4 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" />
               </div>
 
               <div>
