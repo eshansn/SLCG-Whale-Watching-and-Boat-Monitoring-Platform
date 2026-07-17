@@ -1,21 +1,27 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { formatTripDate, shoreTrips, type ShoreApproval } from "./shoreData";
-
-const passengers = ["Rathnayake M.", "Fernando A.", "Perera S.", "Silva N."];
-const crew = [{ name: "Rathnayake M.", role: "Crewman" }, { name: "Jayasinghe K.", role: "Driver" }, { name: "Fernando T.", role: "Driver" }];
+import { formatTripDate, operationsApi } from "../../operations/operationsApi";
+import { useOperations } from "../../operations/useOperations";
 
 const ShoreTripInfo = () => {
   const { tripId } = useParams();
   const navigate = useNavigate();
-  const trip = shoreTrips.find((item) => item.id === tripId) ?? shoreTrips[0];
-  const [approval, setApproval] = useState<ShoreApproval>(trip.approval);
+  const { trips: shoreTrips, boats, token, reload, loading } = useOperations();
+  const trip = shoreTrips.find((item) => item.id === tripId);
+  const boat = boats.find((item) => item.id === trip?.boatId);
+  const [approval, setApproval] = useState<string>();
   const [result, setResult] = useState<"approved" | "declined" | null>(null);
 
-  const decide = (decision: "approved" | "declined") => {
-    setApproval(decision === "approved" ? "Approved" : "Declined");
+  const decide = async (decision: "approved" | "declined") => {
+    if (!trip || !token) return;
+    const next = decision === "approved" ? "Approved" : "Rejected";
+    await operationsApi.approve(token, trip.id, next);
+    setApproval(next); await reload();
     setResult(decision);
   };
+
+  if (loading) return <main className="p-10 text-center">Loading…</main>;
+  if (!trip) return <main className="p-10 text-center"><p>Trip not found.</p><button onClick={()=>navigate('/shore/trips')} className="mt-4 text-indigo-700">Back to trips</button></main>;
 
   return (
     <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
@@ -23,16 +29,16 @@ const ShoreTripInfo = () => {
         <aside className="overflow-hidden rounded-xl bg-white shadow-sm">
           <img src="/gallery-2.jpg" alt="Whale watching vessel at sea" className="h-52 w-full object-cover" />
           <div className="p-6"><h1 className="text-2xl font-semibold text-[#14223d]">{trip.vesselName}</h1><p className="mt-1 text-xs text-slate-400">{trip.registrationNumber}</p>
-            <dl className="mt-6 grid grid-cols-2 gap-x-4 gap-y-4 text-xs"><Detail label="Owner" value={trip.owner} /><Detail label="Departure" value={formatTripDate(trip.scheduledDateTime)} /><Detail label="Length" value="12.6 M" /><Detail label="Capacity" value="26 Passengers" /><Detail label="Crew" value="03 Members" /><Detail label="Status" value={approval} /></dl>
+            <dl className="mt-6 grid grid-cols-2 gap-x-4 gap-y-4 text-xs"><Detail label="Owner" value={trip.ownerName} /><Detail label="Departure" value={formatTripDate(trip.scheduledDepartureUtc)} /><Detail label="Length" value={`${boat?.lengthMeters ?? 0} M`} /><Detail label="Capacity" value={`${boat?.maximumCapacity ?? trip.passengerCount} Passengers`} /><Detail label="Passengers" value={`${trip.passengerCount}`} /><Detail label="Status" value={approval ?? trip.shoreApproval} /></dl>
           </div>
         </aside>
 
         <div className="grid gap-5">
-          <DataCard title="Passengers" columns={["Name", "NIC or Passport", "Age", "Nationality"]} rows={passengers.map((name, index) => [name, `20032${index}7833`, "Adult", "Local"])} />
+          <DataCard title={`Passengers (${trip.passengerCount})`} columns={["Name", "NIC or Passport", "Age", "Nationality"]} rows={[]} />
           <div className="grid gap-5 lg:grid-cols-[1fr_250px]">
-            <DataCard title="Crew" columns={["Name", "NIC", "Role", "Certified"]} rows={crew.map((member, index) => [member.name, `20032${index}7833`, member.role, "Yes"])} />
+            <DataCard title="Crew" columns={["Name", "NIC", "Role", "Certified"]} rows={[]} />
             <section className="rounded-xl bg-white p-6 shadow-sm"><h2 className="text-xl font-semibold text-[#14223d]">Approval</h2><p className="mt-3 text-xs leading-5 text-slate-500">Inspection completed. The information entered in the system has been verified against the actual vessel and all safety requirements, including passenger capacity and life jacket availability.</p>
-              <div className="mt-6 grid gap-3"><button type="button" onClick={() => decide("approved")} className="rounded-md bg-emerald-500 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-600">Approve</button><button type="button" onClick={() => decide("declined")} className="rounded-md bg-red-500 px-4 py-3 text-sm font-semibold text-white transition hover:bg-red-600">Decline</button></div>
+              <div className="mt-6 grid gap-3"><button type="button" onClick={() => void decide("approved")} className="rounded-md bg-emerald-500 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-600">Approve</button><button type="button" onClick={() => void decide("declined")} className="rounded-md bg-red-500 px-4 py-3 text-sm font-semibold text-white transition hover:bg-red-600">Decline</button></div>
             </section>
           </div>
         </div>

@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import '../../services/api_service.dart';
 
 class VesselDetailsScreen extends StatelessWidget {
   const VesselDetailsScreen({Key? key}) : super(key: key);
 
-  void _showApprovalPopup(BuildContext context, bool isApproved) {
+  void _showApprovalPopup(BuildContext context, bool isApproved, String tripId) async {
+    await ApiService.instance.approve(tripId, isApproved ? 'Approved' : 'Rejected');
+    if (!context.mounted) return;
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -59,6 +62,7 @@ class VesselDetailsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final trip=(ModalRoute.of(context)?.settings.arguments as Map<String,dynamic>?) ?? const <String,dynamic>{};
     return Theme(
       data: ThemeData.light().copyWith(
         scaffoldBackgroundColor: const Color(0xFFEBECEF), 
@@ -123,11 +127,11 @@ class VesselDetailsScreen extends StatelessWidget {
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      const Text("FV Mirissa King", style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-                                      const Text("SL-WB-2047   Certified", style: TextStyle(color: Colors.green, fontSize: 12)),
+                                      Text(trip['vessel']?.toString() ?? 'Vessel', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                                      Text("${trip['reg'] ?? ''}   ${trip['status'] ?? ''}", style: const TextStyle(color: Colors.green, fontSize: 12)),
                                       const SizedBox(height: 16),
                                       _buildStatRow("Coordinates", "5.949186, 80.438509"), 
-                                      _buildStatRow("Departure", "06:32:11 Hrs"),
+                                      _buildStatRow("Departure", trip['time']?.toString() ?? 'TBA'),
                                       _buildStatRow("Arrival", "DNA"),
                                       const Divider(height: 32),
                                       const Text("Vessel Information", style: TextStyle(fontWeight: FontWeight.bold)),
@@ -174,10 +178,7 @@ class VesselDetailsScreen extends StatelessWidget {
                                             DataColumn(label: Text('Age')),
                                             DataColumn(label: Text('Nationality')),
                                           ],
-                                          rows: [
-                                            _buildPassengerRow("Rathnayake M.", "20032131313", "Adult", "Local"),
-                                            _buildPassengerRow("Rathnayake M.", "20032131313", "Adult", "Local"),
-                                          ],
+                                            rows: const [],
                                         ),
                                       ),
                                     )
@@ -209,10 +210,7 @@ class VesselDetailsScreen extends StatelessWidget {
                                                   DataColumn(label: Text('Role')),
                                                   DataColumn(label: Text('Certified')),
                                                 ],
-                                                rows: [
-                                                  _buildCrewRow("Rathnayake M.", "20032131313", "Coxswain", "Yes"),
-                                                  _buildCrewRow("Rathnayake M.", "20032131313", "Diver", "Yes"),
-                                                ],
+                                                rows: const [],
                                               ),
                                             ),
                                           )
@@ -240,7 +238,7 @@ class VesselDetailsScreen extends StatelessWidget {
                                             width: double.infinity,
                                             child: ElevatedButton(
                                               style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF34D399), foregroundColor: Colors.white),
-                                              onPressed: () => _showApprovalPopup(context, true),
+                                              onPressed: () => _showApprovalPopup(context, true, trip['id']?.toString() ?? ''),
                                               child: const Text("Approved"),
                                             ),
                                           ),
@@ -249,7 +247,7 @@ class VesselDetailsScreen extends StatelessWidget {
                                             width: double.infinity,
                                             child: ElevatedButton(
                                               style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
-                                              onPressed: () => _showApprovalPopup(context, false),
+                                              onPressed: () => _showApprovalPopup(context, false, trip['id']?.toString() ?? ''),
                                               child: const Text("Not Approved"),
                                             ),
                                           ),
@@ -287,11 +285,4 @@ class VesselDetailsScreen extends StatelessWidget {
     );
   }
 
-  DataRow _buildPassengerRow(String name, String nic, String age, String nat) {
-    return DataRow(cells: [DataCell(Text(name)), DataCell(Text(nic)), DataCell(Text(age)), DataCell(Text(nat))]);
-  }
-
-  DataRow _buildCrewRow(String name, String nic, String role, String cert) {
-    return DataRow(cells: [DataCell(Text(name)), DataCell(Text(nic)), DataCell(Text(role)), DataCell(Text(cert))]);
-  }
 }

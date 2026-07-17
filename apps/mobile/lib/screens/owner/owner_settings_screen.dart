@@ -1,104 +1,162 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/cupertino.dart'; // Needed for iOS-style toggle switch
-import '../../../widgets/owner_layout.dart';
+import '../../owner/owner_store.dart';
+import '../../services/api_service.dart';
+import '../../widgets/owner_layout.dart';
 
 class OwnerSettingsScreen extends StatefulWidget {
   const OwnerSettingsScreen({super.key});
-
   @override
-  State<OwnerSettingsScreen> createState() => _OwnerSettingsScreenState();
+  State<OwnerSettingsScreen> createState() => _State();
 }
 
-class _OwnerSettingsScreenState extends State<OwnerSettingsScreen> {
-  bool _notificationsEnabled = true;
-  bool _autoUpdateEnabled = true;
-
+class _State extends State<OwnerSettingsScreen> {
+  final store = OwnerStore.instance;
   @override
   Widget build(BuildContext context) {
+    final s = store.settings;
     return OwnerLayout(
-      child: ListView(
-        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
-        children: [
-          _buildToggleSetting(
-            title: "App Notifications",
-            subtitle: "Receive mobile app notifications",
-            value: _notificationsEnabled,
-            onChanged: (val) => setState(() => _notificationsEnabled = val),
-          ),
-          const Divider(color: Colors.black12, height: 32),
-          
-          _buildToggleSetting(
-            title: "Auto Updates",
-            subtitle: "Automatically update when available",
-            value: _autoUpdateEnabled,
-            onChanged: (val) => setState(() => _autoUpdateEnabled = val),
-          ),
-          const Divider(color: Colors.black12, height: 32),
-
-          _buildActionSetting(title: "Password", subtitle: "Update your password"),
-          const Divider(color: Colors.black12, height: 32),
-
-          _buildActionSetting(title: "Need Help?", subtitle: "Contact our support center"),
-          const Divider(color: Colors.black12, height: 32),
-
-          _buildTextSetting(title: "Log Out", subtitle: "Log Out From WWMS", isDestructive: true),
-          const Divider(color: Colors.black12, height: 32),
-
-          _buildTextSetting(title: "Delete My Account", subtitle: "Delete your WWMS account", isDestructive: true),
-        ],
-      ),
-    );
+        child: ListView(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+            children: [
+          toggle('App Notifications', 'Receive mobile app notifications',
+              s.notifications, (v) => setState(() => s.notifications = v)),
+          divider,
+          toggle('Auto Updates', 'Automatically update when available',
+              s.autoUpdates, (v) => setState(() => s.autoUpdates = v)),
+          divider,
+          toggle('Privacy', 'Keep profile private', s.privateProfile,
+              (v) => setState(() => s.privateProfile = v)),
+          divider,
+          toggle('Dark Theme', 'Use dark application theme', s.darkTheme,
+              (v) => setState(() => s.darkTheme = v)),
+          divider,
+          action('Password', 'Update your password', changePassword),
+          divider,
+          action('Language', s.language, language),
+          divider,
+          action('Need Help?', 'Contact our support center',
+              () => message('Support: support@wwms.test')),
+          divider,
+          action('Log Out', 'Log Out From WWMS', logout, red: true),
+          divider,
+          action('Delete My Account', 'Delete your WWMS account', deleteAccount,
+              red: true)
+        ]));
   }
 
-  Widget _buildToggleSetting({required String title, required String subtitle, required bool value, required ValueChanged<bool> onChanged}) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(title, style: const TextStyle(fontSize: 16, color: Colors.black87)),
-            const SizedBox(height: 4),
-            Text(subtitle, style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
-          ],
-        ),
-        CupertinoSwitch(
-          activeTrackColor: Colors.blue.shade600,
-          value: value,
-          onChanged: onChanged,
-        ),
-      ],
-    );
+  Widget get divider => const Divider(color: Colors.black12, height: 32);
+  Widget toggle(String title, String subtitle, bool value,
+          ValueChanged<bool> changed) =>
+      Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(title),
+          Text(subtitle,
+              style: TextStyle(fontSize: 12, color: Colors.grey.shade500))
+        ]),
+        CupertinoSwitch(value: value, onChanged: changed)
+      ]);
+  Widget action(String title, String subtitle, VoidCallback tap,
+          {bool red = false}) =>
+      InkWell(
+          onTap: tap,
+          child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(title,
+                              style: TextStyle(
+                                  fontSize: 16,
+                                  color: red ? Colors.red : Colors.black87)),
+                          Text(subtitle,
+                              style: TextStyle(
+                                  fontSize: 12, color: Colors.grey.shade500))
+                        ]),
+                    const Icon(Icons.chevron_right)
+                  ])));
+  void message(String text) =>
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+  void changePassword() {
+    final a = TextEditingController(), b = TextEditingController();
+    showDialog(
+        context: context,
+        builder: (d) => AlertDialog(
+                title: const Text('Change Password'),
+                content: Column(mainAxisSize: MainAxisSize.min, children: [
+                  TextField(
+                      controller: a,
+                      obscureText: true,
+                      decoration:
+                          const InputDecoration(labelText: 'New password')),
+                  TextField(
+                      controller: b,
+                      obscureText: true,
+                      decoration:
+                          const InputDecoration(labelText: 'Confirm password'))
+                ]),
+                actions: [
+                  TextButton(
+                      onPressed: () => Navigator.pop(d),
+                      child: const Text('Cancel')),
+                  TextButton(
+                      onPressed: () {
+                        if (a.text != b.text || !store.changePassword(a.text)) {
+                          message(
+                              'Passwords must match and contain at least 12 characters.');
+                          return;
+                        }
+                        Navigator.pop(d);
+                        message('Password updated locally.');
+                      },
+                      child: const Text('Update'))
+                ]));
   }
 
-  Widget _buildActionSetting({required String title, required String subtitle}) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(title, style: const TextStyle(fontSize: 16, color: Colors.black87)),
-            const SizedBox(height: 4),
-            Text(subtitle, style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
-          ],
-        ),
-        Icon(Icons.chevron_right, color: Colors.grey.shade400),
-      ],
-    );
+  void language() {
+    showModalBottomSheet(
+        context: context,
+        builder: (d) => Column(
+            mainAxisSize: MainAxisSize.min,
+            children: ['English', 'සිංහල', 'தமிழ்']
+                .map((l) => ListTile(
+                    title: Text(l),
+                    onTap: () {
+                      setState(() => store.settings.language = l);
+                      Navigator.pop(d);
+                    }))
+                .toList()));
   }
 
-  Widget _buildTextSetting({required String title, required String subtitle, bool isDestructive = false}) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title, 
-          style: TextStyle(fontSize: 16, color: isDestructive ? Colors.red.shade400 : Colors.black87)
-        ),
-        const SizedBox(height: 4),
-        Text(subtitle, style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
-      ],
-    );
+  Future<void> logout() async {
+    await ApiService.instance.logout();
+    if (mounted)
+      Navigator.pushNamedAndRemoveUntil(context, '/login', (_) => false);
   }
+
+  Future<void> deleteAccount() async {
+    final ok = await confirm('Delete account?',
+        'This action removes the local owner profile and signs you out.');
+    if (ok) {
+      store.deleteLocalAccount();
+      await logout();
+    }
+  }
+
+  Future<bool> confirm(String title, String body) async =>
+      await showDialog<bool>(
+          context: context,
+          builder: (d) =>
+              AlertDialog(title: Text(title), content: Text(body), actions: [
+                TextButton(
+                    onPressed: () => Navigator.pop(d, false),
+                    child: const Text('Cancel')),
+                TextButton(
+                    onPressed: () => Navigator.pop(d, true),
+                    child: const Text('Confirm'))
+              ])) ??
+      false;
 }

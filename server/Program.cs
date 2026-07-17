@@ -12,6 +12,7 @@ using WhaleWatching.Api.Auth;
 using WhaleWatching.Api.Data;
 using WhaleWatching.Api.Domain;
 using WhaleWatching.Api.Health;
+using WhaleWatching.Api.Realtime;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -85,6 +86,16 @@ builder.Services.AddAuthentication(options =>
             NameClaimType = ClaimTypes.NameIdentifier,
             RoleClaimType = "role"
         };
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var token = context.Request.Query["access_token"];
+                if (!string.IsNullOrEmpty(token) && context.HttpContext.Request.Path.StartsWithSegments("/hubs/operations"))
+                    context.Token = token;
+                return Task.CompletedTask;
+            }
+        };
     });
 
 builder.Services.AddAuthorizationBuilder()
@@ -125,6 +136,13 @@ builder.Services.AddHealthChecks()
     .AddCheck<DatabaseHealthCheck>("sqlserver", tags: ["ready"]);
 
 builder.Services.AddControllers();
+builder.Services.AddSignalR();
+builder.Services.AddCors(options => options.AddPolicy("clients", policy =>
+{
+    var origins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ??
+        ["http://localhost:5173", "http://127.0.0.1:5173"];
+    policy.WithOrigins(origins).AllowAnyHeader().AllowAnyMethod().AllowCredentials();
+}));
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
@@ -136,9 +154,11 @@ var app = builder.Build();
 await ApplyDatabaseMigrationsAsync(app.Services);
 
 app.UseRateLimiter();
+app.UseCors("clients");
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.MapHub<OperationsHub>("/hubs/operations");
 app.MapHealthChecks("/health/live", new HealthCheckOptions
 {
     Predicate = _ => false

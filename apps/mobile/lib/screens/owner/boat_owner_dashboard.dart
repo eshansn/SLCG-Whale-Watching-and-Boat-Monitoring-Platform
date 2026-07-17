@@ -1,217 +1,39 @@
 import 'package:flutter/material.dart';
-import '../../../widgets/owner_layout.dart'; // Import to access the shared OwnerDrawer
+import '../../owner/owner_store.dart';
+import '../../widgets/owner_layout.dart';
 
-class BoatOwnerDashboard extends StatelessWidget {
-  const BoatOwnerDashboard({super.key});
+class BoatOwnerDashboard extends StatefulWidget { const BoatOwnerDashboard({super.key}); @override State<BoatOwnerDashboard> createState() => _BoatOwnerDashboardState(); }
+class _BoatOwnerDashboardState extends State<BoatOwnerDashboard> {
+  final store = OwnerStore.instance;
+  @override void initState() { super.initState(); store.addListener(_refresh); }
+  @override void dispose() { store.removeListener(_refresh); super.dispose(); }
+  void _refresh() => setState(() {});
 
   @override
   Widget build(BuildContext context) {
-    return Theme(
-      data: ThemeData.light().copyWith(
-        scaffoldBackgroundColor: const Color(0xFFF4F6F9), 
-        primaryColor: const Color(0xFF152238), 
-      ),
-      child: Scaffold(
-        endDrawer: const OwnerDrawer(), // Added the shared drawer here!
-        body: Stack(
-          children: [
-            Positioned(
-              top: 0, left: 0, right: 0, height: 350,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  Image.asset('assets/images/bg_whale.jpg', fit: BoxFit.cover, alignment: Alignment.topCenter),
-                  Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter, end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.white.withValues(alpha: 0.3),
-                          const Color(0xFFF4F6F9).withValues(alpha: 0.8),
-                          const Color(0xFFF4F6F9),
-                        ],
-                        stops: const [0.0, 0.7, 1.0],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            SafeArea(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Icon(Icons.notifications_none, size: 28, color: Color(0xFF152238)),
-                        // Made the Hamburger Menu Interactive
-                        Builder(
-                          builder: (context) => GestureDetector(
-                            onTap: () => Scaffold.of(context).openEndDrawer(),
-                            child: const Icon(Icons.menu, size: 32, color: Color(0xFF152238)),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-                    Row(
-                      children: [
-                        Container(
-                          width: 64, height: 64,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 2),
-                            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 8)],
-                          ),
-                          child: ClipOval(
-                            child: Image.asset(
-                              'assets/images/profile_kamal.jpg', fit: BoxFit.cover,
-                              errorBuilder: (c, e, s) => const Icon(Icons.person, size: 40, color: Colors.grey),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        const Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text("Welcome Back", style: TextStyle(fontSize: 12, color: Colors.black54)),
-                            Text("Kamal Silva", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.black)),
-                          ],
-                        )
-                      ],
-                    ),
-                    const SizedBox(height: 32),
-                    const Text("My Boats", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.black)),
-                    const SizedBox(height: 16),
-                    _buildBoatCard(context, name: "Mirissa King", regNo: "SL-WB-2047", imagePath: 'assets/images/fv_mirissa_king.jpg'),
-                    const SizedBox(height: 16),
-                    _buildBoatCard(context, name: "Sea Princess", regNo: "SL-WB-2038", imagePath: 'assets/images/sea_princess.jpg'),
-                    const SizedBox(height: 24),
-                    _buildOngoingTripsCard(context), // Pass context here
-                    const SizedBox(height: 24),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
+    final active = store.trips.where((trip) => trip.status == OwnerTripStatus.active).toList();
+    final upcoming = store.trips.where((trip) => trip.status == OwnerTripStatus.upcoming).toList();
+    return Scaffold(
+      backgroundColor: const Color(0xFFF4F6F9), endDrawer: const OwnerDrawer(),
+      body: SafeArea(child: SingleChildScrollView(padding: const EdgeInsets.all(24), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+          Stack(children: [IconButton(onPressed: () => Navigator.pushNamed(context, '/owner_notifications'), icon: const Icon(Icons.notifications_none, size: 28)), if (store.unreadCount > 0) Positioned(right: 5, top: 4, child: CircleAvatar(radius: 8, backgroundColor: Colors.red, child: Text('${store.unreadCount}', style: const TextStyle(fontSize: 9, color: Colors.white))))]),
+          Builder(builder: (drawerContext) => IconButton(onPressed: () => Scaffold.of(drawerContext).openEndDrawer(), icon: const Icon(Icons.menu, size: 32))),
+        ]),
+        const SizedBox(height: 20),
+        Row(children: [const CircleAvatar(radius: 32, backgroundImage: AssetImage('assets/images/profile_kamal.jpg')), const SizedBox(width: 16), Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text('Welcome Back', style: TextStyle(fontSize: 12)), Text(store.profile.fullName, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold))])]),
+        const SizedBox(height: 28),
+        Wrap(spacing: 12, runSpacing: 12, children: [_metric('Registered Boats', store.ownedBoats.length, Icons.directions_boat), _metric('Certified', store.ownedBoats.where((boat) => boat.status == CertificationStatus.certified).length, Icons.verified), _metric('Active Trips', active.length, Icons.sailing), _metric('Upcoming Trips', upcoming.length, Icons.schedule), _metric('Pending Approvals', store.ownedBoats.where((boat) => boat.status == CertificationStatus.pending || boat.status == CertificationStatus.underReview).length, Icons.hourglass_top), _metric('Notifications', store.unreadCount, Icons.notifications)]),
+        const SizedBox(height: 28), const Text('My Boats', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)), const SizedBox(height: 12),
+        ...store.ownedBoats.map((boat) => ListTile(tileColor: Colors.white, leading: const Icon(Icons.directions_boat), title: Text(boat.name), subtitle: Text('${boat.registrationNumber} · ${boat.status.name}'), trailing: IconButton(icon: const Icon(Icons.info_outline), onPressed: () => Navigator.pushNamed(context, '/owner_boat_info', arguments: boat.id)))),
+        const SizedBox(height: 24), const Text('Quick Actions', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)), const SizedBox(height: 12),
+        Row(children: [Expanded(child: _action('Register Boat', Icons.add, () => Navigator.pushNamed(context, '/owner_new_boat'))), const SizedBox(width: 12), Expanded(child: _action('Schedule Trip', Icons.calendar_month, () => Navigator.pushNamed(context, '/owner_new_trip'))), const SizedBox(width: 12), Expanded(child: _action('Manage Crew', Icons.people, () => Navigator.pushNamed(context, '/owner_my_crew')))]),
+        const SizedBox(height: 24), const Text('Active & Upcoming Trips', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+        ...[...active, ...upcoming].map((trip) { final boat = store.boat(trip.boatId)!; return ListTile(tileColor: Colors.white, title: Text(boat.name), subtitle: Text('${trip.destination} · ${trip.departure}'), trailing: IconButton(icon: const Icon(Icons.info_outline), onPressed: () => Navigator.pushNamed(context, '/owner_trip_info', arguments: trip.id))); }),
+      ]))),
     );
   }
 
-  Widget _buildBoatCard(BuildContext context, {required String name, required String regNo, required String imagePath}) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white, borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 4))],
-      ),
-      child: Column(
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                flex: 4,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text("Name", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black)),
-                    const SizedBox(height: 4),
-                    Text(name, style: const TextStyle(fontSize: 16, color: Colors.black87)),
-                    const SizedBox(height: 12),
-                    const Text("Reg No", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black)),
-                    const SizedBox(height: 4),
-                    Text(regNo, style: const TextStyle(fontSize: 14, color: Colors.black87)),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Container(width: 8, height: 8, decoration: const BoxDecoration(color: Color(0xFF34D399), shape: BoxShape.circle)),
-                        const SizedBox(width: 6),
-                        const Text("APPROVED", style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF34D399))),
-                      ],
-                    )
-                  ],
-                ),
-              ),
-              Expanded(
-                flex: 5,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: Image.asset(
-                    imagePath, height: 110, fit: BoxFit.cover,
-                    errorBuilder: (c, e, s) => Container(height: 110, color: Colors.blueGrey.shade100, child: const Center(child: Icon(Icons.directions_boat, color: Colors.white))),
-                  ),
-                ),
-              )
-            ],
-          ),
-          const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity, height: 44,
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF152238), foregroundColor: Colors.white),
-              onPressed: () => Navigator.pushNamed(context, '/owner_boat_info'), // Navigates to Boat info
-              child: const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [Text("Info"), SizedBox(width: 8), Icon(Icons.info_outline, size: 16)],
-              ),
-            ),
-          )
-        ],
-      ),
-    );
-  }
-
-  Widget _buildOngoingTripsCard(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white, borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 4))],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text("Ongoing Trips", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black)),
-              Icon(Icons.directions_boat_outlined, color: Colors.grey.shade800),
-            ],
-          ),
-          const SizedBox(height: 24),
-          _buildTripListItem(context, "Mirissa King", "SL-WB-2047"),
-          const SizedBox(height: 16),
-          _buildTripListItem(context, "Sea Princess", "SL-WB-2048"),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTripListItem(BuildContext context, String name, String regNo) {
-    // Wrapped in InkWell to make the row tap-able
-    return InkWell(
-      onTap: () => Navigator.pushNamed(context, '/owner_trip_info'), // Navigates to Trip details
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4.0),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black)),
-                const SizedBox(height: 4),
-                Text(regNo, style: const TextStyle(fontSize: 10, color: Colors.black54)),
-              ],
-            ),
-            Icon(Icons.info_outline, color: Colors.grey.shade800),
-          ],
-        ),
-      ),
-    );
-  }
+  Widget _metric(String title, int value, IconData icon) => SizedBox(width: 155, child: Container(padding: const EdgeInsets.all(16), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Icon(icon, color: const Color(0xFF152238)), const SizedBox(height: 8), Text('$value', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)), Text(title, style: const TextStyle(fontSize: 11))])));
+  Widget _action(String title, IconData icon, VoidCallback onTap) => ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF152238), foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 18)), onPressed: onTap, child: Column(children: [Icon(icon), Text(title, textAlign: TextAlign.center)]));
 }

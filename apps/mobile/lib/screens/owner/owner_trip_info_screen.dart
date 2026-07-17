@@ -1,242 +1,196 @@
+import 'dart:async';
+import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:qr_flutter/qr_flutter.dart';
+import '../../owner/owner_store.dart';
 import '../../widgets/owner_layout.dart';
 
 class OwnerTripInfoScreen extends StatefulWidget {
-  const OwnerTripInfoScreen({Key? key}) : super(key: key);
-
+  const OwnerTripInfoScreen({super.key});
   @override
-  State<OwnerTripInfoScreen> createState() => _OwnerTripInfoScreenState();
+  State<OwnerTripInfoScreen> createState() => _State();
 }
 
-class _OwnerTripInfoScreenState extends State<OwnerTripInfoScreen> {
-  String _sortValue = 'Name';
+class _State extends State<OwnerTripInfoScreen> {
+  final store = OwnerStore.instance, search = TextEditingController();
+  Timer? timer;
+  String? id;
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    id ??= ModalRoute.of(context)?.settings.arguments as String?;
+    timer ??= Timer.periodic(const Duration(seconds: 4), (_) {
+      final t = id == null ? null : store.trip(id!);
+      if (t != null && mounted) {
+        t.latitude += ((Random().nextDouble() - .5) / 1000);
+        t.longitude += ((Random().nextDouble() - .5) / 1000);
+        setState(() {});
+      }
+    });
+    store.addListener(refresh);
+  }
+
+  @override
+  void dispose() {
+    timer?.cancel();
+    store.removeListener(refresh);
+    search.dispose();
+    super.dispose();
+  }
+
+  void refresh() {
+    if (mounted) setState(() {});
+  }
 
   @override
   Widget build(BuildContext context) {
+    final trip = id == null ? null : store.trip(id!);
+    if (trip == null)
+      return const OwnerLayout(child: Center(child: Text('Trip not found.')));
+    final boat = store.boat(trip.boatId)!;
+    final q = search.text.toLowerCase();
+    final passengers = trip.passengers
+        .where((p) =>
+            p.name.toLowerCase().contains(q) ||
+            p.nicOrPassport.toLowerCase().contains(q))
+        .toList();
+    final overall = trip.approved
+        ? 'Approved'
+        : trip.shoreApproval == 'Rejected' ||
+                trip.wildlifeApproval == 'Rejected'
+            ? 'Rejected'
+            : 'Pending Approval';
     return OwnerLayout(
-      // We wrap the entire body in a Container with Colors.white to override any inherited dark themes or gradients
-      child: Container(
-        color: Colors.white,
-        width: double.infinity,
-        height: double.infinity,
+        title: 'Trip Details',
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              
-              // --- 1. Top Section: Boat Info & QR Code ---
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Left Column: Text Data
-                  Expanded(
-                    flex: 1,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text("Boat", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black)),
-                        const SizedBox(height: 4),
-                        const Text("Mirissa King", style: TextStyle(fontSize: 18, color: Colors.black87, fontWeight: FontWeight.w400)),
-                        const SizedBox(height: 20),
-                        
-                        const Text("Time", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black)),
-                        const SizedBox(height: 4),
-                        const Text("06:30 AM", style: TextStyle(fontSize: 18, color: Colors.black87, fontWeight: FontWeight.w400)),
-                        const SizedBox(height: 20),
-                        
-                        const Text("Date", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black)),
-                        const SizedBox(height: 4),
-                        const Text("Tue, 23 June", style: TextStyle(fontSize: 18, color: Colors.black87, fontWeight: FontWeight.w400)),
-                        const SizedBox(height: 12),
-                        
-                        Row(
-                          children: [
-                            Container(
-                              width: 8, 
-                              height: 8, 
-                              decoration: const BoxDecoration(color: Color(0xFF39FF14), shape: BoxShape.circle)
-                            ),
-                            const SizedBox(width: 8),
-                            const Text(
-                              "APPROVED", 
-                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF32CD32), letterSpacing: 1.0)
-                            ),
-                          ],
-                        )
-                      ],
-                    ),
-                  ),
-                  
-                  // Right Column: Huge QR Code
-                  Expanded(
-                    flex: 1,
-                    child: Align(
-                      alignment: Alignment.topRight,
-                      child: Image.asset(
-                        'assets/images/qr_image.png',
-                        fit: BoxFit.contain,
-                        // Ensures the QR code is large and crisp
-                        height: 280, 
-                        errorBuilder: (context, error, stackTrace) => Container(
-                          height: 280,
-                          width: 280,
-                          color: Colors.grey.shade100,
-                          child: const Center(child: Text("qr_image.png missing")),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              
-              const SizedBox(height: 48),
-
-              // --- 2. Passenger Info Section ---
-              const Text("Passenger Info", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.black)),
+            padding: const EdgeInsets.all(24),
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              card(Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(boat.name,
+                        style: const TextStyle(
+                            fontSize: 20, fontWeight: FontWeight.bold)),
+                    info('Registration', boat.registrationNumber),
+                    info('Departure', trip.departure.toString()),
+                    info('Estimated Return', trip.returnTime.toString()),
+                    info('Destination', trip.destination),
+                    info('Current Status', trip.status.name),
+                    info('Passenger Count',
+                        '${trip.passengers.length}/${trip.passengerCapacity}'),
+                    info('Shore Officer', trip.shoreApproval),
+                    info('Wildlife Officer', trip.wildlifeApproval),
+                    info('Overall Approval', overall)
+                  ])),
               const SizedBox(height: 16),
-              
-              // Search and Filter Bar
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      style: const TextStyle(color: Colors.black),
-                      decoration: const InputDecoration(
-                        hintText: "Search",
-                        hintStyle: TextStyle(color: Colors.grey, fontSize: 14),
-                        prefixIcon: Icon(Icons.search, color: Colors.grey, size: 20),
-                        suffixIcon: Icon(Icons.mic_none, color: Colors.grey, size: 20),
-                        border: InputBorder.none,
-                        isDense: true,
-                        contentPadding: EdgeInsets.symmetric(vertical: 12),
-                      ),
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade50,
-                      borderRadius: BorderRadius.circular(8)
-                    ),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<String>(
-                        value: _sortValue,
-                        icon: const Icon(Icons.keyboard_arrow_down, size: 16, color: Colors.black87),
-                        style: const TextStyle(fontSize: 12, color: Colors.black87, fontWeight: FontWeight.w600),
-                        items: ['Name', 'Age', 'Nationality'].map((String value) {
-                          return DropdownMenuItem<String>(
-                            value: value,
-                            child: Text("Sort by : $value"),
-                          );
-                        }).toList(),
-                        onChanged: (newValue) {
-                          setState(() {
-                            _sortValue = newValue!;
-                          });
-                        },
-                      ),
-                    ),
-                  )
-                ],
-              ),
-              
+              card(Column(children: [
+                QrImageView(data: trip.qrToken, size: 180),
+                Text(trip.qrToken),
+                Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                  TextButton(
+                      onPressed: () => showDialog(
+                          context: context,
+                          builder: (d) => AlertDialog(
+                                  title: const Text('Regenerate QR code?'),
+                                  content: const Text(
+                                      'The previous code will no longer identify this trip.'),
+                                  actions: [
+                                    TextButton(
+                                        onPressed: () => Navigator.pop(d),
+                                        child: const Text('Cancel')),
+                                    TextButton(
+                                        onPressed: () {
+                                          store.regenerateQr(trip.id);
+                                          Navigator.pop(d);
+                                        },
+                                        child: const Text('Regenerate'))
+                                  ])),
+                      child: const Text('Regenerate QR')),
+                  TextButton(
+                      onPressed: () {
+                        Clipboard.setData(ClipboardData(text: trip.qrToken));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('QR value copied.')));
+                      },
+                      child: const Text('Download / Copy')),
+                  TextButton(
+                      onPressed: () => Navigator.pushNamed(
+                          context, '/trip-register',
+                          arguments: trip.id),
+                      child: const Text('Open Registration'))
+                ])
+              ])),
               const SizedBox(height: 16),
-              
-              // Passenger Data Table
-              SizedBox(
-                width: double.infinity,
-                child: Theme(
-                  // Override divider theme to match minimal design
-                  data: Theme.of(context).copyWith(
-                    dividerColor: Colors.grey.shade200,
-                  ),
-                  child: DataTable(
-                    headingTextStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black87),
-                    dataTextStyle: const TextStyle(fontSize: 12, color: Colors.black87, fontWeight: FontWeight.w500),
-                    horizontalMargin: 16,
-                    columnSpacing: 40,
-                    dividerThickness: 0.5,
-                    columns: const [
-                      DataColumn(label: Text("Name")),
-                      DataColumn(label: Text("NIC or PassPort")),
-                      DataColumn(label: Text("Age")),
-                      DataColumn(label: Text("Nationality")),
-                    ],
-                    rows: [
-                      _buildPassengerRow("Rathnayake M.", "20032131313", "Adult", "Local"),
-                      _buildPassengerRow("Rathnayake M.", "20032131313", "Adult", "Local"),
-                      _buildPassengerRow("Rathnayake M.", "20032131313", "Adult", "Local"),
-                    ],
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 32),
-
-              // --- 3. No Emergencies Button ---
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF39FF14), // Bright neon green matching design
-                    foregroundColor: Colors.black,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                    padding: const EdgeInsets.symmetric(vertical: 20),
-                    elevation: 0,
-                  ),
-                  onPressed: () {
-                    // Emergency action
-                  },
-                  child: const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text("No Emergencies", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                      SizedBox(width: 12),
-                      Icon(Icons.notifications_none, size: 20, color: Colors.black),
-                    ],
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 24),
-
-              // --- 4. Live Map Image ---
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Image.asset(
-                  'assets/images/map_image.png',
-                  width: double.infinity,
-                  height: 300,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Container(
-                    height: 300,
-                    width: double.infinity,
-                    color: Colors.blue.shade100,
-                    child: const Center(
-                      child: Text("map_image.png missing\n(Check pubspec.yaml)", textAlign: TextAlign.center, style: TextStyle(color: Colors.black54)),
-                    ),
-                  ),
-                ),
-              ),
-              
-              const SizedBox(height: 40), // Bottom padding buffer
-            ],
-          ),
-        ),
-      ),
-    );
+              card(Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Live Map',
+                        style: TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.bold)),
+                    Container(
+                        height: 180,
+                        color: Colors.blueGrey.shade100,
+                        child: Center(
+                            child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                              const Icon(Icons.location_on,
+                                  size: 48, color: Colors.red),
+                              Text(
+                                  '${trip.latitude.toStringAsFixed(6)}, ${trip.longitude.toStringAsFixed(6)}')
+                            ])))
+                  ])),
+              const SizedBox(height: 16),
+              TextField(
+                  controller: search,
+                  onChanged: (_) => setState(() {}),
+                  decoration: const InputDecoration(
+                      prefixIcon: Icon(Icons.search),
+                      hintText: 'Search passengers')),
+              const SizedBox(height: 8),
+              card(Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Registered Passengers',
+                        style: TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.bold)),
+                    if (passengers.isEmpty)
+                      const Padding(
+                          padding: EdgeInsets.all(16),
+                          child: Text('No passengers registered yet.')),
+                    ...passengers.map((p) => ListTile(
+                        title: Text(p.name),
+                        subtitle: Text(
+                            '${p.nicOrPassport} · ${p.nationality}\nRegistered ${p.registeredAt}'),
+                        onTap: () => showDialog(
+                            context: context,
+                            builder: (d) => AlertDialog(
+                                    title: Text(p.name),
+                                    content: Text(
+                                        '${p.nicOrPassport}\n${p.phone}\n${p.nationality}\nEmergency: ${p.emergencyContact}'),
+                                    actions: [
+                                      TextButton(
+                                          onPressed: () => Navigator.pop(d),
+                                          child: const Text('Close'))
+                                    ]))))
+                  ]))
+            ])));
   }
 
-  // Helper function to keep code clean
-  DataRow _buildPassengerRow(String name, String id, String age, String nationality) {
-    return DataRow(
-      cells: [
-        DataCell(Text(name)),
-        DataCell(Text(id)),
-        DataCell(Text(age)),
-        DataCell(Text(nationality)),
-      ],
-    );
-  }
+  Widget card(Widget child) => Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey.shade200)),
+      child: child);
+  Widget info(String l, String v) => Padding(
+      padding: const EdgeInsets.only(top: 10),
+      child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+        Text(l, style: const TextStyle(fontWeight: FontWeight.bold)),
+        Flexible(child: Text(v, textAlign: TextAlign.right))
+      ]));
 }

@@ -44,11 +44,14 @@ import PassengerVerificationPage from './screens/Passenger/PassengerVerification
 import PassengerRegistrationPage from './screens/Passenger/PassengerRegistrationPage';
 import PassengerOnboardingPage from './screens/Passenger/PassengerOnboardingPage';
 import WildlifeNavbar from './screens/Wildlife/WildlifeNavbar';
+import OperationsPortal from './screens/Portal/OperationsPortal';
 
 const OPS_ROLES = ['OPS'] as const;
 const ADMIN_ROLES = ['Admin'] as const;
 const SHORE_ROLES = ['ShoreCrew'] as const;
 const WILDLIFE_ROLES = ['Wildlife'] as const;
+const OWNER_ROLES = ['BoatOwner'] as const;
+const CREW_ROLES = ['BoatCrew'] as const;
 
 function PublicLandingPage() {
   return (
@@ -101,6 +104,9 @@ function WildlifeRoute({ children }: { children: ReactElement }) {
   return <ProtectedRoute allowedRoles={[...WILDLIFE_ROLES]}><div className="wildlife-portal admin-portal min-h-screen bg-[#f8f9fb] font-[Poppins] text-[#14223d]"><WildlifeNavbar />{children}</div></ProtectedRoute>;
 }
 
+function OwnerRoute({children}:{children:ReactElement}) { return <ProtectedRoute allowedRoles={[...OWNER_ROLES]}>{children}</ProtectedRoute>; }
+function CrewRoute({children}:{children:ReactElement}) { return <ProtectedRoute allowedRoles={[...CREW_ROLES]}>{children}</ProtectedRoute>; }
+
 export default function App() {
   return (
     <BrowserRouter>
@@ -149,6 +155,12 @@ export default function App() {
             <Route path="/shore" element={<ShoreRoute><ShoreDashboard /></ShoreRoute>} />
             <Route path="/shore/trips" element={<ShoreRoute><ShoreTrips /></ShoreRoute>} />
             <Route path="/shore/trips/:tripId" element={<ShoreRoute><ShoreTripInfo /></ShoreRoute>} />
+            <Route path="/owner" element={<OwnerRoute><OperationsPortal kind="owner" /></OwnerRoute>} />
+            <Route path="/owner/boats" element={<OwnerRoute><OperationsPortal kind="owner" /></OwnerRoute>} />
+            <Route path="/owner/trips" element={<OwnerRoute><OperationsPortal kind="owner" /></OwnerRoute>} />
+            <Route path="/owner/crew" element={<OwnerRoute><OperationsPortal kind="owner" /></OwnerRoute>} />
+            <Route path="/crew" element={<CrewRoute><OperationsPortal kind="crew" /></CrewRoute>} />
+            <Route path="/crew/trips" element={<CrewRoute><OperationsPortal kind="crew" /></CrewRoute>} />
             <Route path="/wildlife" element={<WildlifeRoute><AdminDashboard /></WildlifeRoute>} />
             <Route path="/wildlife/manage-users" element={<WildlifeRoute><ManageUsers /></WildlifeRoute>} />
             <Route path="/wildlife/select-users" element={<WildlifeRoute><UserCategoriesPage /></WildlifeRoute>} />

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../services/api_service.dart';
 
 class TripsListScreen extends StatefulWidget {
   const TripsListScreen({Key? key}) : super(key: key);
@@ -8,12 +9,7 @@ class TripsListScreen extends StatefulWidget {
 }
 
 class _TripsListScreenState extends State<TripsListScreen> {
-  final List<Map<String, dynamic>> _allTrips = [
-    {"vessel": "FV Mirissa King", "owner": "Username", "reg": "SL-WB-2047", "time": "06.30 AM, Today", "status": "Approved", "color": Colors.green},
-    {"vessel": "FV Ocean Whisper", "owner": "Username", "reg": "SL-WB-2048", "time": "07.15 AM, Today", "status": "Approved", "color": Colors.green},
-    {"vessel": "FV Blue Horizon", "owner": "Username", "reg": "SL-WB-2049", "time": "08.00 AM, Today", "status": "Not Approved", "color": Colors.red},
-    {"vessel": "FV Aqua Marine", "owner": "Username", "reg": "SL-WB-2050", "time": "10.30 AM, Today", "status": "Pending", "color": Colors.black87},
-  ];
+  final List<Map<String, dynamic>> _allTrips = [];
 
   List<Map<String, dynamic>> _displayedTrips = [];
   final TextEditingController _searchController = TextEditingController();
@@ -23,13 +19,18 @@ class _TripsListScreenState extends State<TripsListScreen> {
   void initState() {
     super.initState();
     _displayedTrips = List.from(_allTrips);
+    _loadTrips();
+    ApiService.instance.addListener(_loadTrips);
   }
 
   @override
   void dispose() {
     _searchController.dispose();
+    ApiService.instance.removeListener(_loadTrips);
     super.dispose();
   }
+
+  Future<void> _loadTrips() async {try{final trips=await ApiService.instance.trips();if(!mounted)return;setState((){_allTrips..clear()..addAll(trips.map((t)=>{"id":t['id'],"vessel":t['vesselName'],"owner":t['ownerName'],"reg":t['registrationNumber'],"time":DateTime.parse(t['scheduledDepartureUtc']).toLocal().toString(),"status":t['shoreApproval'],"color":t['shoreApproval']=='Approved'?Colors.green:t['shoreApproval']=='Rejected'?Colors.red:Colors.black87}));_displayedTrips=List.from(_allTrips);});}catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(e.toString())));}}
 
   void _runSearch(String enteredKeyword) {
     List<Map<String, dynamic>> results = [];
@@ -182,7 +183,7 @@ class _TripsListScreenState extends State<TripsListScreen> {
                                             Row(
                                               mainAxisSize: MainAxisSize.min,
                                               children: [
-                                                IconButton(icon: const Icon(Icons.info_outline, color: Color(0xFF152238)), onPressed: () => Navigator.pushNamed(context, '/vessel_details')),
+                                                IconButton(icon: const Icon(Icons.info_outline, color: Color(0xFF152238)), onPressed: () => Navigator.pushNamed(context, '/vessel_details', arguments: trip)),
                                                 IconButton(icon: const Icon(Icons.delete_outline, color: Colors.red), onPressed: () => _deleteTrip(trip["reg"])),
                                               ],
                                             ),

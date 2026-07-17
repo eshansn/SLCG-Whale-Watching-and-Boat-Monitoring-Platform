@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../widgets/shared_widgets.dart';
+import '../../services/api_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -11,19 +12,31 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  bool _isLoggingIn = false;
 
-  void _handleLogin() {
+  Future<void> _handleLogin() async {
     final username = _usernameController.text.trim();
-    final password = _passwordController.text.trim();
+    final password = _passwordController.text;
 
-    if (username == 'admin' && password == 'admin') {
-      Navigator.pushReplacementNamed(context, '/shore_dashboard'); // Redirect to Shore Dashboard
-    } else if (username == 'owner' && password == 'owner') {
-      Navigator.pushReplacementNamed(context, '/boat_owner');
-    } else {
+    if (username.isEmpty || password.isEmpty || _isLoggingIn) return;
+    setState(() => _isLoggingIn = true);
+
+    try {
+      final role=await ApiService.instance.login(username,password);
+      if(!mounted)return;
+      final route=switch(role){'ShoreCrew'=>'/shore_dashboard','BoatOwner'=>'/boat_owner','BoatCrew'=>'/boat_crew',_=>null};
+      if (route == null) {
+        await ApiService.instance.logout();
+        throw Exception('$role accounts use the web portal. Flutter supports Shore Crew, Boat Owner, and Boat Crew accounts.');
+      }
+      Navigator.pushNamedAndRemoveUntil(context,route,(_)=>false);
+    } catch (error) {
+      if(!mounted)return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Invalid credentials."), backgroundColor: Colors.redAccent),
+        SnackBar(content: Text(error.toString().replaceFirst('Exception: ','')), backgroundColor: Colors.redAccent),
       );
+    } finally {
+      if (mounted) setState(() => _isLoggingIn = false);
     }
   }
 
@@ -55,7 +68,7 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           ),
           const SizedBox(height: 16),
-          CyanButton(text: "Log In", onPressed: _handleLogin),
+          CyanButton(text: _isLoggingIn ? "Connecting..." : "Log In", onPressed: () => _handleLogin()),
           const SizedBox(height: 16),
           Center(
             child: GestureDetector(

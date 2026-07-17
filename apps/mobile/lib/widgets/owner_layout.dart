@@ -21,6 +21,8 @@ class OwnerDrawer extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 32),
+              _buildDrawerItem(context, Icons.dashboard_outlined, 'Dashboard', '/boat_owner'),
+              _buildDrawerItem(context, Icons.notifications_outlined, 'Notifications', '/owner_notifications'),
               _buildDrawerItem(context, Icons.person_outline, 'Profile', '/owner_profile'),
               _buildDrawerItem(context, Icons.people_outline, 'My Crew', '/owner_my_crew'),
               _buildDrawerItem(context, Icons.directions_boat_outlined, 'My Boats', '/owner_boats'),
@@ -38,7 +40,9 @@ class OwnerDrawer extends StatelessWidget {
       onTap: () {
         Navigator.pop(context);
         if (route.isNotEmpty) {
-          Navigator.pushNamed(context, route);
+          if (ModalRoute.of(context)?.settings.name != route) {
+            Navigator.pushNamed(context, route);
+          }
         }
       },
       child: Padding(
@@ -71,7 +75,7 @@ class OwnerLayout extends StatelessWidget {
         iconTheme: const IconThemeData(color: Color(0xFF152238)),
         leading: IconButton(
           icon: const Icon(Icons.notifications_none, size: 28),
-          onPressed: () {},
+          onPressed: () => Navigator.pushNamed(context, '/owner_notifications'),
         ),
         title: title != null 
             ? Text(title!, style: const TextStyle(color: Color(0xFF152238), fontWeight: FontWeight.bold, fontSize: 18))

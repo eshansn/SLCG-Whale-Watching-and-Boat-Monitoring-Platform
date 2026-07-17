@@ -1,13 +1,15 @@
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../auth/useAuth";
 import { Icon } from "../../components/ui/icon";
-import { formatTripDate, shoreTrips } from "./shoreData";
+import { formatTripDate } from "../../operations/operationsApi";
+import { useOperations } from "../../operations/useOperations";
 
 const ShoreDashboard = () => {
   const navigate = useNavigate();
   const { session } = useAuth();
+  const { trips: shoreTrips } = useOperations();
   const name = session?.email.split("@")[0] ?? "Shore Officer";
-  const currentTrips = shoreTrips.filter((trip) => trip.approval === "Pending").length;
+  const currentTrips = shoreTrips.filter((trip) => trip.shoreApproval === "Pending").length;
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
@@ -40,7 +42,7 @@ const ShoreDashboard = () => {
               {shoreTrips.slice(0, 3).map((trip) => (
                 <button key={trip.id} type="button" onClick={() => navigate(`/shore/trips/${trip.id}`)} className="flex w-full items-center gap-3 rounded-xl bg-indigo-50/80 p-3 text-left transition hover:bg-indigo-100">
                   <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white text-indigo-700"><Icon name="vessel" size={23} /></span>
-                  <span className="min-w-0 flex-1"><strong className="block truncate text-xs text-[#14223d]">{trip.vesselName}</strong><span className="mt-1 block text-[10px] text-slate-500">{formatTripDate(trip.scheduledDateTime)}</span></span>
+                  <span className="min-w-0 flex-1"><strong className="block truncate text-xs text-[#14223d]">{trip.vesselName}</strong><span className="mt-1 block text-[10px] text-slate-500">{formatTripDate(trip.scheduledDepartureUtc)}</span></span>
                   <span className="rounded-full border border-indigo-300 bg-white px-2 py-1 text-[9px] text-indigo-700">Info</span>
                 </button>
               ))}

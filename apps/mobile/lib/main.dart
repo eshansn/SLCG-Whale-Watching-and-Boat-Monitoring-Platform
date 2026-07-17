@@ -21,8 +21,15 @@ import 'screens/owner/owner_trip_info_screen.dart';
 import 'screens/owner/owner_my_crew_screen.dart';
 import 'screens/owner/owner_settings_screen.dart';
 import 'screens/owner/owner_boat_info_screen.dart';
+import 'screens/owner/owner_notifications_screen.dart';
+import 'screens/crew/boat_crew_dashboard.dart';
+import 'screens/passenger/trip_registration_screen.dart';
+import 'widgets/auth_gate.dart';
+import 'services/api_service.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await ApiService.instance.restore();
   runApp(const WwmsApp());
 }
 
@@ -37,28 +44,36 @@ class WwmsApp extends StatelessWidget {
       theme: ThemeData.dark().copyWith(
         scaffoldBackgroundColor: Colors.black,
       ),
-      initialRoute: '/',
+      initialRoute: switch (ApiService.instance.role) {
+        'ShoreCrew' => '/shore_dashboard',
+        'BoatOwner' => '/boat_owner',
+        'BoatCrew' => '/boat_crew',
+        _ => '/',
+      },
       routes: {
         '/': (context) => const WelcomeScreen(),
         '/login': (context) => const LoginScreen(),
         '/signup_step1': (context) => const SignupStep1(),
         
         // Shore Routes
-        '/shore_dashboard': (context) => const ShoreDashboard(),
-        '/trips_list': (context) => const TripsListScreen(),
-        '/vessel_details': (context) => const VesselDetailsScreen(),
+        '/shore_dashboard': (context) => const AuthGate(roles:['ShoreCrew'],child:ShoreDashboard()),
+        '/trips_list': (context) => const AuthGate(roles:['ShoreCrew'],child:TripsListScreen()),
+        '/vessel_details': (context) => const AuthGate(roles:['ShoreCrew'],child:VesselDetailsScreen()),
         
         // Boat Owner Routes
-        '/boat_owner': (context) => const BoatOwnerDashboard(),
-        '/owner_profile': (context) => const OwnerProfileScreen(),
-        '/owner_boats': (context) => const OwnerBoatsScreen(),
-        '/owner_new_boat': (context) => const OwnerNewBoatScreen(),
-        '/owner_trips': (context) => const OwnerTripsScreen(),
-        '/owner_new_trip': (context) => const OwnerNewTripScreen(),
-        '/owner_trip_info': (context) => const OwnerTripInfoScreen(),
-        '/owner_my_crew': (context) => const OwnerMyCrewScreen(),
-        '/owner_settings': (context) => const OwnerSettingsScreen(),
-        '/owner_boat_info': (context) => const OwnerBoatInfoScreen(),
+        '/boat_owner': (context) => const AuthGate(roles:['BoatOwner'],child:BoatOwnerDashboard()),
+        '/owner_profile': (context) => const AuthGate(roles:['BoatOwner'],child:OwnerProfileScreen()),
+        '/owner_boats': (context) => const AuthGate(roles:['BoatOwner'],child:OwnerBoatsScreen()),
+        '/owner_new_boat': (context) => const AuthGate(roles:['BoatOwner'],child:OwnerNewBoatScreen()),
+        '/owner_trips': (context) => const AuthGate(roles:['BoatOwner'],child:OwnerTripsScreen()),
+        '/owner_new_trip': (context) => const AuthGate(roles:['BoatOwner'],child:OwnerNewTripScreen()),
+        '/owner_trip_info': (context) => const AuthGate(roles:['BoatOwner'],child:OwnerTripInfoScreen()),
+        '/owner_my_crew': (context) => const AuthGate(roles:['BoatOwner'],child:OwnerMyCrewScreen()),
+        '/owner_settings': (context) => const AuthGate(roles:['BoatOwner'],child:OwnerSettingsScreen()),
+        '/owner_boat_info': (context) => const AuthGate(roles:['BoatOwner'],child:OwnerBoatInfoScreen()),
+        '/owner_notifications': (context) => const AuthGate(roles:['BoatOwner'],child:OwnerNotificationsScreen()),
+        '/boat_crew': (context) => const AuthGate(roles:['BoatCrew'],child:BoatCrewDashboard()),
+        '/trip-register': (context) => const TripRegistrationScreen(),
       },
     );
   }

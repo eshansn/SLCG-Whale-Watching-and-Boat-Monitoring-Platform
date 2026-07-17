@@ -42,6 +42,21 @@ const Login = () => {
         return;
       }
 
+      if (session.roles.includes('BoatOwner')) {
+        navigate(requestedPath?.startsWith('/owner') ? requestedPath : '/owner', { replace: true });
+        return;
+      }
+
+      if (session.roles.includes('BoatCrew')) {
+        navigate(requestedPath?.startsWith('/crew') ? requestedPath : '/crew', { replace: true });
+        return;
+      }
+
+      if (session.roles.includes('Passenger')) {
+        navigate('/passenger', { replace: true });
+        return;
+      }
+
       navigate('/access-denied', { replace: true });
     } catch (loginError) {
       setError(loginError instanceof AuthApiError

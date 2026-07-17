@@ -37,14 +37,20 @@ services:
         User Id=sa;Password=${MSSQL_SA_PASSWORD};
         Encrypt=True;TrustServerCertificate=True;
       Jwt__SigningKey: "${JWT_SIGNING_KEY:?Set JWT_SIGNING_KEY in your .env file}"
-      IdentitySeed__AdminEmail: "${INITIAL_ADMIN_EMAIL:-}"
-      IdentitySeed__AdminPassword: "${INITIAL_ADMIN_PASSWORD:-}"
-      IdentitySeed__OpsEmail: "${INITIAL_OPS_EMAIL:-}"
-      IdentitySeed__OpsPassword: "${INITIAL_OPS_PASSWORD:-}"
-      IdentitySeed__WildlifeEmail: "${INITIAL_WILDLIFE_EMAIL:-}"
-      IdentitySeed__WildlifePassword: "${INITIAL_WILDLIFE_PASSWORD:-}"
-      IdentitySeed__ShoreEmail: "${INITIAL_SHORE_EMAIL:-}"
-      IdentitySeed__ShorePassword: "${INITIAL_SHORE_PASSWORD:-}"
+      IdentitySeed__AdminEmail: "${INITIAL_ADMIN_EMAIL:-admin@wwms.test}"
+      IdentitySeed__AdminPassword: "${INITIAL_ADMIN_PASSWORD:-Admin#WWMS2026!Secure}"
+      IdentitySeed__OpsEmail: "${INITIAL_OPS_EMAIL:-ops@wwms.test}"
+      IdentitySeed__OpsPassword: "${INITIAL_OPS_PASSWORD:-Ops#WWMS2026!Secure}"
+      IdentitySeed__WildlifeEmail: "${INITIAL_WILDLIFE_EMAIL:-wildlife@wwms.test}"
+      IdentitySeed__WildlifePassword: "${INITIAL_WILDLIFE_PASSWORD:-Wildlife#WWMS2026!Secure}"
+      IdentitySeed__ShoreEmail: "${INITIAL_SHORE_EMAIL:-shore@wwms.test}"
+      IdentitySeed__ShorePassword: "${INITIAL_SHORE_PASSWORD:-Shore#WWMS2026!Secure}"
+      IdentitySeed__OwnerEmail: "${INITIAL_OWNER_EMAIL:-owner@wwms.test}"
+      IdentitySeed__OwnerPassword: "${INITIAL_OWNER_PASSWORD:-Owner#WWMS2026!Secure}"
+      IdentitySeed__CrewEmail: "${INITIAL_CREW_EMAIL:-crew@wwms.test}"
+      IdentitySeed__CrewPassword: "${INITIAL_CREW_PASSWORD:-Crew#WWMS2026!Secure}"
+      IdentitySeed__PassengerEmail: "${INITIAL_PASSENGER_EMAIL:-passenger@wwms.test}"
+      IdentitySeed__PassengerPassword: "${INITIAL_PASSENGER_PASSWORD:-Passenger#WWMS2026!Secure}"
     ports:
       - "${API_PORT:-8080}:8080"
     volumes:

@@ -166,6 +166,11 @@ namespace WhaleWatching.Api.Migrations
                         .IsConcurrencyToken()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("nvarchar(160)");
+
                     b.Property<string>("Email")
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
@@ -217,6 +222,119 @@ namespace WhaleWatching.Api.Migrations
                         .HasFilter("[NormalizedUserName] IS NOT NULL");
 
                     b.ToTable("AspNetUsers", (string)null);
+                });
+
+            modelBuilder.Entity("WhaleWatching.Api.Domain.Boat", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Approval")
+                        .HasColumnType("int");
+
+                    b.Property<string>("HullNumber")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("ImageUrl")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal>("LengthMeters")
+                        .HasPrecision(8, 2)
+                        .HasColumnType("decimal(8,2)");
+
+                    b.Property<int>("MaximumCapacity")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("nvarchar(160)");
+
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateOnly>("RegistrationDate")
+                        .HasColumnType("date");
+
+                    b.Property<string>("RegistrationNumber")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<decimal>("WidthMeters")
+                        .HasPrecision(8, 2)
+                        .HasColumnType("decimal(8,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OwnerId");
+
+                    b.HasIndex("RegistrationNumber")
+                        .IsUnique();
+
+                    b.ToTable("Boats");
+                });
+
+            modelBuilder.Entity("WhaleWatching.Api.Domain.BoatDocument", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("BoatId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("FileUrl")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("nvarchar(160)");
+
+                    b.Property<DateTimeOffset>("UploadedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BoatId");
+
+                    b.ToTable("BoatDocuments");
+                });
+
+            modelBuilder.Entity("WhaleWatching.Api.Domain.CrewAssignment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("BoatId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("CrewUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Position")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CrewUserId");
+
+                    b.HasIndex("BoatId", "CrewUserId")
+                        .IsUnique();
+
+                    b.ToTable("CrewAssignments");
                 });
 
             modelBuilder.Entity("WhaleWatching.Api.Domain.GpsTelemetry", b =>
@@ -329,6 +447,82 @@ namespace WhaleWatching.Api.Migrations
                     b.ToTable("RefreshTokens", (string)null);
                 });
 
+            modelBuilder.Entity("WhaleWatching.Api.Domain.SosEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<DateTimeOffset>("RaisedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("RaisedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("ResolvedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("TripId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TripId");
+
+                    b.ToTable("SosEvents");
+                });
+
+            modelBuilder.Entity("WhaleWatching.Api.Domain.Trip", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("ActualArrivalUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset?>("ActualDepartureUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("BoatId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("PassengerCount")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Route")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<DateTimeOffset>("ScheduledDepartureUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<int>("ShoreApproval")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ShoreNotes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BoatId");
+
+                    b.ToTable("Trips");
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<System.Guid>", b =>
                 {
                     b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole<System.Guid>", null)
@@ -380,6 +574,47 @@ namespace WhaleWatching.Api.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("WhaleWatching.Api.Domain.Boat", b =>
+                {
+                    b.HasOne("WhaleWatching.Api.Domain.ApplicationUser", "Owner")
+                        .WithMany("OwnedBoats")
+                        .HasForeignKey("OwnerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Owner");
+                });
+
+            modelBuilder.Entity("WhaleWatching.Api.Domain.BoatDocument", b =>
+                {
+                    b.HasOne("WhaleWatching.Api.Domain.Boat", "Boat")
+                        .WithMany("Documents")
+                        .HasForeignKey("BoatId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Boat");
+                });
+
+            modelBuilder.Entity("WhaleWatching.Api.Domain.CrewAssignment", b =>
+                {
+                    b.HasOne("WhaleWatching.Api.Domain.Boat", "Boat")
+                        .WithMany("CrewAssignments")
+                        .HasForeignKey("BoatId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("WhaleWatching.Api.Domain.ApplicationUser", "CrewUser")
+                        .WithMany("CrewAssignments")
+                        .HasForeignKey("CrewUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Boat");
+
+                    b.Navigation("CrewUser");
+                });
+
             modelBuilder.Entity("WhaleWatching.Api.Domain.RefreshToken", b =>
                 {
                     b.HasOne("WhaleWatching.Api.Domain.ApplicationUser", "User")
@@ -391,9 +626,44 @@ namespace WhaleWatching.Api.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("WhaleWatching.Api.Domain.SosEvent", b =>
+                {
+                    b.HasOne("WhaleWatching.Api.Domain.Trip", "Trip")
+                        .WithMany()
+                        .HasForeignKey("TripId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Trip");
+                });
+
+            modelBuilder.Entity("WhaleWatching.Api.Domain.Trip", b =>
+                {
+                    b.HasOne("WhaleWatching.Api.Domain.Boat", "Boat")
+                        .WithMany("Trips")
+                        .HasForeignKey("BoatId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Boat");
+                });
+
             modelBuilder.Entity("WhaleWatching.Api.Domain.ApplicationUser", b =>
                 {
+                    b.Navigation("CrewAssignments");
+
+                    b.Navigation("OwnedBoats");
+
                     b.Navigation("RefreshTokens");
+                });
+
+            modelBuilder.Entity("WhaleWatching.Api.Domain.Boat", b =>
+                {
+                    b.Navigation("CrewAssignments");
+
+                    b.Navigation("Documents");
+
+                    b.Navigation("Trips");
                 });
 #pragma warning restore 612, 618
         }
