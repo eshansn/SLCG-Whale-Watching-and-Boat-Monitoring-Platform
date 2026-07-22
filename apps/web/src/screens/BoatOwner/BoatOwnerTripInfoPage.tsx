@@ -5,6 +5,7 @@ import {
 } from "react";
 import {
   Bell,
+  ArrowRightLeft,
   Copy,
   Download,
   ChevronDown,
@@ -29,6 +30,7 @@ import userIcon from "../../assets/icons/user.svg";
 import vesselIcon from "../../assets/icons/vessel.svg";
 import { useOperations } from "../../operations/useOperations";
 import { operationsApi, type TripPassenger, type VesselMapRecord } from "../../operations/operationsApi";
+import TripTransferModal from "./TripTransferModal";
 
 interface MenuItem {
   label: string;
@@ -90,6 +92,8 @@ function BoatOwnerTripInfoPage() {
   const [mapError, setMapError] = useState("");
   const [passengers, setPassengers] = useState<TripPassenger[]>([]);
   const [passengerError, setPassengerError] = useState("");
+  const [transferOpen,setTransferOpen]=useState(false);
+  const [transferStatus,setTransferStatus]=useState("");
 
   useEffect(() => {
     if (!token || !trip?.id) return;
@@ -323,6 +327,8 @@ function BoatOwnerTripInfoPage() {
           </div>
         </section>
 
+        {(trip.status==="Scheduled"||trip.status==="Boarding")&&<div className="mt-7 flex flex-col items-center gap-3 border-t border-slate-100 pt-7"><button type="button" onClick={()=>{setTransferStatus("");setTransferOpen(true)}} className="flex min-h-11 items-center gap-2 rounded-lg bg-[#162d54] px-6 py-3 text-sm font-semibold text-white hover:bg-[#203d6c]"><ArrowRightLeft size={18}/>Transfer Passengers / Crew</button>{transferStatus&&<p role="status" className="text-center text-sm font-medium text-emerald-700">{transferStatus}</p>}</div>}
+
         {/* Passenger information */}
         <section className="mt-7 sm:mt-10">
           <div className="flex items-center justify-between gap-4">
@@ -555,6 +561,8 @@ function BoatOwnerTripInfoPage() {
       </div>
 
       {/* Side menu */}
+      {transferOpen&&token&&<TripTransferModal token={token} sourceTripId={trip.id} onClose={()=>setTransferOpen(false)} onComplete={(result,destination)=>{setTransferOpen(false);setTransferStatus(`Transfer completed successfully. ${result.passengerCount} passengers and ${result.crewCount} crew members were transferred to ${destination.boatName} – Trip ${destination.id}.`)}}/>}
+
       {isMenuOpen && (
         <>
           <button

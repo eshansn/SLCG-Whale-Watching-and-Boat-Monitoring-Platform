@@ -1,7 +1,11 @@
 # Development mock accounts
 
 These accounts are seeded from `DemoIdentitySeed` whenever the API runs in the Development environment. They are independent of the bootstrap accounts configured through `.env`, so Docker environment overrides do not replace them. Restart the API after pulling these changes so the accounts are inserted.
+API container, which returned 401 before reaching the complaint endpoint.
 
+I rebuilt and restarted the backend. The API is healthy, and migration PassengerComplaints was successfully applied.
+
+Please submit the complaint again; your existing passenger session should remain valid.
 | Portal | Email | Password |
 |---|---|---|
 | Administrator | `admin@wwms.test` | `Admin#WWMS2026!Secure` |

@@ -1,9 +1,10 @@
 export type ApprovalStatus = "Pending" | "Approved" | "Declined";
 
 export interface TripRecord { id: number; date: string; route: string; passengers: number; status: "Completed" | "Scheduled"; }
-export interface OwnerRecord { id: number; name: string; nic: string; email: string; phone: string; address: string; boatIds: number[]; }
-export interface CrewRecord { id: number; name: string; nic: string; email: string; phone: string; address: string; role: "Captain" | "Coxswain" | "Life Saver" | "Deck Hand" | "Diver" | "First Aid Officer"; boatId?: number; approval: ApprovalStatus; declineReason?: string; certifications: string[]; tripIds: number[]; }
-export interface BoatRecord { id: number; name: string; registrationNumber: string; registrationDate: string; hullNumber: string; length: string; width: string; capacity: number; ownerId: number; crewIds: number[]; approval: ApprovalStatus; declineReason?: string; certifications: string[]; tripIds: number[]; }
+export interface OwnerRecord { id: number; apiId?: string; name: string; nic: string; email: string; phone: string; address: string; boatIds: number[]; }
+export interface CrewRecord { id: number; apiId?: string; ownerId?: number; name: string; nic: string; email: string; phone: string; address: string; role: "Captain" | "Coxswain" | "Life Saver" | "Deck Hand" | "Diver" | "First Aid Officer"; boatId?: number; approval: ApprovalStatus; declineReason?: string; certifications: string[]; tripIds: number[]; }
+export interface BoatDocumentRecord { id:string; name:string; fileName:string; contentType:string; uploadedAtUtc:string }
+export interface BoatRecord { id: number; apiId?: string; imageUrl?: string; documents?: BoatDocumentRecord[]; name: string; registrationNumber: string; registrationDate: string; hullNumber: string; length: string; width: string; capacity: number; ownerId: number; crewIds: number[]; approval: ApprovalStatus; declineReason?: string; certifications: string[]; tripIds: number[]; }
 
 export const trips: TripRecord[] = [
   { id: 101, date: "2026-07-14", route: "Mirissa – Dondra Head", passengers: 28, status: "Completed" },

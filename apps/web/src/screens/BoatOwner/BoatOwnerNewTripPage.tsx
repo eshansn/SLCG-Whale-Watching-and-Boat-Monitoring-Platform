@@ -119,8 +119,6 @@ function BoatOwnerNewTripPage() {
       );
       return;
     }
-    if (!selectedCrew.length) { setStatusMessage("Please select at least one crew member."); return; }
-
     if (!token) return;
     const scheduled = new Date(tripDateTime);
     if (Number.isNaN(scheduled.getTime()) || scheduled <= new Date()) {
@@ -128,9 +126,12 @@ function BoatOwnerNewTripPage() {
     }
     try {
       setSubmitting(true); setStatusMessage("Scheduling trip...");
-      await operationsApi.createTrip(token, selectedVessel, scheduled.toISOString(), selectedCrew);
-      setStatusMessage("The trip has been scheduled successfully.");
+      const created = await operationsApi.createTrip(token, selectedVessel, scheduled.toISOString(), selectedCrew);
+      setStatusMessage(created.crewAutoAssigned
+        ? `The trip has been scheduled successfully. ${created.crewUserIds.length} available crew members were assigned automatically.`
+        : `The trip has been scheduled successfully with ${created.crewUserIds.length} selected crew members.`);
       setTripDateTime("");
+      setSelectedCrew([]);
     } catch (error) { setStatusMessage(error instanceof Error ? error.message : "Unable to schedule trip."); }
     finally { setSubmitting(false); }
   };
@@ -263,6 +264,7 @@ function BoatOwnerNewTripPage() {
 
         <fieldset className="mt-5">
           <legend className="mb-2 text-[14px] font-semibold text-[#252525] sm:text-[15px]">Assign Crew</legend>
+          <p className="mb-2 text-xs text-slate-500">Optional: leave every crew member unchecked to automatically assign all certified crew who are available at the selected date and time.</p>
           <div className="overflow-hidden rounded-xl border border-[#e8e8e8]">
             {crew.length ? crew.map((member) => <label key={member.crewUserId} className="grid min-h-[50px] cursor-pointer grid-cols-[minmax(120px,1fr)_minmax(120px,1fr)_40px] items-center border-b border-[#e8e8e8] px-4 last:border-0 hover:bg-gray-50">
               <span className="truncate text-sm">{member.name}</span>

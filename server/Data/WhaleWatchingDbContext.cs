@@ -18,8 +18,14 @@ public sealed class WhaleWatchingDbContext(DbContextOptions<WhaleWatchingDbConte
     public DbSet<PassengerProfile> PassengerProfiles => Set<PassengerProfile>();
     public DbSet<TripPassenger> TripPassengers => Set<TripPassenger>();
     public DbSet<PassengerSession> PassengerSessions => Set<PassengerSession>();
+    public DbSet<TripPassengerAttendance> TripPassengerAttendances => Set<TripPassengerAttendance>();
+    public DbSet<PassengerAttendanceAudit> PassengerAttendanceAudits => Set<PassengerAttendanceAudit>();
+    public DbSet<PassengerComplaint> PassengerComplaints => Set<PassengerComplaint>();
+    public DbSet<ComplaintImage> ComplaintImages => Set<ComplaintImage>();
     public DbSet<Trip> Trips => Set<Trip>();
     public DbSet<SosEvent> SosEvents => Set<SosEvent>();
+    public DbSet<TripTransfer> TripTransfers => Set<TripTransfer>();
+    public DbSet<TripTransferItem> TripTransferItems => Set<TripTransferItem>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -68,18 +74,46 @@ public sealed class WhaleWatchingDbContext(DbContextOptions<WhaleWatchingDbConte
         passenger.Property(x => x.PassengerType).HasMaxLength(16).IsRequired();
         passenger.Property(x => x.Gender).HasMaxLength(16).IsRequired();
         passenger.Property(x => x.AgeCategory).HasMaxLength(16).IsRequired();
+        passenger.Property(x => x.PersonalQrToken).HasMaxLength(64);
         passenger.HasIndex(x => x.NormalizedIdentificationNumber).IsUnique();
+        passenger.HasIndex(x => x.PersonalQrToken).IsUnique().HasFilter("[PersonalQrToken] IS NOT NULL");
 
         var tripPassenger = modelBuilder.Entity<TripPassenger>();
         tripPassenger.HasIndex(x => new { x.TripId, x.PassengerId }).IsUnique();
         tripPassenger.HasOne(x => x.Trip).WithMany(x => x.Passengers).HasForeignKey(x => x.TripId).OnDelete(DeleteBehavior.Cascade);
         tripPassenger.HasOne(x => x.Passenger).WithMany(x => x.Trips).HasForeignKey(x => x.PassengerId).OnDelete(DeleteBehavior.Restrict);
+        tripPassenger.HasOne(x => x.PrimaryPassenger).WithMany().HasForeignKey(x => x.PrimaryPassengerId).OnDelete(DeleteBehavior.Restrict);
+
+        var attendance = modelBuilder.Entity<TripPassengerAttendance>();
+        attendance.HasIndex(x => x.TripPassengerId).IsUnique();
+        attendance.HasOne(x => x.TripPassenger).WithOne(x => x.Attendance)
+            .HasForeignKey<TripPassengerAttendance>(x => x.TripPassengerId).OnDelete(DeleteBehavior.Cascade);
+        attendance.HasOne(x => x.CheckedByUser).WithMany().HasForeignKey(x => x.CheckedByUserId).OnDelete(DeleteBehavior.Restrict);
+
+        var attendanceAudit = modelBuilder.Entity<PassengerAttendanceAudit>();
+        attendanceAudit.HasIndex(x => x.ChangedAtUtc);
+        attendanceAudit.HasOne(x => x.Attendance).WithMany(x => x.AuditEntries)
+            .HasForeignKey(x => x.AttendanceId).OnDelete(DeleteBehavior.Cascade);
+        attendanceAudit.HasOne(x => x.ChangedByUser).WithMany().HasForeignKey(x => x.ChangedByUserId).OnDelete(DeleteBehavior.Restrict);
 
         var passengerSession = modelBuilder.Entity<PassengerSession>();
         passengerSession.Property(x => x.TokenHash).HasMaxLength(64).IsFixedLength().IsRequired();
         passengerSession.HasIndex(x => x.TokenHash).IsUnique();
         passengerSession.HasOne(x => x.Passenger).WithMany(x => x.Sessions).HasForeignKey(x => x.PassengerId).OnDelete(DeleteBehavior.Cascade);
         passengerSession.HasOne(x => x.Trip).WithMany().HasForeignKey(x => x.TripId).OnDelete(DeleteBehavior.Restrict);
+
+        var complaint = modelBuilder.Entity<PassengerComplaint>();
+        complaint.Property(x => x.Type).HasMaxLength(64).IsRequired();
+        complaint.Property(x => x.Message).HasMaxLength(2000).IsRequired();
+        complaint.HasIndex(x => x.CreatedAtUtc);
+        complaint.HasOne(x => x.Passenger).WithMany(x => x.Complaints).HasForeignKey(x => x.PassengerId).OnDelete(DeleteBehavior.Restrict);
+        complaint.HasOne(x => x.Trip).WithMany().HasForeignKey(x => x.TripId).OnDelete(DeleteBehavior.Restrict);
+
+        var complaintImage = modelBuilder.Entity<ComplaintImage>();
+        complaintImage.Property(x => x.FileName).HasMaxLength(255).IsRequired();
+        complaintImage.Property(x => x.ContentType).HasMaxLength(128).IsRequired();
+        complaintImage.Property(x => x.Content).IsRequired();
+        complaintImage.HasOne(x => x.Complaint).WithMany(x => x.Images).HasForeignKey(x => x.ComplaintId).OnDelete(DeleteBehavior.Cascade);
 
         modelBuilder.Entity<BoatDocument>().Property(x => x.Name).HasMaxLength(160).IsRequired();
         modelBuilder.Entity<BoatDocument>().Property(x => x.FileUrl).HasMaxLength(1000);
@@ -89,7 +123,23 @@ public sealed class WhaleWatchingDbContext(DbContextOptions<WhaleWatchingDbConte
         modelBuilder.Entity<Trip>().Property(x => x.ShoreNotes).HasMaxLength(1000);
         modelBuilder.Entity<Trip>().Property(x => x.InvitationCode).HasMaxLength(64);
         modelBuilder.Entity<Trip>().HasIndex(x => x.InvitationCode).IsUnique().HasFilter("[InvitationCode] IS NOT NULL");
+        modelBuilder.Entity<Trip>().HasOne(x => x.PassengerVerificationFinalizedByUser).WithMany()
+            .HasForeignKey(x => x.PassengerVerificationFinalizedByUserId).OnDelete(DeleteBehavior.Restrict);
         modelBuilder.Entity<SosEvent>().Property(x => x.Message).HasMaxLength(1000).IsRequired();
+
+        var transfer = modelBuilder.Entity<TripTransfer>();
+        transfer.Property(x => x.Reason).HasMaxLength(100).IsRequired();
+        transfer.Property(x => x.Explanation).HasMaxLength(1000);
+        transfer.Property(x => x.Status).HasMaxLength(32).IsRequired();
+        transfer.HasIndex(x => new { x.InitiatedByUserId, x.ClientRequestId }).IsUnique();
+        transfer.HasOne(x => x.SourceTrip).WithMany().HasForeignKey(x => x.SourceTripId).OnDelete(DeleteBehavior.Restrict);
+        transfer.HasOne(x => x.DestinationTrip).WithMany().HasForeignKey(x => x.DestinationTripId).OnDelete(DeleteBehavior.Restrict);
+        transfer.HasOne(x => x.InitiatedByUser).WithMany().HasForeignKey(x => x.InitiatedByUserId).OnDelete(DeleteBehavior.Restrict);
+
+        var transferItem = modelBuilder.Entity<TripTransferItem>();
+        transferItem.Property(x => x.PersonType).HasMaxLength(16).IsRequired();
+        transferItem.Property(x => x.PersonName).HasMaxLength(160).IsRequired();
+        transferItem.HasOne(x => x.Transfer).WithMany(x => x.Items).HasForeignKey(x => x.TransferId).OnDelete(DeleteBehavior.Cascade);
 
         var telemetry = modelBuilder.Entity<GpsTelemetry>();
 
