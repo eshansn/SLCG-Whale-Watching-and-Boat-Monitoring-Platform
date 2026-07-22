@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using WhaleWatching.Api.Data;
 
@@ -11,9 +12,11 @@ using WhaleWatching.Api.Data;
 namespace WhaleWatching.Api.Migrations
 {
     [DbContext(typeof(WhaleWatchingDbContext))]
-    partial class WhaleWatchingDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260722032232_TripTransfers")]
+    partial class TripTransfers
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -498,38 +501,6 @@ namespace WhaleWatching.Api.Migrations
                     b.ToTable("OwnerCrewMemberships");
                 });
 
-            modelBuilder.Entity("WhaleWatching.Api.Domain.PassengerAttendanceAudit", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid>("AttendanceId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTimeOffset>("ChangedAtUtc")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<Guid>("ChangedByUserId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<int>("NewStatus")
-                        .HasColumnType("int");
-
-                    b.Property<int>("PreviousStatus")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("AttendanceId");
-
-                    b.HasIndex("ChangedAtUtc");
-
-                    b.HasIndex("ChangedByUserId");
-
-                    b.ToTable("PassengerAttendanceAudits");
-                });
-
             modelBuilder.Entity("WhaleWatching.Api.Domain.PassengerComplaint", b =>
                 {
                     b.Property<Guid>("Id")
@@ -610,10 +581,6 @@ namespace WhaleWatching.Api.Migrations
                         .HasMaxLength(16)
                         .HasColumnType("nvarchar(16)");
 
-                    b.Property<string>("PersonalQrToken")
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
                     b.Property<string>("PhoneNumber")
                         .IsRequired()
                         .HasMaxLength(32)
@@ -623,10 +590,6 @@ namespace WhaleWatching.Api.Migrations
 
                     b.HasIndex("NormalizedIdentificationNumber")
                         .IsUnique();
-
-                    b.HasIndex("PersonalQrToken")
-                        .IsUnique()
-                        .HasFilter("[PersonalQrToken] IS NOT NULL");
 
                     b.ToTable("PassengerProfiles");
                 });
@@ -786,12 +749,6 @@ namespace WhaleWatching.Api.Migrations
                     b.Property<int>("PassengerCount")
                         .HasColumnType("int");
 
-                    b.Property<DateTimeOffset?>("PassengerVerificationFinalizedAtUtc")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<Guid?>("PassengerVerificationFinalizedByUserId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<string>("Route")
                         .IsRequired()
                         .HasMaxLength(300)
@@ -823,8 +780,6 @@ namespace WhaleWatching.Api.Migrations
                     b.HasIndex("InvitationCode")
                         .IsUnique()
                         .HasFilter("[InvitationCode] IS NOT NULL");
-
-                    b.HasIndex("PassengerVerificationFinalizedByUserId");
 
                     b.ToTable("Trips");
                 });
@@ -860,9 +815,6 @@ namespace WhaleWatching.Api.Migrations
                     b.Property<Guid>("PassengerId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<Guid>("PrimaryPassengerId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<DateTimeOffset>("RegisteredAtUtc")
                         .HasColumnType("datetimeoffset");
 
@@ -873,43 +825,10 @@ namespace WhaleWatching.Api.Migrations
 
                     b.HasIndex("PassengerId");
 
-                    b.HasIndex("PrimaryPassengerId");
-
                     b.HasIndex("TripId", "PassengerId")
                         .IsUnique();
 
                     b.ToTable("TripPassengers");
-                });
-
-            modelBuilder.Entity("WhaleWatching.Api.Domain.TripPassengerAttendance", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTimeOffset?>("CheckedAtUtc")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<Guid?>("CheckedByUserId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("int");
-
-                    b.Property<Guid>("TripPassengerId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTimeOffset>("UpdatedAtUtc")
-                        .HasColumnType("datetimeoffset");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CheckedByUserId");
-
-                    b.HasIndex("TripPassengerId")
-                        .IsUnique();
-
-                    b.ToTable("TripPassengerAttendances");
                 });
 
             modelBuilder.Entity("WhaleWatching.Api.Domain.TripTransfer", b =>
@@ -1110,25 +1029,6 @@ namespace WhaleWatching.Api.Migrations
                     b.Navigation("Owner");
                 });
 
-            modelBuilder.Entity("WhaleWatching.Api.Domain.PassengerAttendanceAudit", b =>
-                {
-                    b.HasOne("WhaleWatching.Api.Domain.TripPassengerAttendance", "Attendance")
-                        .WithMany("AuditEntries")
-                        .HasForeignKey("AttendanceId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("WhaleWatching.Api.Domain.ApplicationUser", "ChangedByUser")
-                        .WithMany()
-                        .HasForeignKey("ChangedByUserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Attendance");
-
-                    b.Navigation("ChangedByUser");
-                });
-
             modelBuilder.Entity("WhaleWatching.Api.Domain.PassengerComplaint", b =>
                 {
                     b.HasOne("WhaleWatching.Api.Domain.PassengerProfile", "Passenger")
@@ -1197,14 +1097,7 @@ namespace WhaleWatching.Api.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("WhaleWatching.Api.Domain.ApplicationUser", "PassengerVerificationFinalizedByUser")
-                        .WithMany()
-                        .HasForeignKey("PassengerVerificationFinalizedByUserId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
                     b.Navigation("Boat");
-
-                    b.Navigation("PassengerVerificationFinalizedByUser");
                 });
 
             modelBuilder.Entity("WhaleWatching.Api.Domain.TripCrewAssignment", b =>
@@ -1234,12 +1127,6 @@ namespace WhaleWatching.Api.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("WhaleWatching.Api.Domain.PassengerProfile", "PrimaryPassenger")
-                        .WithMany()
-                        .HasForeignKey("PrimaryPassengerId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
                     b.HasOne("WhaleWatching.Api.Domain.Trip", "Trip")
                         .WithMany("Passengers")
                         .HasForeignKey("TripId")
@@ -1248,27 +1135,7 @@ namespace WhaleWatching.Api.Migrations
 
                     b.Navigation("Passenger");
 
-                    b.Navigation("PrimaryPassenger");
-
                     b.Navigation("Trip");
-                });
-
-            modelBuilder.Entity("WhaleWatching.Api.Domain.TripPassengerAttendance", b =>
-                {
-                    b.HasOne("WhaleWatching.Api.Domain.ApplicationUser", "CheckedByUser")
-                        .WithMany()
-                        .HasForeignKey("CheckedByUserId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.HasOne("WhaleWatching.Api.Domain.TripPassenger", "TripPassenger")
-                        .WithOne("Attendance")
-                        .HasForeignKey("WhaleWatching.Api.Domain.TripPassengerAttendance", "TripPassengerId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("CheckedByUser");
-
-                    b.Navigation("TripPassenger");
                 });
 
             modelBuilder.Entity("WhaleWatching.Api.Domain.TripTransfer", b =>
@@ -1350,16 +1217,6 @@ namespace WhaleWatching.Api.Migrations
                     b.Navigation("CrewAssignments");
 
                     b.Navigation("Passengers");
-                });
-
-            modelBuilder.Entity("WhaleWatching.Api.Domain.TripPassenger", b =>
-                {
-                    b.Navigation("Attendance");
-                });
-
-            modelBuilder.Entity("WhaleWatching.Api.Domain.TripPassengerAttendance", b =>
-                {
-                    b.Navigation("AuditEntries");
                 });
 
             modelBuilder.Entity("WhaleWatching.Api.Domain.TripTransfer", b =>

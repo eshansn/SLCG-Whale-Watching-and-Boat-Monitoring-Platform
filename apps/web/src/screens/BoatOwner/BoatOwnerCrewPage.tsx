@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { ArrowLeft, Info, Trash2, UserPlus, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { operationsApi, type CrewSuggestion, type OwnerCrew } from "../../operations/operationsApi";
+import { connectOperations, operationsApi, type CrewSuggestion, type OwnerCrew } from "../../operations/operationsApi";
 import { useAuth } from "../../auth/useAuth";
 
 export default function BoatOwnerCrewPage() {
@@ -21,7 +21,7 @@ export default function BoatOwnerCrewPage() {
     catch (error) { setStatus(error instanceof Error ? error.message : "Unable to load crew."); }
   }, [token]);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => { void load(); if(!token)return; return connectOperations(token,()=>void load()); }, [load,token]);
   useEffect(() => {
     if (!token || email.trim().length < 2) { setSuggestions([]); return; }
     const timer = window.setTimeout(() => operationsApi.searchOwnerCrew(token, email)

@@ -5,6 +5,7 @@ import {
   type FormEvent,
 } from "react";
 import { ArrowRight, Camera, UserPlus, X } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 import { useNavigate } from "react-router-dom";
 import {
   addPassenger,
@@ -12,7 +13,8 @@ import {
 } from "./store/passengerStorage";
 import type { PassengerData } from "./store/passenger";
 import PassengerSOSButton from "./components/PassengerSOSButton";
-import { registerTripPassenger } from "./passengerTripApi";
+import { getActivePassengerTrip, getPassengerPersonalQr, registerTravelCompanion, type PassengerPersonalQr, type PassengerTripPreview } from "./passengerTripApi";
+import { submitComplaint } from "./complaintsApi";
 
 const whaleBackground = "/Hero.png";
 const slcgLogo = "/SLCGicon.png";
@@ -74,6 +76,8 @@ function PassengerInformation({
 
 function PassengerOnboardingPage() {
   const navigate = useNavigate();
+  const [trip,setTrip]=useState<PassengerTripPreview|null>(null);
+  const [personalQr,setPersonalQr]=useState<PassengerPersonalQr|null>(null);
 
   const [passengers, setPassengers] = useState<PassengerData[]>(
     () => getPassengers(),
@@ -87,6 +91,7 @@ function PassengerOnboardingPage() {
     null,
   );
   const [formStatus, setFormStatus] = useState("");
+  const [submittingComplaint, setSubmittingComplaint] = useState(false);
 
   const [showFamilyModal, setShowFamilyModal] =
     useState(false);
@@ -102,6 +107,18 @@ function PassengerOnboardingPage() {
       navigate("/passenger/register", { replace: true });
     }
   }, [navigate, passengers.length]);
+
+  useEffect(()=>{
+    let active=true;
+    void getActivePassengerTrip().then(preview=>{if(active){setTrip(preview);sessionStorage.setItem("wwms.passenger.tripInvitation",preview.invitationCode)}}).catch(()=>{if(active)navigate("/passenger",{replace:true})});
+    return()=>{active=false};
+  },[navigate]);
+
+  useEffect(()=>{
+    let active=true;
+    void getPassengerPersonalQr().then(value=>{if(active)setPersonalQr(value)}).catch(()=>undefined);
+    return()=>{active=false};
+  },[]);
 
   useEffect(() => {
     if (!showFamilyModal) {
@@ -187,16 +204,10 @@ function PassengerOnboardingPage() {
       ageCategory: familyForm.ageCategory,
     };
 
-    const invitationCode = sessionStorage.getItem("wwms.passenger.tripInvitation");
-    if (!invitationCode) {
-      setFamilyError("Trip information is missing. Please scan the trip QR code again.");
-      return;
-    }
-
     try {
       setSavingFamily(true);
       setFamilyError("");
-      await registerTripPassenger(invitationCode, companion);
+      await registerTravelCompanion(companion);
       const updatedPassengers = addPassenger(companion);
 
       setPassengers(updatedPassengers);
@@ -216,9 +227,9 @@ function PassengerOnboardingPage() {
     setEvidenceFile(selectedFile);
   };
 
-  const handleComplaintSubmit = (
+  const handleComplaintSubmit = async (
     event: FormEvent<HTMLFormElement>,
-  ): void => {
+  ): Promise<void> => {
     event.preventDefault();
 
     if (!complaintType || !message.trim()) {
@@ -228,19 +239,19 @@ function PassengerOnboardingPage() {
       return;
     }
 
-    setFormStatus(
-      "Your report has been recorded successfully.",
-    );
-
-    /*
-      Send the message and evidenceFile to the backend here.
-    */
-
-    console.log({
-      complaintType,
-      message,
-      evidenceFile,
-    });
+    try {
+      setSubmittingComplaint(true);
+      setFormStatus("");
+      await submitComplaint(complaintType, message.trim(), evidenceFile);
+      setFormStatus("Your report has been recorded successfully.");
+      setComplaintType("");
+      setMessage("");
+      setEvidenceFile(null);
+    } catch (error) {
+      setFormStatus(error instanceof Error ? error.message : "Unable to submit your complaint.");
+    } finally {
+      setSubmittingComplaint(false);
+    }
   };
 
   if (!primaryPassenger) {
@@ -284,17 +295,17 @@ function PassengerOnboardingPage() {
             <div>
               <h1 className="m-0 font-montserrat text-[16px] leading-[150%] font-bold text-white min-[1200px]:text-[clamp(22px,1.4vw,30px)]">Trip Details</h1>
 
-              <h2 className="mt-2 mb-0 font-montserrat text-[18px] leading-[130%] font-bold text-white min-[1200px]:text-[clamp(26px,1.7vw,36px)]">FV Mirissa King</h2>
+              <h2 className="mt-2 mb-0 font-montserrat text-[18px] leading-[130%] font-bold text-white min-[1200px]:text-[clamp(26px,1.7vw,36px)]">{trip?.boatName??"Loading trip..."}</h2>
 
               <p className="mt-px mb-0 font-poppins text-[7px] text-[#d0d0d0] min-[1200px]:text-[clamp(10px,.65vw,13px)]">
-                SLWB-2047
+                {trip?.registrationNumber??""}
               </p>
 
               <div className="mt-0.5 flex gap-3 font-poppins text-[8px] leading-[150%] min-[1200px]:text-[clamp(11px,.75vw,15px)]">
-                <strong>Scheduled</strong>
+                <strong>{trip?.status??"Scheduled"}</strong>
 
                 <span className="text-[#d0d0d0]">
-                  06:32:11 Hrs, Tue. 26th July 2026
+                  {trip?new Intl.DateTimeFormat("en-LK",{dateStyle:"full",timeStyle:"medium"}).format(new Date(trip.scheduledDepartureUtc)):""}
                 </span>
               </div>
             </div>
@@ -306,6 +317,13 @@ function PassengerOnboardingPage() {
             <PassengerInformation
               passenger={primaryPassenger}
             />
+          </section>
+
+          <section className="mt-[17px] rounded-xl border border-white/20 bg-white/[.06] p-4 text-center min-[1200px]:p-6">
+            <h2 className="m-0 font-montserrat text-[16px] font-bold text-white min-[1200px]:text-[clamp(22px,1.4vw,30px)]">Your Boarding QR</h2>
+            <p className="mt-2 font-poppins text-[8px] text-[#d0d0d0] min-[1200px]:text-sm">Show this personal QR code to the Shore Officer when boarding.</p>
+            {personalQr ? <div className="mx-auto mt-4 w-fit rounded-xl bg-white p-3"><QRCodeSVG value={personalQr.qrValue} size={180} level="H" marginSize={2} title={`Personal boarding QR for ${personalQr.passengerName}`} /></div> : <p className="mt-5 text-xs text-[#d0d0d0]">Loading your personal QR code...</p>}
+            {personalQr && <><p className="mt-3 text-sm font-semibold text-white">{personalQr.passengerName}</p><p className="mt-1 break-all text-[8px] text-[#bcbcbc]">Passenger reference: {personalQr.passengerId}</p><p className="mt-1 text-[8px] font-semibold text-[#5cefdc]">Registration active</p></>}
           </section>
 
           <section className="mt-[17px]">
@@ -442,7 +460,7 @@ function PassengerOnboardingPage() {
                   Your passenger identity and QR-linked boat details are attached automatically. Add an image when it helps explain the complaint.
                 </p>
 
-                <button className="min-h-[31px] rounded-[4px] border-0 bg-white font-poppins text-[10px] font-semibold text-[#111] max-[374px]:w-[110px] max-[374px]:justify-self-end min-[1200px]:text-[clamp(13px,.9vw,18px)]" type="submit">Submit</button>
+                <button className="min-h-[31px] rounded-[4px] border-0 bg-white font-poppins text-[10px] font-semibold text-[#111] max-[374px]:w-[110px] max-[374px]:justify-self-end min-[1200px]:text-[clamp(13px,.9vw,18px)]" type="submit" disabled={submittingComplaint}>Submit</button>
               </div>
 
               {formStatus && (
@@ -464,7 +482,7 @@ function PassengerOnboardingPage() {
         </div>
       </section>
 
-      <PassengerSOSButton boatName="FV Mirissa King" passengerName={primaryPassenger.name} />
+      <PassengerSOSButton boatName={trip?.boatName??"this vessel"} passengerName={primaryPassenger.name} />
 
       {showFamilyModal && (
         <div

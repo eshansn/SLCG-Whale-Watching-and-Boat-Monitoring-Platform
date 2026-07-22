@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { formatTripDate, operationsApi, type TripPassenger } from "../../operations/operationsApi";
+import { formatTripDate, operationsApi } from "../../operations/operationsApi";
 import { useOperations } from "../../operations/useOperations";
+import PassengerAttendancePanel from "./PassengerAttendancePanel";
 
 const ShoreTripInfo = () => {
   const { tripId } = useParams();
@@ -11,19 +12,6 @@ const ShoreTripInfo = () => {
   const boat = boats.find((item) => item.id === trip?.boatId);
   const [approval, setApproval] = useState<string>();
   const [result, setResult] = useState<"approved" | "declined" | null>(null);
-  const [passengers, setPassengers] = useState<TripPassenger[]>([]);
-  const [manifestError, setManifestError] = useState("");
-
-  useEffect(() => {
-    if (!token || !tripId) return;
-    let active = true;
-    const load = async () => {
-      try { const records = await operationsApi.tripPassengers(token, tripId); if (active) { setPassengers(records); setManifestError(""); } }
-      catch (loadError) { if (active) setManifestError(loadError instanceof Error ? loadError.message : "Unable to load trip manifest."); }
-    };
-    void load(); const timer = window.setInterval(() => void load(), 5000);
-    return () => { active = false; window.clearInterval(timer); };
-  }, [token, tripId]);
 
   const decide = async (decision: "approved" | "declined") => {
     if (!trip || !token) return;
@@ -47,7 +35,7 @@ const ShoreTripInfo = () => {
         </aside>
 
         <div className="grid gap-5">
-          <DataCard title={`Passengers (${passengers.length})`} columns={["Name", "NIC or Passport", "Age", "Passenger type"]} rows={passengers.map((passenger) => [passenger.name, passenger.identificationNumber, passenger.ageCategory, passenger.passengerType])} emptyText={manifestError || "No passengers registered for this trip."} />
+          {token&&tripId&&<PassengerAttendancePanel token={token} tripId={tripId}/>}
           <div className="grid gap-5 lg:grid-cols-[1fr_250px]">
             <DataCard title={`Crew (${trip.crew.length})`} columns={["Name", "NIC", "Role", "Certified"]} rows={trip.crew.map((member) => [member.name, member.nicNumber || "Not provided", member.position, member.certified ? "Yes" : "No"])} emptyText="No crew assigned to this trip." />
             <section className="rounded-xl bg-white p-6 shadow-sm"><h2 className="text-xl font-semibold text-[#14223d]">Approval</h2><p className="mt-3 text-xs leading-5 text-slate-500">Inspection completed. The information entered in the system has been verified against the actual vessel and all safety requirements, including passenger capacity and life jacket availability.</p>

@@ -77,6 +77,9 @@ public sealed class Trip
     public string? ShoreNotes { get; set; }
     public DateTimeOffset UpdatedAtUtc { get; set; }
     public string? InvitationCode { get; set; }
+    public DateTimeOffset? PassengerVerificationFinalizedAtUtc { get; set; }
+    public Guid? PassengerVerificationFinalizedByUserId { get; set; }
+    public ApplicationUser? PassengerVerificationFinalizedByUser { get; set; }
     public ICollection<TripCrewAssignment> CrewAssignments { get; set; } = [];
     public ICollection<TripPassenger> Passengers { get; set; } = [];
 }

@@ -1,6 +1,8 @@
 import { ChangeEvent, useEffect, useMemo, useState } from "react";
 import { Icon } from "../../components/ui/icon";
 import Navbar from "./components/Navbar";
+import { useAuth } from "../../auth/useAuth";
+import { connectOperations, operationsApi } from "../../operations/operationsApi";
 
 type SortOption =
   | "vessel-asc"
@@ -11,12 +13,13 @@ type SortOption =
   | "passengers-desc";
 
 interface EmergencyAlert {
-  id: number;
+  id: string;
   vesselName: string;
   registrationNumber: string;
   location: string;
   passengersOnboard: number;
   natureOfEmergency: string;
+  raisedAtUtc: string;
 }
 
 interface SpeechRecognitionAlternative {
@@ -52,57 +55,23 @@ declare global {
   }
 }
 
-const initialAlerts: EmergencyAlert[] = [
-  {
-    id: 1,
-    vesselName: "MV Explorer",
-    registrationNumber: "SL-WB-204",
-    location: "5.949186, 80.438509",
-    passengersOnboard: 28,
-    natureOfEmergency: "Engine failure",
-  },
-  {
-    id: 2,
-    vesselName: "FV Aurora",
-    registrationNumber: "SL-WB-302",
-    location: "5.951230, 80.441200",
-    passengersOnboard: 16,
-    natureOfEmergency: "Medical emergency",
-  },
-  {
-    id: 3,
-    vesselName: "WW Sea Breeze",
-    registrationNumber: "SL-WB-118",
-    location: "5.947500, 80.437100",
-    passengersOnboard: 22,
-    natureOfEmergency: "Fire alarm",
-  },
-  {
-    id: 4,
-    vesselName: "MV Blue Horizon",
-    registrationNumber: "SL-WB-409",
-    location: "5.948800, 80.439600",
-    passengersOnboard: 34,
-    natureOfEmergency: "Navigation failure",
-  },
-  {
-    id: 5,
-    vesselName: "FV Ocean Star",
-    registrationNumber: "SL-WB-511",
-    location: "5.952100, 80.442800",
-    passengersOnboard: 19,
-    natureOfEmergency: "Severe weather",
-  },
-];
-
 const ITEMS_PER_PAGE = 4;
 
 export default function OPSSOS() {
-  const [alerts] = useState<EmergencyAlert[]>(initialAlerts);
+  const {session}=useAuth();
+  const [alerts,setAlerts] = useState<EmergencyAlert[]>([]);
   const [searchValue, setSearchValue] = useState("");
   const [sortOption, setSortOption] = useState<SortOption>("vessel-asc");
   const [currentPage, setCurrentPage] = useState(1);
   const [isListening, setIsListening] = useState(false);
+
+  useEffect(()=>{
+    if(!session)return;
+    let active=true;
+    const load=()=>void operationsApi.sosAlerts(session.accessToken).then(items=>{if(active)setAlerts(items)}).catch(()=>undefined);
+    load(); const interval=window.setInterval(load,5000); const disconnect=connectOperations(session.accessToken,load);
+    return()=>{active=false;window.clearInterval(interval);disconnect()};
+  },[session]);
 
   const filteredAndSortedAlerts = useMemo(() => {
     const searchTerm = searchValue.trim().toLowerCase();

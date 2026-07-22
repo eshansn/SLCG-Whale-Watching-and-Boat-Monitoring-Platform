@@ -8,6 +8,8 @@ import {
   X,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../auth/useAuth";
+import { connectOperations, operationsApi } from "../../operations/operationsApi";
 
 import groupIcon from "../../assets/icons/group.svg";
 import infoIcon from "../../assets/icons/info.svg";
@@ -20,6 +22,8 @@ interface Boat {
   name: string;
   registrationNumber: string;
   image: string;
+  approval: string;
+  wildlifeApproval: string;
 }
 
 interface MenuItem {
@@ -28,21 +32,6 @@ interface MenuItem {
   icon?: string;
   type?: "settings";
 }
-
-const boats: Boat[] = [
-  {
-    id: "boat-001",
-    name: "Mirissa King",
-    registrationNumber: "SL-WB-2047",
-    image: "/OwnerBoat1.png",
-  },
-  {
-    id: "boat-002",
-    name: "Sea Princess",
-    registrationNumber: "SL-WB-2038",
-    image: "/OwnerBoat2.png",
-  },
-];
 
 const menuItems: MenuItem[] = [
   {
@@ -79,7 +68,20 @@ const menuItems: MenuItem[] = [
 
 function BoatOwnerBoatsPage() {
   const navigate = useNavigate();
+  const {session}=useAuth();
+  const [boats,setBoats]=useState<Boat[]>([]);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  useEffect(()=>{
+    if(!session)return;
+    let active=true;
+    const load=()=>void operationsApi.boats(session.accessToken).then(records=>{if(active)setBoats(records.map(boat=>({id:boat.id,name:boat.name,registrationNumber:boat.registrationNumber,image:boat.imageUrl??"/OwnerBoat1.png",approval:boat.approval,wildlifeApproval:boat.wildlifeApproval})))}).catch(()=>undefined);
+    load();const disconnect=connectOperations(session.accessToken,load);
+    return()=>{active=false;disconnect()};
+  },[session]);
+
+  const approvedBoats=boats.filter(boat=>boat.approval==="Approved");
+  const awaitingApprovalBoats=boats.filter(boat=>boat.approval!=="Approved");
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
@@ -184,7 +186,8 @@ function BoatOwnerBoatsPage() {
             lg:items-start
           "
         >
-          {boats.map((boat) => (
+          <h2 className="md:col-span-2 lg:col-span-3 text-[17px] font-semibold sm:text-[20px]">Approved Boats</h2>
+          {approvedBoats.map((boat) => (
             <article
               key={boat.id}
               className="
@@ -229,7 +232,7 @@ function BoatOwnerBoatsPage() {
                     />
 
                     <span className="text-[8px] font-medium uppercase text-[#20d820] sm:text-[9px]">
-                      Certified
+                      Approved
                     </span>
                   </div>
                 </div>
@@ -280,6 +283,13 @@ function BoatOwnerBoatsPage() {
               </button>
             </article>
           ))}
+          {approvedBoats.length===0&&<p className="md:col-span-2 lg:col-span-3 text-sm text-slate-500">No boats have completed approval yet.</p>}
+
+          <h2 className="md:col-span-2 lg:col-span-3 mt-3 text-[17px] font-semibold sm:text-[20px]">Yet to be Approved</h2>
+          {awaitingApprovalBoats.map((boat) => (
+            <BoatCard key={boat.id} boat={boat} onOpen={()=>navigate(`/owner/boats/${boat.id}`)}/>
+          ))}
+          {awaitingApprovalBoats.length===0&&<p className="md:col-span-2 lg:col-span-3 text-sm text-slate-500">No boats are awaiting approval.</p>}
 
           {/* Register boat panel */}
           <section
@@ -429,6 +439,17 @@ function BoatOwnerBoatsPage() {
       )}
     </main>
   );
+}
+
+function BoatCard({boat,onOpen}:{boat:Boat;onOpen:()=>void}){
+ const declined=boat.approval==="Rejected";
+ return <article className="w-full overflow-hidden rounded-[22px] bg-white p-3 shadow-[0_6px_9px_rgba(0,0,0,0.22)] sm:p-4">
+  <div className="grid grid-cols-[minmax(0,0.8fr)_minmax(145px,1.2fr)] items-center gap-3 sm:grid-cols-[minmax(130px,0.8fr)_minmax(210px,1.2fr)] sm:gap-5 lg:grid-cols-[minmax(130px,0.8fr)_minmax(190px,1.2fr)] xl:grid-cols-[minmax(150px,0.8fr)_minmax(230px,1.2fr)]">
+   <div className="min-w-0"><p className="text-[16px] font-semibold sm:text-[18px]">Name</p><p className="mt-1 truncate text-[16px] sm:text-[18px]">{boat.name}</p><p className="mt-3 text-[16px] font-semibold sm:text-[18px]">Reg No</p><p className="mt-1 text-[16px] sm:text-[18px]">{boat.registrationNumber}</p><div className="mt-3 flex items-center gap-1"><span className={`h-2 w-2 rounded-full ${declined?"bg-red-500":"bg-amber-400"}`} aria-hidden="true"/><span className={`text-[8px] font-medium uppercase sm:text-[9px] ${declined?"text-red-500":"text-amber-600"}`}>{declined?"Approval declined":"Approval pending"}</span></div></div>
+   <img src={boat.image} alt={`${boat.name} boat`} className="h-[145px] w-full rounded-[12px] object-cover object-center sm:h-[180px] lg:h-[190px] xl:h-[210px]"/>
+  </div>
+  <button type="button" onClick={onOpen} className="mt-3 flex min-h-9 w-full items-center justify-center gap-1 rounded-[9px] bg-[#162d54] px-4 py-2 text-[12px] text-white transition-colors hover:bg-[#203d6c] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#162d54] focus-visible:ring-offset-2 sm:min-h-10 sm:text-[13px]"><span>Info</span><img src={infoIcon} alt="" aria-hidden="true" className="h-4 w-4 brightness-0 invert"/></button>
+ </article>;
 }
 
 export default BoatOwnerBoatsPage;
