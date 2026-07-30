@@ -2,5 +2,61 @@ import 'package:flutter/material.dart';
 import '../../owner/owner_store.dart';
 import '../../widgets/owner_layout.dart';
 
-class OwnerBoatInfoScreen extends StatelessWidget{const OwnerBoatInfoScreen({super.key});@override Widget build(BuildContext context){final id=ModalRoute.of(context)?.settings.arguments as String?;final boat=id==null?null:OwnerStore.instance.boat(id);if(boat==null)return const OwnerLayout(child:Center(child:Text('Boat not found.')));return OwnerLayout(title:'Boat Information',child:SingleChildScrollView(padding:const EdgeInsets.all(24),child:Container(padding:const EdgeInsets.all(24),decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(16),border:Border.all(color:Colors.grey.shade200)),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Container(height:180,color:Colors.blueGrey.shade100,child:const Center(child:Icon(Icons.directions_boat,size:90,color:Colors.white))),const SizedBox(height:24),Text(boat.name,style:const TextStyle(fontSize:22,fontWeight:FontWeight.bold)),info('Registration',boat.registrationNumber),info('Boat type',boat.type),info('Maximum capacity','${boat.capacity} passengers'),info('Engine details',boat.engineDetails),info('Owner',OwnerStore.instance.profile.fullName),info('Owner email',boat.ownerEmail),info('Certification',OwnerBoatsScreenLabel.label(boat.status))]))));}Widget info(String l,String v)=>Padding(padding:const EdgeInsets.only(top:16),child:Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[Text(l,style:const TextStyle(fontWeight:FontWeight.bold)),Flexible(child:Text(v,textAlign:TextAlign.right))]));}
-class OwnerBoatsScreenLabel{static String label(CertificationStatus s)=>switch(s){CertificationStatus.pending=>'Pending',CertificationStatus.underReview=>'Under Review',CertificationStatus.certified=>'Certified',CertificationStatus.rejected=>'Rejected'};}
+class OwnerBoatInfoScreen extends StatelessWidget {
+  const OwnerBoatInfoScreen({super.key});
+  @override
+  Widget build(BuildContext context) {
+    final id = ModalRoute.of(context)?.settings.arguments as String?;
+    final boat = id == null ? null : OwnerStore.instance.boat(id);
+    if (boat == null)
+      return const OwnerLayout(child: Center(child: Text('Boat not found.')));
+    return OwnerLayout(
+        title: 'Boat Information',
+        child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.grey.shade200)),
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                          height: 180,
+                          color: Colors.blueGrey.shade100,
+                          child: const Center(
+                              child: Icon(Icons.directions_boat,
+                                  size: 90, color: Colors.white))),
+                      const SizedBox(height: 24),
+                      Text(boat.name,
+                          style: const TextStyle(
+                              fontSize: 22, fontWeight: FontWeight.bold)),
+                      info('Registration', boat.registrationNumber),
+                      info('Boat type', boat.type),
+                      info('Maximum capacity', '${boat.capacity} passengers'),
+                      info('Engine details', boat.engineDetails),
+                      info('Owner', OwnerStore.instance.profile.fullName),
+                      info('Owner email', boat.ownerEmail),
+                      info('Certification',
+                          OwnerBoatsScreenLabel.label(boat.status))
+                    ]))));
+  }
+
+  Widget info(String l, String v) => Padding(
+      padding: const EdgeInsets.only(top: 16),
+      child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+        Text(l, style: const TextStyle(fontWeight: FontWeight.bold)),
+        Flexible(child: Text(v, textAlign: TextAlign.right))
+      ]));
+}
+
+class OwnerBoatsScreenLabel {
+  static String label(CertificationStatus s) => switch (s) {
+        CertificationStatus.pending => 'Pending',
+        CertificationStatus.underReview => 'Under Review',
+        CertificationStatus.certified => 'Certified',
+        CertificationStatus.rejected => 'Rejected'
+      };
+}

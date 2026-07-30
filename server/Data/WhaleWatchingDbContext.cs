@@ -20,6 +20,7 @@ public sealed class WhaleWatchingDbContext(DbContextOptions<WhaleWatchingDbConte
     public DbSet<PassengerSession> PassengerSessions => Set<PassengerSession>();
     public DbSet<TripPassengerAttendance> TripPassengerAttendances => Set<TripPassengerAttendance>();
     public DbSet<PassengerAttendanceAudit> PassengerAttendanceAudits => Set<PassengerAttendanceAudit>();
+    public DbSet<WildlifeMonitoringRecord> WildlifeMonitoringRecords => Set<WildlifeMonitoringRecord>();
     public DbSet<PassengerComplaint> PassengerComplaints => Set<PassengerComplaint>();
     public DbSet<ComplaintImage> ComplaintImages => Set<ComplaintImage>();
     public DbSet<Trip> Trips => Set<Trip>();
@@ -74,6 +75,7 @@ public sealed class WhaleWatchingDbContext(DbContextOptions<WhaleWatchingDbConte
         passenger.Property(x => x.PassengerType).HasMaxLength(16).IsRequired();
         passenger.Property(x => x.Gender).HasMaxLength(16).IsRequired();
         passenger.Property(x => x.AgeCategory).HasMaxLength(16).IsRequired();
+        passenger.Property(x => x.SpecialNeedType).HasMaxLength(80);
         passenger.Property(x => x.PersonalQrToken).HasMaxLength(64);
         passenger.HasIndex(x => x.NormalizedIdentificationNumber).IsUnique();
         passenger.HasIndex(x => x.PersonalQrToken).IsUnique().HasFilter("[PersonalQrToken] IS NOT NULL");
@@ -95,6 +97,19 @@ public sealed class WhaleWatchingDbContext(DbContextOptions<WhaleWatchingDbConte
         attendanceAudit.HasOne(x => x.Attendance).WithMany(x => x.AuditEntries)
             .HasForeignKey(x => x.AttendanceId).OnDelete(DeleteBehavior.Cascade);
         attendanceAudit.HasOne(x => x.ChangedByUser).WithMany().HasForeignKey(x => x.ChangedByUserId).OnDelete(DeleteBehavior.Restrict);
+
+        var wildlifeRecord = modelBuilder.Entity<WildlifeMonitoringRecord>();
+        wildlifeRecord.Property(x => x.TicketNumber).HasMaxLength(80).IsRequired();
+        wildlifeRecord.Property(x => x.TidNumber).HasMaxLength(80).IsRequired();
+        wildlifeRecord.Property(x => x.MonitoringOfficer).HasMaxLength(160).IsRequired();
+        wildlifeRecord.Property(x => x.Supervisor).HasMaxLength(160).IsRequired();
+        wildlifeRecord.Property(x => x.HarbourOfficerName).HasMaxLength(160);
+        wildlifeRecord.Property(x => x.HarbourOfficerSignature).HasMaxLength(500000);
+        wildlifeRecord.Property(x => x.MonitoringOfficerSignature).HasMaxLength(500000);
+        wildlifeRecord.Property(x => x.SupervisorSignature).HasMaxLength(500000);
+        wildlifeRecord.HasIndex(x => new { x.TripId, x.CreatedAtUtc });
+        wildlifeRecord.HasOne(x => x.Trip).WithMany().HasForeignKey(x => x.TripId).OnDelete(DeleteBehavior.Restrict);
+        wildlifeRecord.HasOne(x => x.CreatedByUser).WithMany().HasForeignKey(x => x.CreatedByUserId).OnDelete(DeleteBehavior.Restrict);
 
         var passengerSession = modelBuilder.Entity<PassengerSession>();
         passengerSession.Property(x => x.TokenHash).HasMaxLength(64).IsFixedLength().IsRequired();
@@ -121,6 +136,7 @@ public sealed class WhaleWatchingDbContext(DbContextOptions<WhaleWatchingDbConte
         modelBuilder.Entity<BoatDocument>().Property(x => x.ContentType).HasMaxLength(128).IsRequired();
         modelBuilder.Entity<Trip>().Property(x => x.Route).HasMaxLength(300).IsRequired();
         modelBuilder.Entity<Trip>().Property(x => x.ShoreNotes).HasMaxLength(1000);
+        modelBuilder.Entity<Trip>().Property(x => x.WildlifeShoreNotes).HasMaxLength(1000);
         modelBuilder.Entity<Trip>().Property(x => x.InvitationCode).HasMaxLength(64);
         modelBuilder.Entity<Trip>().HasIndex(x => x.InvitationCode).IsUnique().HasFilter("[InvitationCode] IS NOT NULL");
         modelBuilder.Entity<Trip>().HasOne(x => x.PassengerVerificationFinalizedByUser).WithMany()

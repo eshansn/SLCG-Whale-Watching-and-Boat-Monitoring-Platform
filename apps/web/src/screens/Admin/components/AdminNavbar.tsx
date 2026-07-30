@@ -56,8 +56,8 @@ const AdminNavbar = () => {
       <div className="mx-auto flex min-h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
         <Link to={homePath} className="flex shrink-0 items-center" aria-label="Go to portal dashboard">
           <img
-            src="/SLCG.png"
-            alt="Sri Lanka Coast Guard Logo"
+            src={isWildlife ? "/WildlifeAuthority.png" : "/SLCG.png"}
+            alt={isWildlife ? "Department of Wildlife Conservation" : "Sri Lanka Coast Guard Logo"}
             className="h-9 w-auto object-contain sm:h-10"
           />
         </Link>

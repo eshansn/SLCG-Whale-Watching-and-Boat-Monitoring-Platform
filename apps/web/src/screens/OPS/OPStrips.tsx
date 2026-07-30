@@ -7,6 +7,8 @@ import {
 import { useNavigate } from "react-router-dom";
 import { Icon } from "../../components/ui/icon";
 import Navbar from "./components/Navbar";
+import { useOperations } from "../../operations/useOperations";
+import type { Trip as OperationTrip } from "../../operations/operationsApi";
 type ApprovalStatus = "Approved" | "Pending" | "Not Approved";
 
 type SortOption =
@@ -19,7 +21,7 @@ type SortOption =
   | "approval-not-approved";
 
 interface Trip {
-  id: number;
+  id: string;
   vesselName: string;
   registrationNumber: string;
   location: string;
@@ -60,50 +62,6 @@ declare global {
   }
 }
 
-// Updated Mock Data matching the design
-const initialTrips: Trip[] = [
-  {
-    id: 1,
-    vesselName: "FV Mirissa King",
-    registrationNumber: "SL-WB-204",
-    location: "5.949186, 80.438509",
-    departureTime: "06:30 AM, Today",
-    approval: "Approved",
-  },
-  {
-    id: 2,
-    vesselName: "WW Sea Princess",
-    registrationNumber: "SL-WB-304",
-    location: "5.949186, 80.438509",
-    departureTime: "06:30 AM, Today",
-    approval: "Approved",
-  },
-  {
-    id: 3,
-    vesselName: "MV Indo-Ceylon",
-    registrationNumber: "SL-WB-204",
-    location: "5.949186, 80.438509",
-    departureTime: "06:30 AM, Today",
-    approval: "Not Approved",
-  },
-  {
-    id: 4,
-    vesselName: "FV Ocean Harvest",
-    registrationNumber: "SL-WB-204",
-    location: "5.949186, 80.438509",
-    departureTime: "10:30 AM, Today",
-    approval: "Pending",
-  },
-  {
-    id: 5,
-    vesselName: "Whale Seeker",
-    registrationNumber: "SL-WB-205",
-    location: "5.951230, 80.441200",
-    departureTime: "11:00 AM, Today",
-    approval: "Approved",
-  },
-];
-
 const ITEMS_PER_PAGE = 4;
 
 const approvalPriority: Record<ApprovalStatus, number> = {
@@ -114,8 +72,16 @@ const approvalPriority: Record<ApprovalStatus, number> = {
 
 const OPStrips = () => {
   const navigate = useNavigate();
-
-  const [trips] = useState<Trip[]>(initialTrips);
+  const { trips: operationTrips, boats, loading, error } = useOperations();
+  const trips = useMemo<Trip[]>(() => operationTrips.map((trip:OperationTrip) => {
+    const boat=boats.find(item=>item.id===trip.boatId);
+    const boatApproved=boat?.approval==='Approved'||boat?.wildlifeApproval==='Approved';
+    const fullyApproved=boatApproved&&trip.shoreApproval==='Approved'&&trip.wildlifeShoreApproval==='Approved';
+    const rejected=trip.shoreApproval==='Rejected'||trip.wildlifeShoreApproval==='Rejected';
+    return {id:trip.id,vesselName:trip.vesselName,registrationNumber:trip.registrationNumber,
+      location:trip.route,departureTime:new Intl.DateTimeFormat('en-LK',{dateStyle:'medium',timeStyle:'short'}).format(new Date(trip.scheduledDepartureUtc)),
+      approval:fullyApproved?'Approved':rejected?'Not Approved':'Pending'};
+  }),[operationTrips,boats]);
   const [searchValue, setSearchValue] = useState<string>("");
   const [sortOption, setSortOption] = useState<SortOption>("vessel-asc");
 
@@ -220,7 +186,7 @@ const OPStrips = () => {
     recognition.start();
   };
 
-  const handleTripInfo = (tripId: number): void => {
+  const handleTripInfo = (tripId: string): void => {
     navigate(`/ops/trip-info/${tripId}`);
   };
 
@@ -378,7 +344,7 @@ const OPStrips = () => {
             <div className="py-16 text-center">
               <Icon name="search" size={30} className="mx-auto" />
               <h2 className="mt-4 text-sm font-semibold">
-                No trips found
+                {loading ? "Loading trips…" : error || "No trips found"}
               </h2>
             </div>
           )}

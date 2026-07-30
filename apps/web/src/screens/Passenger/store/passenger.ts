@@ -5,5 +5,7 @@ export interface PassengerData {
   phoneNumber: string;
   passengerType: "local" | "foreign";
   gender: "male" | "female" | "other";
-  ageCategory: "adult" | "child";
+  ageCategory: "adult" | "child" | "small" | "specialneeds";
+  specialNeedType?: string;
+  selfCareConfirmed?: boolean;
 }

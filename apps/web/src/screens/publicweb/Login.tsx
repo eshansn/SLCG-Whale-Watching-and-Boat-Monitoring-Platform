@@ -42,6 +42,11 @@ const Login = () => {
         return;
       }
 
+      if (session.roles.includes('ShoreWildlife')) {
+        navigate(requestedPath?.startsWith('/shore-wildlife') ? requestedPath : '/shore-wildlife', { replace: true });
+        return;
+      }
+
       if (session.roles.includes('BoatOwner')) {
         navigate(requestedPath?.startsWith('/owner') ? requestedPath : '/owner', { replace: true });
         return;

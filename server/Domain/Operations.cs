@@ -74,6 +74,8 @@ public sealed class Trip
     public int SpecialNeedsCount { get; set; }
     public TripStatus Status { get; set; }
     public ApprovalStatus ShoreApproval { get; set; }
+    public ApprovalStatus WildlifeShoreApproval { get; set; }
+    public string? WildlifeShoreNotes { get; set; }
     public string? ShoreNotes { get; set; }
     public DateTimeOffset UpdatedAtUtc { get; set; }
     public string? InvitationCode { get; set; }

@@ -7,7 +7,7 @@ export interface Boat { id:string; ownerId:string; ownerName:string; name:string
 export interface CreateBoat { name:string; registrationNumber:string; registrationDate:string; hullNumber:string; lengthMeters:number; widthMeters:number; maximumCapacity:number; imageUrl?:string; maximumSpeedKnots:number; lifeJacketCount:number; gpsDeviceId?:string }
 export interface TripCrew { crewUserId:string; name:string; email:string; position:string; nicNumber?:string; certified:boolean }
 export interface TripPassenger { id:string; name:string; identificationNumber:string; phoneNumber:string; ageCategory:string; passengerType:string; gender:string; registeredAtUtc:string }
-export interface Trip { id:string; boatId:string; vesselName:string; registrationNumber:string; ownerName:string; scheduledDepartureUtc:string; actualDepartureUtc?:string; actualArrivalUtc?:string; route:string; passengerCount:number; status:string; shoreApproval:string; shoreNotes?:string; updatedAtUtc:string; invitationCode?:string; crew:TripCrew[]; hasActiveSos:boolean }
+export interface Trip { id:string; boatId:string; vesselName:string; registrationNumber:string; ownerName:string; scheduledDepartureUtc:string; actualDepartureUtc?:string; actualArrivalUtc?:string; route:string; passengerCount:number; status:string; shoreApproval:string; wildlifeShoreApproval:string; shoreNotes?:string; updatedAtUtc:string; invitationCode?:string; crew:TripCrew[]; hasActiveSos:boolean }
 export interface DirectoryOwner { id:string; displayName:string; email:string; phoneNumber?:string; nicNumber?:string; bio?:string }
 export interface DirectoryCrew { id:string; displayName:string; email:string; phoneNumber?:string; position:string; boatId?:string; ownerId:string; nicNumber?:string; certified:boolean }
 export interface OperationsDirectory { owners:DirectoryOwner[]; crew:DirectoryCrew[] }
@@ -24,7 +24,7 @@ export interface TransferHistory { id:string; sourceTripId:string; sourceBoat:st
 export interface OwnerCrew { assignmentId:string; crewUserId:string; name:string; email:string; phoneNumber?:string; position:string; certified:boolean }
 export interface CreateTripResult { id:string; crewUserIds:string[]; crewAutoAssigned:boolean }
 export interface CrewSuggestion { crewUserId:string; name:string; email:string; position:string }
-export interface VesselMapRecord { id:string; name:string; registrationNumber:string; imageUrl?:string; certificationApproval:string; wildlifeApproval:string; shoreApproval:string; fullyApproved:boolean; latitude?:number; longitude?:number; coordinatesRecordedAtUtc?:string; departureUtc?:string; arrivalUtc?:string; lengthMeters:number; beamMeters:number; cruisingSpeedKnots?:number; maximumSpeedKnots:number; maximumCapacity:number; lifeJacketCount:number; passengerCount:number; childrenCount:number; specialNeedsCount:number; lifeSaverCount:number; diverCount:number; coxswainCount:number }
+export interface VesselMapRecord { id:string; name:string; registrationNumber:string; imageUrl?:string; certificationApproval:string; wildlifeApproval:string; shoreApproval:string; wildlifeShoreApproval:string; fullyApproved:boolean; latitude?:number; longitude?:number; coordinatesRecordedAtUtc?:string; departureUtc?:string; arrivalUtc?:string; lengthMeters:number; beamMeters:number; cruisingSpeedKnots?:number; maximumSpeedKnots:number; maximumCapacity:number; lifeJacketCount:number; passengerCount:number; childrenCount:number; specialNeedsCount:number; lifeSaverCount:number; diverCount:number; coxswainCount:number }
 
 async function request<T>(path:string, token:string, init?:RequestInit):Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, { ...init, headers:{'Content-Type':'application/json', Authorization:`Bearer ${token}`, ...init?.headers} });
@@ -59,6 +59,7 @@ export const operationsApi = {
   removeOwnerCrew:(token:string,assignmentId:string)=>request<void>(`/api/operations/owner/crew/${assignmentId}`,token,{method:'DELETE'}),
   vesselMap:(token:string)=>request<VesselMapRecord[]>('/api/operations/vessel-map',token),
   sosAlerts:(token:string)=>request<SosAlert[]>('/api/operations/sos',token),
+  raiseCrewSos:(token:string,tripId:string)=>request<{id:string;raisedAtUtc:string}>(`/api/operations/trips/${tripId}/sos`,token,{method:'POST'}),
   approve:(token:string,id:string,approval:'Approved'|'Rejected',notes?:string)=>request<void>(`/api/operations/trips/${id}/shore-approval`,token,{method:'PATCH',body:JSON.stringify({approval,notes})}),
   status:(token:string,id:string,status:string)=>request<void>(`/api/operations/trips/${id}/status`,token,{method:'PATCH',body:JSON.stringify({status})}),
   approveBoat:(token:string,id:string,approval:'Approved'|'Rejected',notes?:string)=>request<void>(`/api/operations/boats/${id}/approval`,token,{method:'PATCH',body:JSON.stringify({approval,notes})}),

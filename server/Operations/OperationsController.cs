@@ -115,7 +115,7 @@ public sealed class OperationsController(WhaleWatchingDbContext db, IHubContext<
     }
 
     [HttpGet("vessel-map")]
-    [Authorize(Roles = $"{PortalRoles.Admin},{PortalRoles.Wildlife},{PortalRoles.Ops},{PortalRoles.ShoreCrew},{PortalRoles.BoatOwner}")]
+    [Authorize(Roles = $"{PortalRoles.Admin},{PortalRoles.Wildlife},{PortalRoles.Ops},{PortalRoles.ShoreCrew},{PortalRoles.BoatOwner},{PortalRoles.BoatCrew}")]
     public async Task<ActionResult<IReadOnlyList<VesselMapDto>>> VesselMap(CancellationToken ct)
     {
         var boats = await ScopeBoats(db.Boats.AsNoTracking())
@@ -139,7 +139,9 @@ public sealed class OperationsController(WhaleWatchingDbContext db, IHubContext<
             return new VesselMapDto(boat.Id, boat.Name, boat.RegistrationNumber, boat.ImageUrl,
                 boat.Approval.ToString(), boat.WildlifeApproval.ToString(),
                 trip?.ShoreApproval.ToString() ?? ApprovalStatus.Pending.ToString(),
-                boat.Approval == ApprovalStatus.Approved && boat.WildlifeApproval == ApprovalStatus.Approved && trip?.ShoreApproval == ApprovalStatus.Approved,
+                trip?.WildlifeShoreApproval.ToString() ?? ApprovalStatus.Pending.ToString(),
+                (boat.Approval == ApprovalStatus.Approved || boat.WildlifeApproval == ApprovalStatus.Approved) &&
+                    trip?.ShoreApproval == ApprovalStatus.Approved && trip.WildlifeShoreApproval == ApprovalStatus.Approved,
                 gps?.Latitude, gps?.Longitude, gps?.RecordedAtUtc, trip?.ActualDepartureUtc,
                 trip?.ActualArrivalUtc, boat.LengthMeters, boat.WidthMeters, gps?.SpeedKnots,
                 boat.MaximumSpeedKnots, boat.MaximumCapacity, boat.LifeJacketCount,
@@ -158,7 +160,7 @@ public sealed class OperationsController(WhaleWatchingDbContext db, IHubContext<
             .Select(x => new TripDto(x.Id, x.BoatId, x.Boat.Name, x.Boat.RegistrationNumber,
                 x.Boat.Owner.DisplayName, x.ScheduledDepartureUtc, x.ActualDepartureUtc,
                 x.ActualArrivalUtc, x.Route, x.PassengerCount, x.Status.ToString(),
-                x.ShoreApproval.ToString(), x.ShoreNotes, x.UpdatedAtUtc, x.InvitationCode,
+                x.ShoreApproval.ToString(), x.WildlifeShoreApproval.ToString(), x.ShoreNotes, x.UpdatedAtUtc, x.InvitationCode,
                 x.CrewAssignments.OrderBy(a => a.CrewUser.DisplayName).Select(a => new TripCrewDto(
                     a.CrewUserId, a.CrewUser.DisplayName, a.CrewUser.Email!,
                     a.CrewUser.CrewType ?? "Crew Member", a.CrewUser.NicNumber,
@@ -190,8 +192,25 @@ public sealed class OperationsController(WhaleWatchingDbContext db, IHubContext<
         }).ToList());
     }
 
+    [HttpPost("trips/{id:guid}/sos")]
+    [Authorize(Policy = PortalPolicies.BoatCrew)]
+    public async Task<ActionResult> RaiseCrewSos(Guid id, CancellationToken ct)
+    {
+        var trip = await db.Trips.Include(x => x.CrewAssignments).SingleOrDefaultAsync(x => x.Id == id, ct);
+        if (trip is null || !trip.CrewAssignments.Any(x => x.CrewUserId == UserId)) return NotFound();
+        if (trip.Status is TripStatus.Completed or TripStatus.Cancelled)
+            return Conflict(new { message = "An SOS cannot be raised for a completed or cancelled trip." });
+        var existing = await db.SosEvents.SingleOrDefaultAsync(x => x.TripId == id && x.RaisedByUserId == UserId && x.ResolvedAtUtc == null, ct);
+        if (existing is not null) return Ok(new { id = existing.Id, raisedAtUtc = existing.RaisedAtUtc });
+        var sos = new SosEvent { Id = Guid.NewGuid(), TripId = id, RaisedByUserId = UserId,
+            Message = "Emergency assistance requested by assigned boat crew", RaisedAtUtc = DateTimeOffset.UtcNow };
+        db.SosEvents.Add(sos); trip.UpdatedAtUtc = DateTimeOffset.UtcNow; await db.SaveChangesAsync(ct);
+        await hub.Clients.All.SendAsync("operationsChanged", new { entity = "sos", id = sos.Id, tripId = id }, ct);
+        return Created($"/api/operations/sos/{sos.Id}", new { id = sos.Id, raisedAtUtc = sos.RaisedAtUtc });
+    }
+
     [HttpGet("trips/{id:guid}/passengers")]
-    [Authorize(Roles = $"{PortalRoles.Admin},{PortalRoles.Wildlife},{PortalRoles.Ops},{PortalRoles.BoatOwner},{PortalRoles.ShoreCrew}")]
+    [Authorize(Roles = $"{PortalRoles.Admin},{PortalRoles.Wildlife},{PortalRoles.Ops},{PortalRoles.BoatOwner},{PortalRoles.ShoreCrew},{PortalRoles.BoatCrew}")]
     public async Task<ActionResult<IReadOnlyList<TripPassengerDto>>> TripPassengers(Guid id, CancellationToken ct)
     {
         var allowedBoatIds = ScopeBoats(db.Boats.AsNoTracking()).Select(x => x.Id);
@@ -321,7 +340,8 @@ public sealed class OperationsController(WhaleWatchingDbContext db, IHubContext<
                 ScheduledDepartureUtc = request.ScheduledDepartureUtc, Route = request.Route.Trim(),
                 PassengerCount = request.PassengerCount, Status = TripStatus.Scheduled,
                 ChildrenCount = request.ChildrenCount, SpecialNeedsCount = request.SpecialNeedsCount,
-                ShoreApproval = ApprovalStatus.Pending, UpdatedAtUtc = DateTimeOffset.UtcNow,
+                ShoreApproval = ApprovalStatus.Pending, WildlifeShoreApproval = ApprovalStatus.Pending,
+                UpdatedAtUtc = DateTimeOffset.UtcNow,
                 InvitationCode = WebEncoders.Base64UrlEncode(RandomNumberGenerator.GetBytes(32)) };
             db.Trips.Add(trip);
             db.TripCrewAssignments.AddRange(crewIds.Select(crewId => new TripCrewAssignment {
@@ -380,7 +400,7 @@ public sealed record BoatDocumentDto(Guid Id, string Name, string FileName, stri
     DateTimeOffset UploadedAtUtc);
 public sealed record TripDto(Guid Id, Guid BoatId, string VesselName, string RegistrationNumber, string OwnerName,
     DateTimeOffset ScheduledDepartureUtc, DateTimeOffset? ActualDepartureUtc, DateTimeOffset? ActualArrivalUtc,
-    string Route, int PassengerCount, string Status, string ShoreApproval, string? ShoreNotes,
+    string Route, int PassengerCount, string Status, string ShoreApproval, string WildlifeShoreApproval, string? ShoreNotes,
     DateTimeOffset UpdatedAtUtc, string? InvitationCode, IReadOnlyList<TripCrewDto> Crew, bool HasActiveSos);
 public sealed record TripCrewDto(Guid CrewUserId, string Name, string Email, string Position,
     string? NicNumber, bool Certified);
@@ -406,7 +426,7 @@ public sealed record OwnerCrewDto(Guid AssignmentId, Guid CrewUserId, string Nam
 public sealed record CrewSuggestionDto(Guid CrewUserId, string Name, string Email, string Position);
 public sealed record AddOwnerCrewRequest(string Email);
 public sealed record VesselMapDto(Guid Id, string Name, string RegistrationNumber, string? ImageUrl,
-    string CertificationApproval, string WildlifeApproval, string ShoreApproval, bool FullyApproved,
+    string CertificationApproval, string WildlifeApproval, string ShoreApproval, string WildlifeShoreApproval, bool FullyApproved,
     decimal? Latitude, decimal? Longitude, DateTimeOffset? CoordinatesRecordedAtUtc,
     DateTimeOffset? DepartureUtc, DateTimeOffset? ArrivalUtc, decimal LengthMeters, decimal BeamMeters,
     decimal? CruisingSpeedKnots, decimal MaximumSpeedKnots, int MaximumCapacity, int LifeJacketCount,

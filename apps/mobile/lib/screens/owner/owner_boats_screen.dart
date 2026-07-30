@@ -2,5 +2,165 @@ import 'package:flutter/material.dart';
 import '../../owner/owner_store.dart';
 import '../../widgets/owner_layout.dart';
 
-class OwnerBoatsScreen extends StatefulWidget{const OwnerBoatsScreen({super.key});@override State<OwnerBoatsScreen> createState()=>_State();}
-class _State extends State<OwnerBoatsScreen>{final store=OwnerStore.instance,search=TextEditingController();CertificationStatus? filter;bool nameSort=true;@override void initState(){super.initState();store.addListener(refresh);}@override void dispose(){store.removeListener(refresh);search.dispose();super.dispose();}void refresh()=>setState((){});@override Widget build(BuildContext context){final q=search.text.toLowerCase();final boats=store.ownedBoats.where((b)=>(b.name.toLowerCase().contains(q)||b.registrationNumber.toLowerCase().contains(q))&&(filter==null||b.status==filter)).toList()..sort((a,b)=>nameSort?a.name.compareTo(b.name):a.registrationNumber.compareTo(b.registrationNumber));return OwnerLayout(child:SingleChildScrollView(padding:const EdgeInsets.all(24),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('My Boats',style:TextStyle(fontSize:24,fontWeight:FontWeight.bold,color:Colors.black)),const SizedBox(height:16),Row(children:[Expanded(child:TextField(controller:search,onChanged:(_)=>setState((){}),decoration:const InputDecoration(prefixIcon:Icon(Icons.search),hintText:'Search boats'))),PopupMenuButton<CertificationStatus?>(icon:const Icon(Icons.filter_list),onSelected:(v)=>setState(()=>filter=v),itemBuilder:(_)=>[const PopupMenuItem(value:null,child:Text('All statuses')),...CertificationStatus.values.map((s)=>PopupMenuItem(value:s,child:Text(label(s))))]),IconButton(onPressed:()=>setState(()=>nameSort=!nameSort),icon:const Icon(Icons.sort))]),const SizedBox(height:16),...boats.map(card),const SizedBox(height:16),Container(width:double.infinity,padding:const EdgeInsets.all(24),decoration:BoxDecoration(color:const Color(0xFF1F2937),borderRadius:BorderRadius.circular(16)),child:Column(children:[const Text('Register New Boats',style:TextStyle(fontSize:20,fontWeight:FontWeight.bold,color:Colors.white)),const SizedBox(height:8),const Text("Initialize your boat's digital profile.",style:TextStyle(color:Colors.white70,fontSize:12)),const SizedBox(height:24),SizedBox(width:double.infinity,height:48,child:ElevatedButton(style:ElevatedButton.styleFrom(backgroundColor:Colors.white,foregroundColor:const Color(0xFF1F2937)),onPressed:()=>Navigator.pushNamed(context,'/owner_new_boat'),child:const Text('Add More',style:TextStyle(fontWeight:FontWeight.bold))))]))])));}Widget card(OwnerBoat b)=>Padding(padding:const EdgeInsets.only(bottom:16),child:Container(padding:const EdgeInsets.all(16),decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(16),border:Border.all(color:Colors.grey.shade200)),child:Column(children:[Row(children:[Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('Name',style:TextStyle(fontWeight:FontWeight.bold)),Text(b.name),const SizedBox(height:10),const Text('Reg No',style:TextStyle(fontWeight:FontWeight.bold)),Text(b.registrationNumber),const SizedBox(height:10),Text(label(b.status).toUpperCase(),style:TextStyle(fontSize:10,fontWeight:FontWeight.bold,color:color(b.status)))])),Expanded(child:Container(height:110,color:Colors.blueGrey.shade100,child:const Icon(Icons.directions_boat,size:60,color:Colors.white)))]),const SizedBox(height:16),SizedBox(width:double.infinity,height:44,child:ElevatedButton(style:ElevatedButton.styleFrom(backgroundColor:const Color(0xFF0F172A),foregroundColor:Colors.white),onPressed:()=>Navigator.pushNamed(context,'/owner_boat_info',arguments:b.id),child:const Text('Info')))])));static String label(CertificationStatus s)=>switch(s){CertificationStatus.pending=>'Pending',CertificationStatus.underReview=>'Under Review',CertificationStatus.certified=>'Certified',CertificationStatus.rejected=>'Rejected'};Color color(CertificationStatus s)=>s==CertificationStatus.certified?Colors.green:s==CertificationStatus.rejected?Colors.red:Colors.orange;}
+class OwnerBoatsScreen extends StatefulWidget {
+  const OwnerBoatsScreen({super.key});
+  @override
+  State<OwnerBoatsScreen> createState() => _State();
+}
+
+class _State extends State<OwnerBoatsScreen> {
+  final store = OwnerStore.instance, search = TextEditingController();
+  CertificationStatus? filter;
+  bool nameSort = true;
+  @override
+  void initState() {
+    super.initState();
+    store.addListener(refresh);
+  }
+
+  @override
+  void dispose() {
+    store.removeListener(refresh);
+    search.dispose();
+    super.dispose();
+  }
+
+  void refresh() => setState(() {});
+  @override
+  Widget build(BuildContext context) {
+    final q = search.text.toLowerCase();
+    final boats = store.ownedBoats
+        .where((b) =>
+            (b.name.toLowerCase().contains(q) ||
+                b.registrationNumber.toLowerCase().contains(q)) &&
+            (filter == null || b.status == filter))
+        .toList()
+      ..sort((a, b) => nameSort
+          ? a.name.compareTo(b.name)
+          : a.registrationNumber.compareTo(b.registrationNumber));
+    return OwnerLayout(
+        child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Text('My Boats',
+                  style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black)),
+              const SizedBox(height: 16),
+              Row(children: [
+                Expanded(
+                    child: TextField(
+                        controller: search,
+                        onChanged: (_) => setState(() {}),
+                        decoration: const InputDecoration(
+                            prefixIcon: Icon(Icons.search),
+                            hintText: 'Search boats'))),
+                PopupMenuButton<CertificationStatus?>(
+                    icon: const Icon(Icons.filter_list),
+                    onSelected: (v) => setState(() => filter = v),
+                    itemBuilder: (_) => [
+                          const PopupMenuItem(
+                              value: null, child: Text('All statuses')),
+                          ...CertificationStatus.values.map((s) =>
+                              PopupMenuItem(value: s, child: Text(label(s))))
+                        ]),
+                IconButton(
+                    onPressed: () => setState(() => nameSort = !nameSort),
+                    icon: const Icon(Icons.sort))
+              ]),
+              const SizedBox(height: 16),
+              ...boats.map(card),
+              const SizedBox(height: 16),
+              Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                      color: const Color(0xFF1F2937),
+                      borderRadius: BorderRadius.circular(16)),
+                  child: Column(children: [
+                    const Text('Register New Boats',
+                        style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white)),
+                    const SizedBox(height: 8),
+                    const Text("Initialize your boat's digital profile.",
+                        style: TextStyle(color: Colors.white70, fontSize: 12)),
+                    const SizedBox(height: 24),
+                    SizedBox(
+                        width: double.infinity,
+                        height: 48,
+                        child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.white,
+                                foregroundColor: const Color(0xFF1F2937)),
+                            onPressed: () =>
+                                Navigator.pushNamed(context, '/owner_new_boat'),
+                            child: const Text('Add More',
+                                style: TextStyle(fontWeight: FontWeight.bold))))
+                  ]))
+            ])));
+  }
+
+  Widget card(OwnerBoat b) => Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.grey.shade200)),
+          child: Column(children: [
+            Row(children: [
+              Expanded(
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                    const Text('Name',
+                        style: TextStyle(fontWeight: FontWeight.bold)),
+                    Text(b.name),
+                    const SizedBox(height: 10),
+                    const Text('Reg No',
+                        style: TextStyle(fontWeight: FontWeight.bold)),
+                    Text(b.registrationNumber),
+                    const SizedBox(height: 10),
+                    Text(label(b.status).toUpperCase(),
+                        style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: color(b.status)))
+                  ])),
+              Expanded(
+                  child: Container(
+                      height: 110,
+                      color: Colors.blueGrey.shade100,
+                      child: const Icon(Icons.directions_boat,
+                          size: 60, color: Colors.white)))
+            ]),
+            const SizedBox(height: 16),
+            SizedBox(
+                width: double.infinity,
+                height: 44,
+                child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF0F172A),
+                        foregroundColor: Colors.white),
+                    onPressed: () => Navigator.pushNamed(
+                        context, '/owner_boat_info',
+                        arguments: b.id),
+                    child: const Text('Info')))
+          ])));
+  static String label(CertificationStatus s) => switch (s) {
+        CertificationStatus.pending => 'Pending',
+        CertificationStatus.underReview => 'Under Review',
+        CertificationStatus.certified => 'Certified',
+        CertificationStatus.rejected => 'Rejected'
+      };
+  Color color(CertificationStatus s) => s == CertificationStatus.certified
+      ? Colors.green
+      : s == CertificationStatus.rejected
+          ? Colors.red
+          : Colors.orange;
+}

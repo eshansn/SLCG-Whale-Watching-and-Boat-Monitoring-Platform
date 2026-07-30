@@ -45,6 +45,11 @@ public sealed class IdentitySeeder(
             "IdentitySeed:WildlifePassword",
             PortalRoles.Wildlife,
             "development wildlife authority user");
+        await SeedPortalUserAsync(
+            "IdentitySeed:ShoreWildlifeEmail",
+            "IdentitySeed:ShoreWildlifePassword",
+            PortalRoles.ShoreWildlife,
+            "development wildlife shore officer");
         await SeedPortalUserAsync("IdentitySeed:OwnerEmail", "IdentitySeed:OwnerPassword",
             PortalRoles.BoatOwner, "development boat owner", "Kamal Silva");
         await SeedPortalUserAsync("IdentitySeed:CrewEmail", "IdentitySeed:CrewPassword",
@@ -118,6 +123,7 @@ public sealed class IdentitySeeder(
             ("Ops", PortalRoles.Ops, "WWMS Demo OPS Officer"),
             ("Shore", PortalRoles.ShoreCrew, "WWMS Demo Shore Officer"),
             ("Wildlife", PortalRoles.Wildlife, "WWMS Demo Wildlife Officer"),
+            ("ShoreWildlife", PortalRoles.ShoreWildlife, "WWMS Demo Wildlife Shore Officer"),
             ("Owner", PortalRoles.BoatOwner, "Kamal Silva"),
             ("Crew", PortalRoles.BoatCrew, "Nimal Perera"),
             ("Passenger", PortalRoles.Passenger, "Amara Fernando")
