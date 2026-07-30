@@ -27,7 +27,7 @@ export async function getActivePassengerTrip():Promise<PassengerTripPreview>{
   return response.json() as Promise<PassengerTripPreview>;
 }
 
-export interface RegisterPassengerDetails { name:string; identificationNumber:string; phoneNumber:string; passengerType:'local'|'foreign'; gender:'male'|'female'|'other'; ageCategory:'adult'|'child' }
+export interface RegisterPassengerDetails { name:string; identificationNumber:string; phoneNumber:string; passengerType:'local'|'foreign'; gender:'male'|'female'|'other'; ageCategory:'adult'|'child'|'small'|'specialneeds'; specialNeedType?:string; selfCareConfirmed?:boolean }
 export interface RegisteredPassenger extends RegisterPassengerDetails { id:string; tripId:string; sessionToken:string; sessionExpiresAtUtc:string }
 export interface RegisteredCompanion extends RegisterPassengerDetails { id:string; tripId:string; primaryPassengerId:string }
 export interface PassengerPersonalQr { passengerId:string; passengerName:string; qrToken:string; qrValue:string }

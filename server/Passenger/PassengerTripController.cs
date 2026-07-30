@@ -76,15 +76,20 @@ public sealed class PassengerTripController(WhaleWatchingDbContext db) : Control
             return Conflict(new { message = "This trip is no longer accepting passenger registrations." });
         if (trip.PassengerCount >= trip.Boat.MaximumCapacity)
             return Conflict(new { message = "This trip has reached its maximum passenger capacity." });
+        if (SpecialNeedsInvalid(request)) return ValidationProblem("Select the special need and confirm self-care responsibility.");
 
-        var normalizedId = Normalize(request.IdentificationNumber);
-        if (await db.PassengerProfiles.AnyAsync(x => x.NormalizedIdentificationNumber == normalizedId, ct))
+        var identificationRequired = IdentificationRequired(request);
+        if (identificationRequired && string.IsNullOrWhiteSpace(request.IdentificationNumber))
+            return ValidationProblem("NIC or passport number is required for Local Adults and all Foreign passengers.");
+        var normalizedId = identificationRequired ? Normalize(request.IdentificationNumber) : CreateMinorReference();
+        if (identificationRequired && await db.PassengerProfiles.AnyAsync(x => x.NormalizedIdentificationNumber == normalizedId, ct))
             return Conflict(new { message = "A passenger with this NIC or passport already exists. Use Returning Passenger." });
         var passenger = new PassengerProfile { Id = Guid.NewGuid(), Name = request.Name.Trim(),
-            IdentificationNumber = request.IdentificationNumber.Trim().ToUpperInvariant(),
+            IdentificationNumber = identificationRequired ? request.IdentificationNumber.Trim().ToUpperInvariant() : string.Empty,
             NormalizedIdentificationNumber = normalizedId, PhoneNumber = request.PhoneNumber.Trim(),
             NormalizedPhoneNumber = Normalize(request.PhoneNumber), PassengerType = request.PassengerType,
             Gender = request.Gender, AgeCategory = request.AgeCategory, CreatedAtUtc = DateTimeOffset.UtcNow,
+            SpecialNeedType = request.SpecialNeedType?.Trim(), SelfCareConfirmed = request.SelfCareConfirmed,
             PersonalQrToken = CreatePersonalQrToken() };
         db.PassengerProfiles.Add(passenger);
         db.TripPassengers.Add(new TripPassenger { Id = Guid.NewGuid(), TripId = trip.Id,
@@ -156,14 +161,19 @@ public sealed class PassengerTripController(WhaleWatchingDbContext db) : Control
                 return Conflict(new { message = "This trip is no longer accepting passenger registrations." });
             if (session.Trip.PassengerCount >= session.Trip.Boat.MaximumCapacity)
                 return Conflict(new { message = "This trip has reached its maximum passenger capacity." });
-            var normalizedId = Normalize(request.IdentificationNumber);
-            if (await db.PassengerProfiles.AnyAsync(x => x.NormalizedIdentificationNumber == normalizedId, ct))
+            if (SpecialNeedsInvalid(request)) return ValidationProblem("Select the special need and confirm self-care responsibility.");
+            var identificationRequired = IdentificationRequired(request);
+            if (identificationRequired && string.IsNullOrWhiteSpace(request.IdentificationNumber))
+                return ValidationProblem("NIC or passport number is required for Local Adults and all Foreign passengers.");
+            var normalizedId = identificationRequired ? Normalize(request.IdentificationNumber) : CreateMinorReference();
+            if (identificationRequired && await db.PassengerProfiles.AnyAsync(x => x.NormalizedIdentificationNumber == normalizedId, ct))
                 return Conflict(new { message = "A passenger with this NIC or passport already exists." });
             var passenger = new PassengerProfile { Id = Guid.NewGuid(), Name = request.Name.Trim(),
-                IdentificationNumber = request.IdentificationNumber.Trim().ToUpperInvariant(),
+                IdentificationNumber = identificationRequired ? request.IdentificationNumber.Trim().ToUpperInvariant() : string.Empty,
                 NormalizedIdentificationNumber = normalizedId, PhoneNumber = request.PhoneNumber.Trim(),
                 NormalizedPhoneNumber = Normalize(request.PhoneNumber), PassengerType = request.PassengerType,
                 Gender = request.Gender, AgeCategory = request.AgeCategory, CreatedAtUtc = DateTimeOffset.UtcNow,
+                SpecialNeedType = request.SpecialNeedType?.Trim(), SelfCareConfirmed = request.SelfCareConfirmed,
                 PersonalQrToken = CreatePersonalQrToken() };
             db.PassengerProfiles.Add(passenger);
             db.TripPassengers.Add(new TripPassenger { Id = Guid.NewGuid(), TripId = session.TripId,
@@ -172,6 +182,8 @@ public sealed class PassengerTripController(WhaleWatchingDbContext db) : Control
             session.Trip.PassengerCount++;
             if (string.Equals(passenger.AgeCategory, "child", StringComparison.OrdinalIgnoreCase))
                 session.Trip.ChildrenCount++;
+            if (string.Equals(passenger.AgeCategory, "specialneeds", StringComparison.OrdinalIgnoreCase))
+                session.Trip.SpecialNeedsCount++;
             session.Trip.UpdatedAtUtc = DateTimeOffset.UtcNow;
             await db.SaveChangesAsync(ct); await transaction.CommitAsync(ct);
             return Created("api/passenger/session/companions", new RegisteredCompanionDto(passenger.Id,
@@ -182,6 +194,14 @@ public sealed class PassengerTripController(WhaleWatchingDbContext db) : Control
 
     private static string Normalize(string value) => new(value.Where(char.IsLetterOrDigit)
         .Select(char.ToUpperInvariant).ToArray());
+    private static bool IdentificationRequired(RegisterPassengerRequest request) =>
+        !string.Equals(request.PassengerType, "local", StringComparison.OrdinalIgnoreCase) ||
+        !(string.Equals(request.AgeCategory, "child", StringComparison.OrdinalIgnoreCase) ||
+          string.Equals(request.AgeCategory, "small", StringComparison.OrdinalIgnoreCase));
+    private static bool SpecialNeedsInvalid(RegisterPassengerRequest request) =>
+        string.Equals(request.AgeCategory, "specialneeds", StringComparison.OrdinalIgnoreCase) &&
+        (string.IsNullOrWhiteSpace(request.SpecialNeedType) || !request.SelfCareConfirmed);
+    private static string CreateMinorReference() => "MINOR" + WebEncoders.Base64UrlEncode(RandomNumberGenerator.GetBytes(18));
     private static string CreatePersonalQrToken() => WebEncoders.Base64UrlEncode(RandomNumberGenerator.GetBytes(32));
     private static (PassengerSession Entity, string RawToken) CreateSession(Guid passengerId, Guid tripId,
         DateTimeOffset scheduledDepartureUtc)
@@ -201,11 +221,13 @@ public sealed record PassengerTripPreviewDto(Guid TripId, string BoatName, strin
 public sealed class RegisterPassengerRequest
 {
     [Required, MaxLength(160)] public required string Name { get; init; }
-    [Required, MaxLength(32)] public required string IdentificationNumber { get; init; }
+    [MaxLength(32)] public string IdentificationNumber { get; init; } = string.Empty;
     [Required, Phone, MaxLength(32)] public required string PhoneNumber { get; init; }
     [Required, RegularExpression("^(local|foreign)$")] public required string PassengerType { get; init; }
     [Required, RegularExpression("^(male|female|other)$")] public required string Gender { get; init; }
-    [Required, RegularExpression("^(adult|child)$")] public required string AgeCategory { get; init; }
+    [Required, RegularExpression("^(adult|child|small|specialneeds)$")] public required string AgeCategory { get; init; }
+    [MaxLength(80)] public string? SpecialNeedType { get; init; }
+    public bool SelfCareConfirmed { get; init; }
 }
 
 public sealed record RegisteredPassengerDto(Guid Id, Guid TripId, string Name, string IdentificationNumber,

@@ -11,6 +11,8 @@ public sealed class PassengerProfile
     public string PassengerType { get; set; } = string.Empty;
     public string Gender { get; set; } = string.Empty;
     public string AgeCategory { get; set; } = string.Empty;
+    public string? SpecialNeedType { get; set; }
+    public bool SelfCareConfirmed { get; set; }
     public DateTimeOffset CreatedAtUtc { get; set; }
     public string? PersonalQrToken { get; set; }
     public ICollection<TripPassenger> Trips { get; set; } = [];
@@ -91,4 +93,34 @@ public sealed class PassengerAttendanceAudit
     public Guid ChangedByUserId { get; set; }
     public ApplicationUser ChangedByUser { get; set; } = null!;
     public DateTimeOffset ChangedAtUtc { get; set; }
+}
+
+public enum WildlifeMonitoringStatus { Draft, PendingHarbourSignature, Completed }
+
+public sealed class WildlifeMonitoringRecord
+{
+    public Guid Id { get; set; }
+    public Guid TripId { get; set; }
+    public Trip Trip { get; set; } = null!;
+    public Guid CreatedByUserId { get; set; }
+    public ApplicationUser CreatedByUser { get; set; } = null!;
+    public string TicketNumber { get; set; } = string.Empty;
+    public string TidNumber { get; set; } = string.Empty;
+    public string MonitoringOfficer { get; set; } = string.Empty;
+    public string Supervisor { get; set; } = string.Empty;
+    public WildlifeMonitoringStatus Status { get; set; }
+    public int LocalAdultSnapshot { get; set; }
+    public int LocalChildSnapshot { get; set; }
+    public int LocalSmallSnapshot { get; set; }
+    public int ForeignAdultSnapshot { get; set; }
+    public int ForeignChildSnapshot { get; set; }
+    public int ForeignSmallSnapshot { get; set; }
+    public string? HarbourOfficerName { get; set; }
+    public string? HarbourOfficerSignature { get; set; }
+    public string? MonitoringOfficerSignature { get; set; }
+    public string? SupervisorSignature { get; set; }
+    public DateTimeOffset CreatedAtUtc { get; set; }
+    public DateTimeOffset UpdatedAtUtc { get; set; }
+    public DateTimeOffset? SignedAtUtc { get; set; }
+    public DateTimeOffset? CompletedAtUtc { get; set; }
 }

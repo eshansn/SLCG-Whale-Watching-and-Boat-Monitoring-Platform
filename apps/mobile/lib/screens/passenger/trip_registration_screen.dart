@@ -61,14 +61,16 @@ class _TripRegistrationState extends State<TripRegistrationScreen> {
           content: Text('This trip has reached passenger capacity.')));
       return;
     }
-    OwnerStore.instance.registerPassenger(trip.id, OwnerPassenger(
-        id: 'passenger-${DateTime.now().millisecondsSinceEpoch}',
-        name: name.text.trim(),
-        nicOrPassport: identity.text.trim(),
-        phone: phone.text.trim(),
-        nationality: nationality.text.trim(),
-        emergencyContact: emergency.text.trim(),
-        registeredAt: DateTime.now()));
+    OwnerStore.instance.registerPassenger(
+        trip.id,
+        OwnerPassenger(
+            id: 'passenger-${DateTime.now().millisecondsSinceEpoch}',
+            name: name.text.trim(),
+            nicOrPassport: identity.text.trim(),
+            phone: phone.text.trim(),
+            nationality: nationality.text.trim(),
+            emergencyContact: emergency.text.trim(),
+            registeredAt: DateTime.now()));
     showDialog(
         context: context,
         barrierDismissible: false,

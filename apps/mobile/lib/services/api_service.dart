@@ -57,6 +57,28 @@ class ApiService extends ChangeNotifier {
   Future<List<Map<String, dynamic>>> boats() async =>
       (await _get('/api/operations/boats') as List)
           .cast<Map<String, dynamic>>();
+  Future<List<Map<String, dynamic>>> shoreWildlifeTrips() async =>
+      (await _get('/api/shore-wildlife/trips') as List)
+          .cast<Map<String, dynamic>>();
+  Future<Map<String, dynamic>> shoreWildlifeAttendance(String tripId) async =>
+      (await _get('/api/shore-wildlife/trips/$tripId/attendance') as Map)
+          .cast<String, dynamic>();
+  Future<List<Map<String, dynamic>>> shoreWildlifeRecords() async =>
+      (await _get('/api/shore-wildlife/records') as List)
+          .cast<Map<String, dynamic>>();
+  Future<Map<String, dynamic>> createShoreWildlifeRecord(
+          Map<String, dynamic> body) =>
+      _sendMap('POST', '/api/shore-wildlife/records', body);
+  Future<Map<String, dynamic>> requestShoreWildlifeSignatures(
+          String id, Map<String, dynamic> body) =>
+      _sendMap('PUT', '/api/shore-wildlife/records/$id', body);
+  Future<Map<String, dynamic>> signShoreWildlifeRecord(
+          String id, Map<String, dynamic> body) =>
+      _sendMap('POST', '/api/shore-wildlife/records/$id/sign', body);
+  Future<Map<String, dynamic>> approveShoreWildlifeTrip(
+          String tripId, String approval) =>
+      _sendMap('PATCH', '/api/shore-wildlife/trips/$tripId/approval',
+          {'approval': approval});
   Future<List<Map<String, dynamic>>> tripPassengers(String tripId) async =>
       (await _get('/api/operations/trips/$tripId/passengers?updated=${DateTime.now().millisecondsSinceEpoch}')
               as List)
@@ -109,10 +131,18 @@ class ApiService extends ChangeNotifier {
         if (session != null) 'Authorization': 'Bearer ${session!.accessToken}'
       };
   Future<dynamic> _get(String path) async {
-    final r = await http
-        .get(Uri.parse('$baseUrl$path'), headers: _headers)
-        .timeout(const Duration(seconds: 10));
-    return _decode(r);
+    try {
+      final r = await http
+          .get(Uri.parse('$baseUrl$path'), headers: _headers)
+          .timeout(const Duration(seconds: 15));
+      return _decode(r);
+    } on TimeoutException {
+      throw Exception(
+          'The WWMS API did not respond. Check the server and your connection.');
+    } on http.ClientException {
+      throw Exception(
+          'Cannot reach the WWMS API at $baseUrl. Check the server and your connection.');
+    }
   }
 
   Future<Map<String, dynamic>> _post(String path, Object body,
@@ -136,31 +166,75 @@ class ApiService extends ChangeNotifier {
   }
 
   Future<void> _send(String method, String path, Object body) async {
+    await _sendResponse(method, path, body);
+  }
+
+  Future<Map<String, dynamic>> _sendMap(
+      String method, String path, Object body) async {
+    final response = await _sendResponse(method, path, body);
+    final decoded = _decode(response);
+    if (decoded is! Map)
+      throw Exception('The server returned an invalid response.');
+    return decoded.cast<String, dynamic>();
+  }
+
+  Future<http.Response> _sendResponse(
+      String method, String path, Object body) async {
     final req = http.Request(method, Uri.parse('$baseUrl$path'))
       ..headers.addAll(_headers)
       ..body = jsonEncode(body);
-    final streamed = await req.send();
-    if (streamed.statusCode < 200 || streamed.statusCode >= 300)
-      throw Exception('Request failed (${streamed.statusCode})');
+    try {
+      final streamed = await req.send().timeout(const Duration(seconds: 15));
+      final response = await http.Response.fromStream(streamed)
+          .timeout(const Duration(seconds: 15));
+      _decode(response);
+      return response;
+    } on TimeoutException {
+      throw Exception(
+          'The WWMS API did not respond. Check the server and your connection.');
+    } on http.ClientException {
+      throw Exception(
+          'Cannot reach the WWMS API at $baseUrl. Check the server and your connection.');
+    }
   }
 
   dynamic _decode(http.Response r) {
-    if (r.statusCode < 200 || r.statusCode >= 300)
-      throw Exception(r.statusCode == 401
-          ? 'Invalid email or password.'
-          : 'Request failed (${r.statusCode})');
+    if (r.statusCode < 200 || r.statusCode >= 300) {
+      String? serverMessage;
+      try {
+        final payload = jsonDecode(r.body);
+        if (payload is Map) {
+          serverMessage = payload['message']?.toString() ??
+              payload['detail']?.toString() ??
+              payload['title']?.toString();
+        }
+      } catch (_) {
+        // Use the status fallback for non-JSON error responses.
+      }
+      throw Exception(serverMessage ??
+          (r.statusCode == 401
+              ? 'Invalid email or password.'
+              : r.statusCode == 403
+                  ? 'You do not have permission to perform this action.'
+                  : 'Request failed (${r.statusCode}).'));
+    }
     return r.body.isEmpty ? null : jsonDecode(r.body);
   }
 
   Future<void> _connect() async {
+    final currentSession = session;
+    if (currentSession == null) return;
     await _hub?.stop();
     _hub = HubConnectionBuilder()
         .withUrl('$baseUrl/hubs/operations',
             options: HttpConnectionOptions(
-                accessTokenFactory: () => Future.value(session!.accessToken)))
+                accessTokenFactory: () =>
+                    Future.value(currentSession.accessToken)))
         .withAutomaticReconnect()
         .build();
-    _hub!.on('operationsChanged', (_) => notifyListeners());
+    _hub!.on('operationsChanged', (_) {
+      if (session == currentSession) notifyListeners();
+    });
     try {
       await _hub!.start();
     } catch (e) {

@@ -14,7 +14,8 @@ class WelcomeScreen extends StatelessWidget {
             'assets/images/slcg_logo.png',
             height: 100,
             fit: BoxFit.contain,
-            errorBuilder: (context, error, stackTrace) => const Icon(Icons.anchor, size: 80, color: Colors.amber),
+            errorBuilder: (context, error, stackTrace) =>
+                const Icon(Icons.anchor, size: 80, color: Colors.amber),
           ),
           const SizedBox(height: 24),
           const Text(
@@ -29,9 +30,13 @@ class WelcomeScreen extends StatelessWidget {
             style: TextStyle(fontSize: 14, color: Colors.white70, height: 1.5),
           ),
           const SizedBox(height: 32),
-          CyanButton(text: "Log In", onPressed: () => Navigator.pushNamed(context, '/login')),
+          CyanButton(
+              text: "Log In",
+              onPressed: () => Navigator.pushNamed(context, '/login')),
           const SizedBox(height: 16),
-          CyanButton(text: "Sign Up", onPressed: () => Navigator.pushNamed(context, '/signup_step1')),
+          CyanButton(
+              text: "Sign Up",
+              onPressed: () => Navigator.pushNamed(context, '/signup_step1')),
           const SizedBox(height: 16),
         ],
       ),

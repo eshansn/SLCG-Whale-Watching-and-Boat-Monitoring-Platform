@@ -45,6 +45,8 @@ import PassengerVerificationPage from './screens/Passenger/PassengerVerification
 import PassengerRegistrationPage from './screens/Passenger/PassengerRegistrationPage';
 import PassengerOnboardingPage from './screens/Passenger/PassengerOnboardingPage';
 import WildlifeNavbar from './screens/Wildlife/WildlifeNavbar';
+import ShoreWildlifeNavbar from './screens/ShoreWildlife/ShoreWildlifeNavbar';
+import { WildlifeRecords as ShoreWildlifeRecords, WildlifeTripDetails as ShoreWildlifeTripDetails, WildlifeTrips as ShoreWildlifeTrips } from './screens/ShoreWildlife/ShoreWildlifePages';
 import BoatCrewDashboard from './screens/BoatCrew/BoatCrewDashboard';
 import BoatCrewProfile from './screens/BoatCrew/BoatCrewProfile';
 import BoatCrewSettings from './screens/BoatCrew/BoatCrewSettings';
@@ -66,6 +68,7 @@ const OPS_ROLES = ['OPS'] as const;
 const ADMIN_ROLES = ['Admin'] as const;
 const SHORE_ROLES = ['ShoreCrew'] as const;
 const WILDLIFE_ROLES = ['Wildlife'] as const;
+const SHORE_WILDLIFE_ROLES = ['ShoreWildlife'] as const;
 const OWNER_ROLES = ['BoatOwner'] as const;
 const CREW_ROLES = ['BoatCrew'] as const;
 
@@ -120,13 +123,17 @@ function WildlifeRoute({ children }: { children: ReactElement }) {
   return <ProtectedRoute allowedRoles={[...WILDLIFE_ROLES]}><div className="wildlife-portal admin-portal min-h-screen bg-[#f8f9fb] font-[Poppins] text-[#14223d]"><WildlifeNavbar />{children}</div></ProtectedRoute>;
 }
 
+function ShoreWildlifeRoute({ children }: { children: ReactElement }) {
+  return <ProtectedRoute allowedRoles={[...SHORE_WILDLIFE_ROLES]}><div className="shore-wildlife-portal min-h-screen bg-[#f8f9fb] font-[Poppins] text-[#14223d]"><ShoreWildlifeNavbar />{children}</div></ProtectedRoute>;
+}
+
 function OwnerRoute({ children }: { children: ReactElement }) {
   return <ProtectedRoute allowedRoles={[...OWNER_ROLES]}>{children}</ProtectedRoute>;
 }
 function CrewRoute({ children }: { children: ReactElement }) {
   return (
     <ProtectedRoute allowedRoles={[...CREW_ROLES]}>
-      <div className="boat-crew-portal min-h-screen bg-[#1e1e1e] font-[Poppins]">
+      <div className="boat-crew-portal min-h-screen bg-[#f8f9fb] font-[Poppins] text-[#14223d]">
         {children}
       </div>
     </ProtectedRoute>
@@ -234,6 +241,9 @@ export default function App() {
             <Route path="/wildlife/trips" element={<WildlifeRoute><Trips /></WildlifeRoute>} />
             <Route path="/wildlife/trip-info/:tripId" element={<WildlifeRoute><TripInfo /></WildlifeRoute>} />
             <Route path="/wildlife/complaints" element={<WildlifeRoute><ComplaintsInquiriesPage /></WildlifeRoute>} />
+            <Route path="/shore-wildlife" element={<ShoreWildlifeRoute><ShoreWildlifeTrips /></ShoreWildlifeRoute>} />
+            <Route path="/shore-wildlife/trips/:id" element={<ShoreWildlifeRoute><ShoreWildlifeTripDetails /></ShoreWildlifeRoute>} />
+            <Route path="/shore-wildlife/records" element={<ShoreWildlifeRoute><ShoreWildlifeRecords /></ShoreWildlifeRoute>} />
 
             <Route
               path="/access-denied"

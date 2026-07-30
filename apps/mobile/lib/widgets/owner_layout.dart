@@ -21,13 +21,20 @@ class OwnerDrawer extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 32),
-              _buildDrawerItem(context, Icons.dashboard_outlined, 'Dashboard', '/boat_owner'),
-              _buildDrawerItem(context, Icons.notifications_outlined, 'Notifications', '/owner_notifications'),
-              _buildDrawerItem(context, Icons.person_outline, 'Profile', '/owner_profile'),
-              _buildDrawerItem(context, Icons.people_outline, 'My Crew', '/owner_my_crew'),
-              _buildDrawerItem(context, Icons.directions_boat_outlined, 'My Boats', '/owner_boats'),
-              _buildDrawerItem(context, Icons.info_outline, 'My Trips', '/owner_trips'),
-              _buildDrawerItem(context, Icons.settings_outlined, 'Settings', '/owner_settings'),
+              _buildDrawerItem(context, Icons.dashboard_outlined, 'Dashboard',
+                  '/boat_owner'),
+              _buildDrawerItem(context, Icons.notifications_outlined,
+                  'Notifications', '/owner_notifications'),
+              _buildDrawerItem(
+                  context, Icons.person_outline, 'Profile', '/owner_profile'),
+              _buildDrawerItem(
+                  context, Icons.people_outline, 'My Crew', '/owner_my_crew'),
+              _buildDrawerItem(context, Icons.directions_boat_outlined,
+                  'My Boats', '/owner_boats'),
+              _buildDrawerItem(
+                  context, Icons.info_outline, 'My Trips', '/owner_trips'),
+              _buildDrawerItem(context, Icons.settings_outlined, 'Settings',
+                  '/owner_settings'),
             ],
           ),
         ),
@@ -35,7 +42,8 @@ class OwnerDrawer extends StatelessWidget {
     );
   }
 
-  Widget _buildDrawerItem(BuildContext context, IconData icon, String title, String route) {
+  Widget _buildDrawerItem(
+      BuildContext context, IconData icon, String title, String route) {
     return InkWell(
       onTap: () {
         Navigator.pop(context);
@@ -51,7 +59,11 @@ class OwnerDrawer extends StatelessWidget {
           children: [
             Icon(icon, color: Colors.black87, size: 24),
             const SizedBox(width: 16),
-            Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black87)),
+            Text(title,
+                style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87)),
           ],
         ),
       ),
@@ -63,7 +75,8 @@ class OwnerLayout extends StatelessWidget {
   final Widget child;
   final String? title;
 
-  const OwnerLayout({Key? key, required this.child, this.title}) : super(key: key);
+  const OwnerLayout({Key? key, required this.child, this.title})
+      : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -77,8 +90,12 @@ class OwnerLayout extends StatelessWidget {
           icon: const Icon(Icons.notifications_none, size: 28),
           onPressed: () => Navigator.pushNamed(context, '/owner_notifications'),
         ),
-        title: title != null 
-            ? Text(title!, style: const TextStyle(color: Color(0xFF152238), fontWeight: FontWeight.bold, fontSize: 18))
+        title: title != null
+            ? Text(title!,
+                style: const TextStyle(
+                    color: Color(0xFF152238),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18))
             : null,
         centerTitle: true,
         actions: [

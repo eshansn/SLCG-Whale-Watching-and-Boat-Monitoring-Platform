@@ -45,6 +45,8 @@ services:
       IdentitySeed__OpsPassword: "${INITIAL_OPS_PASSWORD:-Ops#WWMS2026!Secure}"
       IdentitySeed__WildlifeEmail: "${INITIAL_WILDLIFE_EMAIL:-wildlife@wwms.test}"
       IdentitySeed__WildlifePassword: "${INITIAL_WILDLIFE_PASSWORD:-Wildlife#WWMS2026!Secure}"
+      IdentitySeed__ShoreWildlifeEmail: "${INITIAL_SHORE_WILDLIFE_EMAIL:-shorewildlife@wwms.test}"
+      IdentitySeed__ShoreWildlifePassword: "${INITIAL_SHORE_WILDLIFE_PASSWORD:-ShoreWildlife#WWMS2026!Secure}"
       IdentitySeed__ShoreEmail: "${INITIAL_SHORE_EMAIL:-shore@wwms.test}"
       IdentitySeed__ShorePassword: "${INITIAL_SHORE_PASSWORD:-Shore#WWMS2026!Secure}"
       IdentitySeed__OwnerEmail: "${INITIAL_OWNER_EMAIL:-owner@wwms.test}"

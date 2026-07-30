@@ -14,7 +14,7 @@ namespace WhaleWatching.Api.Passenger;
 
 [ApiController]
 [Route("api/shore/trips/{tripId:guid}/attendance")]
-[Authorize(Policy = PortalPolicies.ShoreCrew)]
+[Authorize(Roles = $"{PortalRoles.ShoreCrew},{PortalRoles.BoatCrew}")]
 public sealed class PassengerAttendanceController(WhaleWatchingDbContext db,
     IHubContext<OperationsHub> hub) : ControllerBase
 {
@@ -26,6 +26,7 @@ public sealed class PassengerAttendanceController(WhaleWatchingDbContext db,
     }
 
     [HttpPost("scan")]
+    [Authorize(Policy = PortalPolicies.ShoreCrew)]
     public async Task<ActionResult<PassengerGroupDto>> Scan(Guid tripId, ScanPassengerQrRequest request,
         CancellationToken ct)
     {
@@ -46,6 +47,7 @@ public sealed class PassengerAttendanceController(WhaleWatchingDbContext db,
     }
 
     [HttpGet("groups/{primaryPassengerId:guid}")]
+    [Authorize(Policy = PortalPolicies.ShoreCrew)]
     public async Task<ActionResult<PassengerGroupDto>> Group(Guid tripId, Guid primaryPassengerId, CancellationToken ct)
     {
         var group = await BuildGroup(tripId, primaryPassengerId, ct);
@@ -53,6 +55,7 @@ public sealed class PassengerAttendanceController(WhaleWatchingDbContext db,
     }
 
     [HttpGet("search")]
+    [Authorize(Policy = PortalPolicies.ShoreCrew)]
     public async Task<ActionResult<IReadOnlyList<PassengerGroupSearchDto>>> Search(Guid tripId,
         [FromQuery] string? query, CancellationToken ct)
     {
@@ -78,6 +81,7 @@ public sealed class PassengerAttendanceController(WhaleWatchingDbContext db,
     }
 
     [HttpPut("groups/{primaryPassengerId:guid}")]
+    [Authorize(Policy = PortalPolicies.ShoreCrew)]
     public async Task<ActionResult<PassengerGroupDto>> SaveGroup(Guid tripId, Guid primaryPassengerId,
         SaveAttendanceRequest request, CancellationToken ct)
     {
@@ -140,6 +144,7 @@ public sealed class PassengerAttendanceController(WhaleWatchingDbContext db,
     }
 
     [HttpPost("finalize")]
+    [Authorize(Policy = PortalPolicies.ShoreCrew)]
     public async Task<ActionResult<TripAttendanceDto>> Finalize(Guid tripId,
         FinalizeAttendanceRequest request, CancellationToken ct)
     {
@@ -163,6 +168,7 @@ public sealed class PassengerAttendanceController(WhaleWatchingDbContext db,
     }
 
     [HttpGet("audit")]
+    [Authorize(Policy = PortalPolicies.ShoreCrew)]
     public async Task<ActionResult<IReadOnlyList<AttendanceAuditDto>>> Audit(Guid tripId, CancellationToken ct) =>
         Ok(await db.PassengerAttendanceAudits.AsNoTracking().Where(x => x.Attendance.TripPassenger.TripId == tripId)
             .OrderByDescending(x => x.ChangedAtUtc).Take(100).Select(x => new AttendanceAuditDto(

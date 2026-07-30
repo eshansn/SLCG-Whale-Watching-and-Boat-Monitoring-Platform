@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 
 class ScreenBackground extends StatelessWidget {
   final Widget child;
-  final String imagePath; 
+  final String imagePath;
 
-  const ScreenBackground({
-    Key? key, 
-    required this.child, 
-    this.imagePath = 'assets/images/bg_whale.jpg' 
-  }) : super(key: key);
+  const ScreenBackground(
+      {Key? key,
+      required this.child,
+      this.imagePath = 'assets/images/bg_whale.jpg'})
+      : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -23,8 +23,8 @@ class ScreenBackground extends StatelessWidget {
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 colors: [
-                  Colors.transparent, 
-                  Colors.black.withOpacity(0.8), 
+                  Colors.transparent,
+                  Colors.black.withOpacity(0.8),
                   Colors.black
                 ],
                 stops: const [0.3, 0.7, 1.0],
@@ -33,7 +33,8 @@ class ScreenBackground extends StatelessWidget {
           ),
           SafeArea(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
               child: Column(
                 children: [
                   Expanded(child: child),
@@ -42,7 +43,7 @@ class ScreenBackground extends StatelessWidget {
                     "Copyright © Sri Lanka Coast Guard 2026 | Designed and maintained by Sri Lanka Coast Guard Information Technology Department",
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      fontSize: 10, 
+                      fontSize: 10,
                       color: Colors.white54,
                       height: 1.4,
                     ),
@@ -62,12 +63,9 @@ class CyanButton extends StatelessWidget {
   final VoidCallback onPressed;
   final IconData? icon;
 
-  const CyanButton({
-    Key? key, 
-    required this.text, 
-    required this.onPressed, 
-    this.icon
-  }) : super(key: key);
+  const CyanButton(
+      {Key? key, required this.text, required this.onPressed, this.icon})
+      : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -78,15 +76,18 @@ class CyanButton extends StatelessWidget {
         style: ElevatedButton.styleFrom(
           backgroundColor: const Color(0xFF6FFFE9),
           foregroundColor: Colors.black,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
         ),
         onPressed: onPressed,
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(text, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Text(text,
+                style:
+                    const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             if (icon != null) ...[
-              const SizedBox(width: 8), 
+              const SizedBox(width: 8),
               Icon(icon, size: 24)
             ],
           ],
@@ -102,8 +103,8 @@ class CustomTextField extends StatefulWidget {
   final TextEditingController? controller;
 
   const CustomTextField({
-    Key? key, 
-    required this.hintText, 
+    Key? key,
+    required this.hintText,
     this.isPassword = false,
     this.controller,
   }) : super(key: key);
@@ -140,14 +141,16 @@ class _CustomTextFieldState extends State<CustomTextField> {
               ? IconButton(
                   tooltip: _obscured ? 'Show password' : 'Hide password',
                   onPressed: () => setState(() => _obscured = !_obscured),
-                  icon: Icon(_obscured ? Icons.visibility_off : Icons.visibility, color: Colors.black54),
+                  icon: Icon(
+                      _obscured ? Icons.visibility_off : Icons.visibility,
+                      color: Colors.black54),
                 )
               : null,
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8.0), 
-            borderSide: BorderSide.none
-          ),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 18.0),
+              borderRadius: BorderRadius.circular(8.0),
+              borderSide: BorderSide.none),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 16.0, vertical: 18.0),
         ),
       ),
     );

@@ -22,18 +22,27 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoggingIn = true);
 
     try {
-      final role=await ApiService.instance.login(username,password);
-      if(!mounted)return;
-      final route=switch(role){'ShoreCrew'=>'/shore_dashboard','BoatOwner'=>'/boat_owner','BoatCrew'=>'/boat_crew',_=>null};
+      final role = await ApiService.instance.login(username, password);
+      if (!mounted) return;
+      final route = switch (role) {
+        'ShoreCrew' => '/shore_dashboard',
+        'ShoreWildlife' => '/shore_wildlife',
+        'BoatOwner' => '/boat_owner',
+        'BoatCrew' => '/boat_crew',
+        _ => null
+      };
       if (route == null) {
         await ApiService.instance.logout();
-        throw Exception('$role accounts use the web portal. Flutter supports Shore Crew, Boat Owner, and Boat Crew accounts.');
+        throw Exception(
+            '$role accounts use the web portal. Flutter supports Shore Crew, Wildlife Shore, Boat Owner, and Boat Crew accounts.');
       }
-      Navigator.pushNamedAndRemoveUntil(context,route,(_)=>false);
+      Navigator.pushNamedAndRemoveUntil(context, route, (_) => false);
     } catch (error) {
-      if(!mounted)return;
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.toString().replaceFirst('Exception: ','')), backgroundColor: Colors.redAccent),
+        SnackBar(
+            content: Text(error.toString().replaceFirst('Exception: ', '')),
+            backgroundColor: Colors.redAccent),
       );
     } finally {
       if (mounted) setState(() => _isLoggingIn = false);
@@ -54,30 +63,45 @@ class _LoginScreenState extends State<LoginScreen> {
         mainAxisAlignment: MainAxisAlignment.end,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text("Welcome Back!", style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold)),
+          const Text("Welcome Back!",
+              style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
-          const Text("Continue Where You Left Off With Secure Account Access.", style: TextStyle(fontSize: 14, color: Colors.white70)),
+          const Text("Continue Where You Left Off With Secure Account Access.",
+              style: TextStyle(fontSize: 14, color: Colors.white70)),
           const SizedBox(height: 32),
-          CustomTextField(hintText: "Enter email or user name", controller: _usernameController),
-          CustomTextField(hintText: "Password", isPassword: true, controller: _passwordController),
+          CustomTextField(
+              hintText: "Enter email or user name",
+              controller: _usernameController),
+          CustomTextField(
+              hintText: "Password",
+              isPassword: true,
+              controller: _passwordController),
           Align(
             alignment: Alignment.centerRight,
             child: TextButton(
               onPressed: () {},
-              child: const Text("Forgot password?", style: TextStyle(color: Colors.white54)),
+              child: const Text("Forgot password?",
+                  style: TextStyle(color: Colors.white54)),
             ),
           ),
           const SizedBox(height: 16),
-          CyanButton(text: _isLoggingIn ? "Connecting..." : "Log In", onPressed: () => _handleLogin()),
+          CyanButton(
+              text: _isLoggingIn ? "Connecting..." : "Log In",
+              onPressed: () => _handleLogin()),
           const SizedBox(height: 16),
           Center(
             child: GestureDetector(
-              onTap: () => Navigator.pushReplacementNamed(context, '/signup_step1'),
+              onTap: () =>
+                  Navigator.pushReplacementNamed(context, '/signup_step1'),
               child: RichText(
                 text: const TextSpan(
                   text: "Don't have an account? ",
                   style: TextStyle(color: Colors.white54),
-                  children: [TextSpan(text: "Sign Up", style: TextStyle(color: Color(0xFF6FFFE9)))],
+                  children: [
+                    TextSpan(
+                        text: "Sign Up",
+                        style: TextStyle(color: Color(0xFF6FFFE9)))
+                  ],
                 ),
               ),
             ),

@@ -77,8 +77,8 @@ class _State extends State<OwnerMyCrewScreen> {
                                     '${invitation.email} · ${invitation.status.name}'),
                                 onPressed: invitation.status ==
                                         InvitationStatus.pending
-                                    ? () => store
-                                        .acceptInvitation(invitation.email)
+                                    ? () =>
+                                        store.acceptInvitation(invitation.email)
                                     : null)))
                         .toList())),
           Expanded(

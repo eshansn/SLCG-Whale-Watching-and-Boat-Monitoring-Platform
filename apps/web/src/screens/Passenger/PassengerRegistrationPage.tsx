@@ -12,7 +12,7 @@ interface RegistrationFormData {
   phoneNumber: string;
   passengerType: "local" | "foreign";
   gender: "male" | "female" | "other";
-  ageCategory: "adult" | "child";
+  ageCategory: "adult" | "child" | "small";
 }
 
 function PassengerRegistrationPage() {
@@ -47,9 +47,10 @@ function PassengerRegistrationPage() {
  const handleSubmit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
   event.preventDefault();
 
+  const identificationRequired = formData.passengerType !== "local" || formData.ageCategory === "adult";
   if (
     !formData.name.trim() ||
-    !formData.identificationNumber.trim() ||
+    (identificationRequired && !formData.identificationNumber.trim()) ||
     !formData.phoneNumber.trim()
   ) {
     setErrorMessage("Please complete all the required fields.");
@@ -134,7 +135,7 @@ function PassengerRegistrationPage() {
               type="text"
               value={formData.identificationNumber}
               className="block h-11 w-full rounded-lg border border-transparent bg-white px-3 font-poppins text-sm font-normal text-[#111] outline-none placeholder:text-[#9b9b9b] focus:border-[#5cefdc] focus:shadow-[0_0_0_3px_rgba(92,239,220,.2)] min-[1024px]:text-[clamp(11px,.72vw,15px)]"
-              placeholder="National Identity Card Number"
+              placeholder={formData.passengerType === "local" && formData.ageCategory !== "adult" ? "NIC / Passport (Optional)" : "NIC / Passport Number"}
               autoComplete="off"
               maxLength={15}
               onChange={(event) =>
@@ -233,12 +234,14 @@ function PassengerRegistrationPage() {
                       "ageCategory",
                       event.target.value as
                         | "adult"
-                        | "child",
+                        | "child"
+                        | "small",
                     )
                   }
                 >
                   <option value="adult">Adult</option>
                   <option value="child">Child</option>
+                  <option value="small">Small (Under 6 Y)</option>
                 </select>
               </div>
             </div>

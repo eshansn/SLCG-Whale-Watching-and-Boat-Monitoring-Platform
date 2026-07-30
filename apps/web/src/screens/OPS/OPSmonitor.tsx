@@ -4,11 +4,12 @@ import Sidebar from './components/Sidebar';
 import { useDashboardStore } from './store/useDashboardStore';
 import { useAuth } from '../../auth/useAuth';
 import { useEffect } from 'react';
+import { connectOperations } from '../../operations/operationsApi';
 
 export default function OPSMonitor() {
   const { loadVessels } = useDashboardStore();
   const { session } = useAuth();
-  useEffect(() => { if (session) void loadVessels(session.accessToken); }, [loadVessels, session]);
+  useEffect(() => { if (!session)return;const load=()=>void loadVessels(session.accessToken);load();const disconnect=connectOperations(session.accessToken,load);const interval=window.setInterval(load,10000);return()=>{disconnect();window.clearInterval(interval)}; }, [loadVessels, session]);
 
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-[#F8F9FA] font-sans text-slate-800">

@@ -2,5 +2,156 @@ import 'package:flutter/material.dart';
 import '../../owner/owner_store.dart';
 import '../../widgets/owner_layout.dart';
 
-class OwnerTripsScreen extends StatefulWidget{const OwnerTripsScreen({super.key});@override State<OwnerTripsScreen> createState()=>_State();}
-class _State extends State<OwnerTripsScreen>{final store=OwnerStore.instance,search=TextEditingController();OwnerTripStatus? filter;@override void initState(){super.initState();store.addListener(refresh);}@override void dispose(){store.removeListener(refresh);search.dispose();super.dispose();}void refresh()=>setState((){});@override Widget build(BuildContext context){final q=search.text.toLowerCase();final trips=store.trips.where((t){final b=store.boat(t.boatId);return (b?.name.toLowerCase().contains(q)??false)&&(filter==null||t.status==filter);}).toList()..sort((a,b)=>b.departure.compareTo(a.departure));return OwnerLayout(child:SingleChildScrollView(padding:const EdgeInsets.all(24),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Container(width:double.infinity,padding:const EdgeInsets.all(32),decoration:BoxDecoration(color:const Color(0xFF152238),borderRadius:BorderRadius.circular(16)),child:Column(children:[const Text('Start New Trips!',style:TextStyle(fontSize:22,fontWeight:FontWeight.bold,color:Colors.white)),const SizedBox(height:8),const Text('Set up the schedule and preferences\nfor an upcoming tour.',textAlign:TextAlign.center,style:TextStyle(color:Colors.white70)),const SizedBox(height:24),SizedBox(width:double.infinity,height:44,child:ElevatedButton(style:ElevatedButton.styleFrom(backgroundColor:Colors.white,foregroundColor:const Color(0xFF152238)),onPressed:()=>Navigator.pushNamed(context,'/owner_new_trip'),child:const Text('Schedule Trip')))])),const SizedBox(height:32),const Text('My Trips',style:TextStyle(fontSize:22,fontWeight:FontWeight.bold,color:Colors.black)),Row(children:[Expanded(child:TextField(controller:search,onChanged:(_)=>setState((){}),decoration:const InputDecoration(prefixIcon:Icon(Icons.search),hintText:'Search'))),PopupMenuButton<OwnerTripStatus?>(icon:const Icon(Icons.filter_list),onSelected:(v)=>setState(()=>filter=v),itemBuilder:(_)=>[const PopupMenuItem(value:null,child:Text('All trips')),...OwnerTripStatus.values.map((s)=>PopupMenuItem(value:s,child:Text(s.name)))])]),const SizedBox(height:16),...trips.map((t)=>card(t))])));}Widget card(OwnerTrip t){final b=store.boat(t.boatId)!;return Padding(padding:const EdgeInsets.only(bottom:16),child:Container(padding:const EdgeInsets.all(16),decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(16),border:Border.all(color:Colors.grey.shade200)),child:Column(children:[Row(children:[Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('Boat',style:TextStyle(fontWeight:FontWeight.bold)),Text(b.name),const SizedBox(height:10),const Text('Schedule',style:TextStyle(fontWeight:FontWeight.bold)),Text(t.departure.toLocal().toString()),Text('${t.passengers.length}/${t.passengerCapacity} passengers'),Text(t.approved?'APPROVED':t.shoreApproval=='Rejected'||t.wildlifeApproval=='Rejected'?'REJECTED':'PENDING APPROVAL',style:TextStyle(color:t.approved?Colors.green:Colors.orange,fontSize:11))])),Expanded(child:Container(height:110,color:Colors.blueGrey.shade100,child:const Icon(Icons.directions_boat,size:60,color:Colors.white)))]),const SizedBox(height:16),SizedBox(width:double.infinity,height:44,child:ElevatedButton(style:ElevatedButton.styleFrom(backgroundColor:const Color(0xFF152238),foregroundColor:Colors.white),onPressed:()=>Navigator.pushNamed(context,'/owner_trip_info',arguments:t.id),child:const Text('Info')))])));}}
+class OwnerTripsScreen extends StatefulWidget {
+  const OwnerTripsScreen({super.key});
+  @override
+  State<OwnerTripsScreen> createState() => _State();
+}
+
+class _State extends State<OwnerTripsScreen> {
+  final store = OwnerStore.instance, search = TextEditingController();
+  OwnerTripStatus? filter;
+  @override
+  void initState() {
+    super.initState();
+    store.addListener(refresh);
+  }
+
+  @override
+  void dispose() {
+    store.removeListener(refresh);
+    search.dispose();
+    super.dispose();
+  }
+
+  void refresh() => setState(() {});
+  @override
+  Widget build(BuildContext context) {
+    final q = search.text.toLowerCase();
+    final trips = store.trips.where((t) {
+      final b = store.boat(t.boatId);
+      return (b?.name.toLowerCase().contains(q) ?? false) &&
+          (filter == null || t.status == filter);
+    }).toList()
+      ..sort((a, b) => b.departure.compareTo(a.departure));
+    return OwnerLayout(
+        child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(32),
+                  decoration: BoxDecoration(
+                      color: const Color(0xFF152238),
+                      borderRadius: BorderRadius.circular(16)),
+                  child: Column(children: [
+                    const Text('Start New Trips!',
+                        style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white)),
+                    const SizedBox(height: 8),
+                    const Text(
+                        'Set up the schedule and preferences\nfor an upcoming tour.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: Colors.white70)),
+                    const SizedBox(height: 24),
+                    SizedBox(
+                        width: double.infinity,
+                        height: 44,
+                        child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.white,
+                                foregroundColor: const Color(0xFF152238)),
+                            onPressed: () =>
+                                Navigator.pushNamed(context, '/owner_new_trip'),
+                            child: const Text('Schedule Trip')))
+                  ])),
+              const SizedBox(height: 32),
+              const Text('My Trips',
+                  style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black)),
+              Row(children: [
+                Expanded(
+                    child: TextField(
+                        controller: search,
+                        onChanged: (_) => setState(() {}),
+                        decoration: const InputDecoration(
+                            prefixIcon: Icon(Icons.search),
+                            hintText: 'Search'))),
+                PopupMenuButton<OwnerTripStatus?>(
+                    icon: const Icon(Icons.filter_list),
+                    onSelected: (v) => setState(() => filter = v),
+                    itemBuilder: (_) => [
+                          const PopupMenuItem(
+                              value: null, child: Text('All trips')),
+                          ...OwnerTripStatus.values.map((s) =>
+                              PopupMenuItem(value: s, child: Text(s.name)))
+                        ])
+              ]),
+              const SizedBox(height: 16),
+              ...trips.map((t) => card(t))
+            ])));
+  }
+
+  Widget card(OwnerTrip t) {
+    final b = store.boat(t.boatId)!;
+    return Padding(
+        padding: const EdgeInsets.only(bottom: 16),
+        child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.grey.shade200)),
+            child: Column(children: [
+              Row(children: [
+                Expanded(
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                      const Text('Boat',
+                          style: TextStyle(fontWeight: FontWeight.bold)),
+                      Text(b.name),
+                      const SizedBox(height: 10),
+                      const Text('Schedule',
+                          style: TextStyle(fontWeight: FontWeight.bold)),
+                      Text(t.departure.toLocal().toString()),
+                      Text(
+                          '${t.passengers.length}/${t.passengerCapacity} passengers'),
+                      Text(
+                          t.approved
+                              ? 'APPROVED'
+                              : t.shoreApproval == 'Rejected' ||
+                                      t.wildlifeApproval == 'Rejected'
+                                  ? 'REJECTED'
+                                  : 'PENDING APPROVAL',
+                          style: TextStyle(
+                              color: t.approved ? Colors.green : Colors.orange,
+                              fontSize: 11))
+                    ])),
+                Expanded(
+                    child: Container(
+                        height: 110,
+                        color: Colors.blueGrey.shade100,
+                        child: const Icon(Icons.directions_boat,
+                            size: 60, color: Colors.white)))
+              ]),
+              const SizedBox(height: 16),
+              SizedBox(
+                  width: double.infinity,
+                  height: 44,
+                  child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF152238),
+                          foregroundColor: Colors.white),
+                      onPressed: () => Navigator.pushNamed(
+                          context, '/owner_trip_info',
+                          arguments: t.id),
+                      child: const Text('Info')))
+            ])));
+  }
+}

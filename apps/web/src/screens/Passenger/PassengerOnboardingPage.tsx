@@ -28,6 +28,8 @@ const EMPTY_FAMILY_FORM: FamilyFormData = {
   passengerType: "local",
   gender: "male",
   ageCategory: "adult",
+  specialNeedType: "",
+  selfCareConfirmed: false,
 };
 
 function formatValue(value: string): string {
@@ -180,10 +182,12 @@ function PassengerOnboardingPage() {
     const cleanIdentification =
       familyForm.identificationNumber.trim();
     const cleanPhoneNumber = familyForm.phoneNumber.trim();
+    const identificationRequired = familyForm.passengerType !== "local" || !["child", "small"].includes(familyForm.ageCategory);
+    const specialNeedsSelected = familyForm.ageCategory === "specialneeds";
 
     if (
       !cleanName ||
-      !cleanIdentification ||
+      (identificationRequired && !cleanIdentification) ||
       !cleanPhoneNumber
     ) {
       setFamilyError("Please complete all required fields.");
@@ -195,6 +199,11 @@ function PassengerOnboardingPage() {
       return;
     }
 
+    if (specialNeedsSelected && (!familyForm.specialNeedType?.trim() || !familyForm.selfCareConfirmed)) {
+      setFamilyError("Please specify the special need and confirm self-care responsibility.");
+      return;
+    }
+
     const companion = {
       name: cleanName,
       identificationNumber: cleanIdentification,
@@ -202,6 +211,8 @@ function PassengerOnboardingPage() {
       passengerType: familyForm.passengerType,
       gender: familyForm.gender,
       ageCategory: familyForm.ageCategory,
+      specialNeedType: specialNeedsSelected ? familyForm.specialNeedType?.trim() : undefined,
+      selfCareConfirmed: specialNeedsSelected ? familyForm.selfCareConfirmed : false,
     };
 
     try {
@@ -501,13 +512,12 @@ function PassengerOnboardingPage() {
             aria-labelledby="familyModalTitle"
           >
             <button
-              className="absolute top-4 right-4 z-10 grid h-9 w-9 place-items-center rounded-md border border-white/20 bg-white/10 p-0 text-transparent transition hover:bg-white/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+              className="absolute top-4 right-4 z-10 inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/20 bg-white/10 p-0 text-white transition hover:bg-white/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
               type="button"
               aria-label="Close family information form"
               onClick={closeFamilyModal}
             >
               <X size={17} strokeWidth={2} className="text-white" aria-hidden="true" />
-              ×
             </button>
 
             <p className="mb-0 flex items-center gap-3 bg-black px-6 py-6 pr-14 font-poppins text-sm font-medium text-white [&>span]:hidden">
@@ -565,7 +575,7 @@ function PassengerOnboardingPage() {
                 value={
                   familyForm.identificationNumber
                 }
-                placeholder="National Identity Card Number"
+                placeholder={familyForm.passengerType === "local" && ["child", "small"].includes(familyForm.ageCategory) ? "NIC / Passport (Optional)" : "NIC / Passport Number"}
                 maxLength={15}
                 onChange={(event) =>
                   updateFamilyField(
@@ -678,15 +688,39 @@ function PassengerOnboardingPage() {
                         "ageCategory",
                         event.target.value as
                           | "adult"
-                          | "child",
+                          | "child"
+                          | "small"
+                          | "specialneeds",
                       )
                     }
                   >
                     <option value="adult">Adult</option>
                     <option value="child">Child</option>
+                    <option value="small">Small (Under 6 Y)</option>
+                    <option value="specialneeds">Special Needs</option>
                   </select>
                 </div>
               </div>
+
+              {familyForm.ageCategory === "specialneeds" && (
+                <section className="rounded-xl border border-amber-200 bg-amber-50/70 p-4">
+                  <label className="block font-poppins text-xs font-medium text-slate-700" htmlFor="familySpecialNeed">Special need</label>
+                  <select id="familySpecialNeed" value={familyForm.specialNeedType ?? ""} onChange={(event) => updateFamilyField("specialNeedType", event.target.value)} className="mt-2 h-11 w-full rounded-xl border border-amber-200 bg-white px-3 font-poppins text-sm text-slate-900 outline-none focus:border-black focus:ring-4 focus:ring-black/10">
+                    <option value="">Select a special need</option>
+                    <option value="Pregnant">Pregnant</option>
+                    <option value="Physical disability">Physical disability</option>
+                    <option value="Mobility assistance">Mobility assistance</option>
+                    <option value="Visual impairment">Visual impairment</option>
+                    <option value="Hearing impairment">Hearing impairment</option>
+                    <option value="Medical condition">Medical condition</option>
+                    <option value="Other">Other</option>
+                  </select>
+                  <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-lg bg-white p-3 text-xs leading-relaxed text-slate-700">
+                    <input type="checkbox" checked={familyForm.selfCareConfirmed ?? false} onChange={(event) => updateFamilyField("selfCareConfirmed", event.target.checked)} className="mt-0.5 h-4 w-4 shrink-0 accent-black" />
+                    <span>I confirm that this passenger or their companion will take responsibility for their required personal care during the trip.</span>
+                  </label>
+                </section>
+              )}
 
               {familyError && (
                 <p
@@ -698,19 +732,13 @@ function PassengerOnboardingPage() {
               )}
 
               <button
-                className="relative flex min-h-11 w-full items-center justify-center rounded-xl border-0 bg-black px-5 py-3 font-poppins text-sm font-medium text-white shadow-sm transition hover:bg-slate-800 active:scale-[.99] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
+                className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border-0 bg-black px-5 py-3 font-poppins text-sm font-medium text-white shadow-sm transition hover:bg-slate-800 active:scale-[.99] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
                 type="submit"
                 disabled={savingFamily}
               >
                 <span>{savingFamily ? "Adding..." : "Submit"}</span>
 
-                <span
-                  className="absolute right-5 grid h-5 w-5 place-items-center rounded-full border border-white/70 text-transparent"
-                  aria-hidden="true"
-                >
-                  <ArrowRight size={12} strokeWidth={2} className="text-white" />
-                  →
-                </span>
+                <ArrowRight size={17} strokeWidth={2} aria-hidden="true" />
               </button>
             </form>
           </section>

@@ -26,6 +26,7 @@ import 'screens/owner/owner_boat_info_screen.dart';
 import 'screens/owner/owner_notifications_screen.dart';
 import 'screens/crew/boat_crew_dashboard.dart';
 import 'screens/passenger/trip_registration_screen.dart';
+import 'screens/shore_wildlife/shore_wildlife_portal.dart';
 import 'widgets/auth_gate.dart';
 import 'services/api_service.dart';
 
@@ -50,6 +51,7 @@ class WwmsApp extends StatelessWidget {
         'ShoreCrew' => '/shore_dashboard',
         'BoatOwner' => '/boat_owner',
         'BoatCrew' => '/boat_crew',
+        'ShoreWildlife' => '/shore_wildlife',
         _ => '/',
       },
       routes: {
@@ -94,6 +96,10 @@ class WwmsApp extends StatelessWidget {
             roles: ['BoatOwner'], child: OwnerNotificationsScreen()),
         '/boat_crew': (context) =>
             const AuthGate(roles: ['BoatCrew'], child: BoatCrewDashboard()),
+        '/shore_wildlife': (context) => const AuthGate(
+            roles: ['ShoreWildlife'], child: ShoreWildlifeTripsScreen()),
+        '/shore_wildlife_trip': (context) => const AuthGate(
+            roles: ['ShoreWildlife'], child: ShoreWildlifeTripScreen()),
         '/trip-register': (context) => const TripRegistrationScreen(),
       },
     );
