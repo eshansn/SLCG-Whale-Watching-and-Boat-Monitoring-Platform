@@ -18,16 +18,16 @@ class WelcomeScreen extends StatelessWidget {
                 const Icon(Icons.anchor, size: 80, color: Colors.amber),
           ),
           const SizedBox(height: 24),
-          const Text(
+          Text(
             "SLCG Whale-Watching And Boat Monitoring Platform",
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            style: authHeadingStyle(fontSize: 24),
           ),
           const SizedBox(height: 32),
-          const Text(
+          Text(
             "Sign In To Your Account Or Create One To Securely Access The Complete Whale-Watching And Boat Monitoring Platform From Anywhere.",
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 14, color: Colors.white70, height: 1.5),
+            style: authSubheadingStyle(fontSize: 14, height: 1.5),
           ),
           const SizedBox(height: 32),
           CyanButton(

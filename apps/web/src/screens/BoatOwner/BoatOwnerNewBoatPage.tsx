@@ -6,6 +6,8 @@ import {
 import {
   ArrowLeft,
   Paperclip,
+  Save,
+  Send,
   Trash2,
   Upload,
 } from "lucide-react";
@@ -786,7 +788,7 @@ function BoatOwnerNewBoatPage() {
               focus-visible:ring-offset-2
             "
           >
-            Save as Draft
+            <span className="inline-flex items-center gap-2"><Save size={19}/>Save as Draft</span>
           </button>
 
           <button
@@ -805,7 +807,7 @@ function BoatOwnerNewBoatPage() {
               focus-visible:ring-offset-2
             "
           >
-            Request Approval
+            <span className="inline-flex items-center gap-2"><Send size={19}/>Request Approval</span>
           </button>
         </div>
       </form>

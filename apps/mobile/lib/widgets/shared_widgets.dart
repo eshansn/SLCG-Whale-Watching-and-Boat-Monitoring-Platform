@@ -1,4 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+
+TextStyle authHeadingStyle({double fontSize = 36}) => GoogleFonts.montserrat(
+      fontSize: fontSize,
+      color: Colors.white,
+      fontWeight: FontWeight.bold,
+    );
+
+TextStyle authSubheadingStyle({double fontSize = 16, double? height}) =>
+    GoogleFonts.montserrat(
+      fontSize: fontSize,
+      color: Colors.white,
+      height: height,
+    );
 
 class ScreenBackground extends StatelessWidget {
   final Widget child;
@@ -83,9 +97,13 @@ class CyanButton extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(text,
-                style:
-                    const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Text(
+              text,
+              style: GoogleFonts.montserrat(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
             if (icon != null) ...[
               const SizedBox(width: 8),
               Icon(icon, size: 24)

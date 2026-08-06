@@ -74,7 +74,7 @@ export default function BoatOwnerCrewPage() {
             {suggestions.map((suggestion) => <button key={suggestion.crewUserId} type="button" onClick={() => { setEmail(suggestion.email); setSuggestions([]); }} className="flex w-full items-center justify-between gap-4 border-b border-slate-100 px-4 py-3 text-left last:border-0 hover:bg-slate-50"><span><span className="block text-sm font-medium">{suggestion.name}</span><span className="block text-xs text-slate-500">{suggestion.email}</span></span><span className="text-xs text-slate-500">{suggestion.position}</span></button>)}
           </div>}
         </div>
-        <button type="submit" disabled={submitting} className="mt-4 min-h-11 w-full rounded-lg bg-white px-5 text-sm font-semibold text-[#162d54] disabled:opacity-50">{submitting ? 'Adding...' : 'Add Member'}</button>
+        <button type="submit" disabled={submitting} className="mt-4 flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-white px-5 text-sm font-semibold text-[#162d54] disabled:opacity-50"><UserPlus size={18}/>{submitting ? 'Adding...' : 'Add Member'}</button>
       </form>
       {status && <p role="status" className="mt-4 rounded-lg bg-slate-100 p-3 text-center text-sm text-[#162d54]">{status}</p>}
     </div>

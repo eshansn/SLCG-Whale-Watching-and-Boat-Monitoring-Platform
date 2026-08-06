@@ -2,36 +2,44 @@ import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../../auth/useAuth";
 import { Icon } from "../../../components/ui/icon";
+import { Anchor, CircleUserRound, FileWarning, House, LogOut, Ship, UsersRound, UserRoundCog } from "lucide-react";
 
 interface NavigationItem {
   label: string;
   path: string;
+  icon: typeof House;
 }
 
 const adminNavigationItems: NavigationItem[] = [
   {
     label: "Users",
     path: "/admin/manage-users",
+    icon: UsersRound,
   },
   {
     label: "Boats",
     path: "/admin/boats",
+    icon: Ship,
   },
   {
     label: "Trips",
     path: "/admin/trips",
+    icon: Anchor,
   },
   {
     label: "Staff",
     path: "/admin/manage-staff",
+    icon: UserRoundCog,
   },
   {
     label: "Owners",
     path: "/admin/manage-boat-owners",
+    icon: CircleUserRound,
   },
   {
     label: "Complaints",
     path: "/admin/complaints",
+    icon: FileWarning,
   },
 ];
 
@@ -77,11 +85,13 @@ const AdminNavbar = () => {
               <Link
                 key={item.path}
                 to={isActive ? homePath : item.path}
-                className={`whitespace-nowrap font-medium tracking-wide transition-colors hover:text-[#14223d] ${
+                aria-label={isActive ? "Dashboard" : item.label}
+                title={isActive ? "Dashboard" : item.label}
+                className={`rounded-full p-2 transition-colors hover:bg-slate-100 hover:text-[#14223d] ${
                   isActive ? "font-bold text-[#14223d]" : "text-slate-500"
                 }`}
               >
-                {isActive ? "Home" : item.label}
+                <span className="flex items-center gap-2">{isActive ? <House size={18}/> : <item.icon size={18}/>}<span>{isActive ? "Dashboard" : item.label}</span></span>
               </Link>
             );
           })}
@@ -89,9 +99,9 @@ const AdminNavbar = () => {
           <button
             type="button"
             onClick={handleLogout}
-            className="rounded-md bg-[#14223d] px-6 py-2.5 font-semibold text-white shadow-sm transition hover:bg-[#22375f] hover:shadow"
+            aria-label="Log out" title="Log out" className="rounded-full bg-[#14223d] p-2.5 text-white shadow-sm transition hover:bg-[#22375f] hover:shadow"
           >
-            Log Out
+            <span className="flex items-center gap-2"><LogOut size={18}/><span>Log out</span></span>
           </button>
         </nav>
 
@@ -118,20 +128,20 @@ const AdminNavbar = () => {
                   key={item.path}
                   to={isActive ? homePath : item.path}
                   onClick={() => setIsMenuOpen(false)}
-                  className={`rounded-md px-3 py-3 text-sm font-medium transition-colors ${
+                  aria-label={isActive ? "Dashboard" : item.label} title={isActive ? "Dashboard" : item.label} className={`flex justify-center rounded-md px-3 py-3 transition-colors ${
                     isActive ? "bg-slate-100 text-[#14223d]" : "text-slate-600 hover:bg-slate-50 hover:text-[#14223d]"
                   }`}
                 >
-                  {isActive ? "Home" : item.label}
+                  <span className="flex items-center gap-2">{isActive ? <House size={20}/> : <item.icon size={20}/>}<span>{isActive ? "Dashboard" : item.label}</span></span>
                 </Link>
               );
             })}
             <button
               type="button"
               onClick={handleLogout}
-              className="mt-2 rounded-md bg-[#14223d] px-4 py-3 text-left text-sm font-semibold text-white"
+              aria-label="Log out" title="Log out" className="mt-2 flex justify-center rounded-md bg-[#14223d] px-4 py-3 text-white"
             >
-              Log Out
+              <span className="flex items-center gap-2"><LogOut size={20}/><span>Log out</span></span>
             </button>
           </div>
         </nav>

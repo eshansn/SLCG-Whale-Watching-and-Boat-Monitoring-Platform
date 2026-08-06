@@ -1,11 +1,11 @@
 import { useEffect, useState, type MouseEvent } from 'react';
-import { Menu, X } from 'lucide-react';
+import { CircleUserRound, House, Images, Info, Mail, Menu, X } from 'lucide-react';
 
 const navLinks = [
-    { label: 'Home', href: '#home' },
-    { label: 'About', href: '#about' },
-    { label: 'Gallery', href: '#gallery' },
-    { label: 'Contact', href: '#contact' },
+    { label: 'Home', href: '#home', icon: House },
+    { label: 'About', href: '#about', icon: Info },
+    { label: 'Gallery', href: '#gallery', icon: Images },
+    { label: 'Contact', href: '#contact', icon: Mail },
 ];
 
 export default function Navbar() {
@@ -72,9 +72,11 @@ export default function Navbar() {
                                 key={link.label}
                                 href={link.href}
                                 onClick={(event) => handleNavClick(event, link.href)}
-                                className="hover:text-gray-500 transition-colors"
+                                className="rounded-full p-2 hover:bg-slate-100 hover:text-gray-500 transition-colors"
+                                aria-label={link.label}
+                                title={link.label}
                             >
-                                {link.label}
+                                <span className="flex items-center gap-2"><link.icon size={18}/><span>{link.label}</span></span>
                             </a>
                         ))}
                     </div>
@@ -108,9 +110,11 @@ export default function Navbar() {
                             key={link.label}
                             href={link.href}
                             onClick={(event) => handleNavClick(event, link.href)}
-                            className="hover:text-gray-500 py-3 border-b border-gray-100"
+                            className="flex items-center justify-center py-3 border-b border-gray-100 hover:text-gray-500"
+                            aria-label={link.label}
+                            title={link.label}
                         >
-                            {link.label}
+                            <span className="flex items-center gap-2"><link.icon size={20}/><span>{link.label}</span></span>
                         </a>
                     ))}
                 </div>

@@ -12,10 +12,24 @@ class OwnerProfileScreen extends StatefulWidget {
 
 class _State extends State<OwnerProfileScreen> {
   final store = OwnerStore.instance;
-  late final phone = TextEditingController(text: store.profile.phone),
-      address = TextEditingController(text: store.profile.address),
-      about = TextEditingController(text: store.profile.about);
+  final phone = TextEditingController(),
+      address = TextEditingController(),
+      about = TextEditingController();
   String? imagePath;
+  bool saving = false;
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+  Future<void> _load() async {
+    await store.refresh();
+    if (!mounted) return;
+    phone.text = store.profile.phone;
+    address.text = store.profile.address;
+    about.text = store.profile.about;
+    setState(() {});
+  }
   @override
   void dispose() {
     phone.dispose();
@@ -30,19 +44,24 @@ class _State extends State<OwnerProfileScreen> {
     if (image != null) setState(() => imagePath = image.path);
   }
 
-  void save() {
-    if (phone.text.trim().length < 7 || address.text.trim().isEmpty) {
+  Future<void> save() async {
+    if (phone.text.trim().length < 7) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Enter a valid phone number and address.')));
+          content: Text('Enter a valid phone number.')));
       return;
     }
-    store.updateProfile(
-        phone: phone.text.trim(),
-        address: address.text.trim(),
-        about: about.text.trim(),
-        imagePath: imagePath);
-    ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Profile updated successfully.')));
+    setState(() => saving = true);
+    try {
+      await store.updateProfile(phone: phone.text.trim(), address: address.text.trim(),
+          about: about.text.trim(), imagePath: imagePath);
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Profile updated successfully.')));
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(e.toString().replaceFirst('Exception: ', ''))));
+    } finally {
+      if (mounted) setState(() => saving = false);
+    }
   }
 
   @override
@@ -98,7 +117,7 @@ class _State extends State<OwnerProfileScreen> {
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(8))),
-                      onPressed: save,
+                      onPressed: saving ? null : save,
                       child:
                           const Text('Update', style: TextStyle(fontSize: 16))))
             ])));

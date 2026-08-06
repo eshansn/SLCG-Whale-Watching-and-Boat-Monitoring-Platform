@@ -28,6 +28,9 @@ import infoIcon from "../../assets/icons/info.svg";
 import notificationIcon from "../../assets/icons/notification.svg";
 import userIcon from "../../assets/icons/user.svg";
 import vesselIcon from "../../assets/icons/vessel.svg";
+import dashboardIcon from "../../assets/icons/dashboard.svg";
+import crewIcon from "../../assets/icons/crew.svg";
+import tripsIcon from "../../assets/icons/trips.svg";
 import { useOperations } from "../../operations/useOperations";
 import { operationsApi, type TripPassenger, type VesselMapRecord } from "../../operations/operationsApi";
 import TripTransferModal from "./TripTransferModal";
@@ -43,7 +46,7 @@ const menuItems: MenuItem[] = [
   {
     label: "Dashboard",
     path: "/owner",
-    icon: infoIcon,
+    icon: dashboardIcon,
   },
   {
     label: "Profile",
@@ -53,7 +56,7 @@ const menuItems: MenuItem[] = [
   {
     label: "My Crew",
     path: "/owner/crew",
-    icon: groupIcon,
+    icon: crewIcon,
   },
   {
     label: "My Boats",
@@ -63,7 +66,7 @@ const menuItems: MenuItem[] = [
   {
     label: "My Trips",
     path: "/owner/trips",
-    icon: infoIcon,
+    icon: tripsIcon,
   },
   {
     label: "Settings",

@@ -44,8 +44,50 @@ class WwmsApp extends StatelessWidget {
     return MaterialApp(
       title: 'WWMS Platform',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData.dark().copyWith(
-        scaffoldBackgroundColor: Colors.black,
+      theme: ThemeData(
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF162D54),
+          primary: const Color(0xFF162D54),
+          surface: Colors.white,
+        ),
+        scaffoldBackgroundColor: const Color(0xFFF8F9FB),
+        fontFamily: 'Poppins',
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Colors.white,
+          foregroundColor: Color(0xFF14223D),
+          surfaceTintColor: Colors.transparent,
+          elevation: 0,
+          centerTitle: true,
+        ),
+        cardTheme: CardThemeData(
+          color: Colors.white,
+          elevation: 2,
+          shadowColor: Colors.black.withValues(alpha: .12),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        ),
+        inputDecorationTheme: InputDecorationTheme(
+          filled: true,
+          fillColor: const Color(0xFFF8F9FB),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none,
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+          ),
+        ),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF162D54),
+            foregroundColor: Colors.white,
+            minimumSize: const Size(0, 48),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+        ),
       ),
       initialRoute: switch (ApiService.instance.role) {
         'ShoreCrew' => '/shore_dashboard',
@@ -96,6 +138,16 @@ class WwmsApp extends StatelessWidget {
             roles: ['BoatOwner'], child: OwnerNotificationsScreen()),
         '/boat_crew': (context) =>
             const AuthGate(roles: ['BoatCrew'], child: BoatCrewDashboard()),
+        '/crew_profile': (context) =>
+            const AuthGate(roles: ['BoatCrew'], child: BoatCrewProfileScreen()),
+        '/crew_trips': (context) =>
+            const AuthGate(roles: ['BoatCrew'], child: BoatCrewTripsScreen()),
+        '/crew_trip_info': (context) => const AuthGate(
+            roles: ['BoatCrew'], child: BoatCrewTripDetailsScreen()),
+        '/crew_notifications': (context) => const AuthGate(
+            roles: ['BoatCrew'], child: BoatCrewNotificationsScreen()),
+        '/crew_settings': (context) => const AuthGate(
+            roles: ['BoatCrew'], child: BoatCrewSettingsScreen()),
         '/shore_wildlife': (context) => const AuthGate(
             roles: ['ShoreWildlife'], child: ShoreWildlifeTripsScreen()),
         '/shore_wildlife_trip': (context) => const AuthGate(

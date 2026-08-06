@@ -39,9 +39,6 @@ class _State extends State<OwnerSettingsScreen> {
               () => message('Support: support@wwms.test')),
           divider,
           action('Log Out', 'Log Out From WWMS', logout, red: true),
-          divider,
-          action('Delete My Account', 'Delete your WWMS account', deleteAccount,
-              red: true)
         ]));
   }
 
@@ -81,12 +78,16 @@ class _State extends State<OwnerSettingsScreen> {
   void message(String text) =>
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
   void changePassword() {
-    final a = TextEditingController(), b = TextEditingController();
+    final current = TextEditingController(), a = TextEditingController(), b = TextEditingController();
     showDialog(
         context: context,
         builder: (d) => AlertDialog(
                 title: const Text('Change Password'),
                 content: Column(mainAxisSize: MainAxisSize.min, children: [
+                  TextField(
+                      controller: current,
+                      obscureText: true,
+                      decoration: const InputDecoration(labelText: 'Current password')),
                   TextField(
                       controller: a,
                       obscureText: true,
@@ -103,14 +104,19 @@ class _State extends State<OwnerSettingsScreen> {
                       onPressed: () => Navigator.pop(d),
                       child: const Text('Cancel')),
                   TextButton(
-                      onPressed: () {
-                        if (a.text != b.text || !store.changePassword(a.text)) {
+                      onPressed: () async {
+                        if (a.text != b.text || a.text.length < 12 || current.text.isEmpty) {
                           message(
-                              'Passwords must match and contain at least 12 characters.');
+                              'Enter your current password; new passwords must match and contain at least 12 characters.');
                           return;
                         }
-                        Navigator.pop(d);
-                        message('Password updated locally.');
+                        try {
+                          await ApiService.instance.changePassword(current.text, a.text);
+                          if (d.mounted) Navigator.pop(d);
+                          if (mounted) message('Password updated successfully.');
+                        } catch (e) {
+                          if (mounted) message(e.toString().replaceFirst('Exception: ', ''));
+                        }
                       },
                       child: const Text('Update'))
                 ]));
@@ -137,26 +143,4 @@ class _State extends State<OwnerSettingsScreen> {
       Navigator.pushNamedAndRemoveUntil(context, '/login', (_) => false);
   }
 
-  Future<void> deleteAccount() async {
-    final ok = await confirm('Delete account?',
-        'This action removes the local owner profile and signs you out.');
-    if (ok) {
-      store.deleteLocalAccount();
-      await logout();
-    }
-  }
-
-  Future<bool> confirm(String title, String body) async =>
-      await showDialog<bool>(
-          context: context,
-          builder: (d) =>
-              AlertDialog(title: Text(title), content: Text(body), actions: [
-                TextButton(
-                    onPressed: () => Navigator.pop(d, false),
-                    child: const Text('Cancel')),
-                TextButton(
-                    onPressed: () => Navigator.pop(d, true),
-                    child: const Text('Confirm'))
-              ])) ??
-      false;
 }

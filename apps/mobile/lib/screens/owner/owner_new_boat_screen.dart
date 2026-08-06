@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../owner/owner_store.dart';
+import '../../services/api_service.dart';
 
 class OwnerNewBoatScreen extends StatefulWidget {
   const OwnerNewBoatScreen({Key? key}) : super(key: key);
@@ -16,6 +16,7 @@ class _OwnerNewBoatScreenState extends State<OwnerNewBoatScreen> {
       width = TextEditingController(),
       type = TextEditingController(),
       engine = TextEditingController();
+  bool saving = false;
   @override
   void dispose() {
     for (final c in [
@@ -34,30 +35,43 @@ class _OwnerNewBoatScreenState extends State<OwnerNewBoatScreen> {
   }
 
   Future<void> _save() async {
-    final cap = int.tryParse(capacity.text);
+    final cap = int.tryParse(capacity.text),
+        boatLength = double.tryParse(length.text),
+        boatWidth = double.tryParse(width.text);
     if (name.text.trim().isEmpty ||
         registration.text.trim().isEmpty ||
         cap == null ||
         cap <= 0 ||
+        hull.text.trim().isEmpty ||
+        boatLength == null ||
+        boatLength <= 0 ||
+        boatWidth == null ||
+        boatWidth <= 0 ||
         type.text.trim().isEmpty ||
         engine.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Complete all required boat fields.')));
       return;
     }
-    OwnerStore.instance.addBoat(OwnerBoat(
-        id: 'boat-${DateTime.now().millisecondsSinceEpoch}',
-        ownerEmail: OwnerStore.instance.ownerEmail,
-        name: name.text.trim(),
-        registrationNumber: registration.text.trim(),
-        type: type.text.trim(),
-        capacity: cap,
-        engineDetails: engine.text.trim(),
-        status: CertificationStatus.pending));
-    if (mounted) {
+    setState(() => saving = true);
+    try {
+      await ApiService.instance.createBoat(
+          name: name.text.trim(),
+          registrationNumber: registration.text.trim(),
+          hullNumber: hull.text.trim(),
+          length: boatLength,
+          width: boatWidth,
+          capacity: cap);
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Boat submitted for approval.')));
-      Navigator.pop(context);
+      Navigator.pop(context, true);
+    } catch (exception) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(exception.toString().replaceFirst('Exception: ', ''))));
+    } finally {
+      if (mounted) setState(() => saving = false);
     }
   }
 
@@ -212,7 +226,7 @@ class _OwnerNewBoatScreenState extends State<OwnerNewBoatScreen> {
                     side: const BorderSide(color: Color(0xFF0F172A)),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8))),
-                onPressed: _save,
+                onPressed: saving ? null : _save,
                 child: const Text("Save as Draft",
                     style:
                         TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
@@ -228,7 +242,7 @@ class _OwnerNewBoatScreenState extends State<OwnerNewBoatScreen> {
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8))),
-                onPressed: _save,
+                onPressed: saving ? null : _save,
                 child: const Text("Request Approval",
                     style:
                         TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),

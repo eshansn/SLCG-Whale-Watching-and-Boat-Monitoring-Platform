@@ -15,11 +15,9 @@ class SignupStep1 extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.end,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text("Let's Get Started!",
-              style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold)),
+          Text("Let's Get Started!", style: authHeadingStyle()),
           const SizedBox(height: 8),
-          const Text("Just Few Steps Away.",
-              style: TextStyle(fontSize: 16, color: Colors.white70)),
+          Text("Just Few Steps Away.", style: authSubheadingStyle()),
           const SizedBox(height: 32),
           const CustomTextField(hintText: "Enter Username"),
           const CustomTextField(hintText: "Enter Email"),

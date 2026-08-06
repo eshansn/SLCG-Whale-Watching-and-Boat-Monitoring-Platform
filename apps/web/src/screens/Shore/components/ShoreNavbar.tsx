@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../../auth/useAuth";
 import { Icon } from "../../../components/ui/icon";
+import { House, LogOut, Menu, Settings, Ship, X } from "lucide-react";
 
 const ShoreNavbar = () => {
   const [open, setOpen] = useState(false);
@@ -26,25 +27,23 @@ const ShoreNavbar = () => {
           <button type="button" aria-label="Notifications" className="text-slate-500 transition hover:text-[#14223d]">
             <Icon name="notification" size={20} />
           </button>
-          <Link to={onTripsPage ? "/shore" : "/shore/trips"} className="font-medium text-slate-500 transition hover:text-[#14223d]">
-            {onTripsPage ? "Home" : "Trips"}
+          <Link aria-label={onTripsPage?"Dashboard":"Trips"} title={onTripsPage?"Dashboard":"Trips"} to={onTripsPage ? "/shore" : "/shore/trips"} className="rounded-full p-2 text-slate-500 transition hover:bg-slate-100 hover:text-[#14223d]">
+            <span className="flex items-center gap-2">{onTripsPage ? <House size={18}/> : <Ship size={18}/>}<span>{onTripsPage ? "Dashboard" : "Trips"}</span></span>
           </Link>
-          <Link to="/shore" className="font-medium text-slate-500 transition hover:text-[#14223d]">Settings</Link>
-          <button type="button" onClick={signOut} className="rounded-md bg-[#14223d] px-6 py-2.5 font-semibold text-white shadow-sm transition hover:bg-[#22375f]">Log Out</button>
+          <Link aria-label="Settings" title="Settings" to="/shore" className="rounded-full p-2 text-slate-500 transition hover:bg-slate-100 hover:text-[#14223d]"><span className="flex items-center gap-2"><Settings size={18}/><span>Settings</span></span></Link>
+          <button type="button" onClick={signOut} aria-label="Log out" title="Log out" className="rounded-full bg-[#14223d] p-2.5 text-white shadow-sm transition hover:bg-[#22375f]"><span className="flex items-center gap-2"><LogOut size={18}/><span>Log out</span></span></button>
         </nav>
 
         <button type="button" onClick={() => setOpen((value) => !value)} className="flex h-10 w-10 flex-col items-center justify-center gap-1.5 rounded-md hover:bg-slate-100 lg:hidden" aria-label="Toggle navigation" aria-expanded={open}>
-          <span className={`h-0.5 w-5 bg-current transition ${open ? "translate-y-2 rotate-45" : ""}`} />
-          <span className={`h-0.5 w-5 bg-current transition ${open ? "opacity-0" : ""}`} />
-          <span className={`h-0.5 w-5 bg-current transition ${open ? "-translate-y-2 -rotate-45" : ""}`} />
+          {open?<X size={22}/>:<Menu size={22}/>} 
         </button>
       </div>
 
       {open && (
         <nav className="grid gap-1 border-t border-slate-200 bg-white px-4 py-4 shadow-lg lg:hidden">
-          <Link onClick={() => setOpen(false)} to={onTripsPage ? "/shore" : "/shore/trips"} className="rounded-md px-3 py-3 text-sm font-medium hover:bg-slate-50">{onTripsPage ? "Home" : "Trips"}</Link>
-          <Link onClick={() => setOpen(false)} to="/shore" className="rounded-md px-3 py-3 text-sm font-medium hover:bg-slate-50">Settings</Link>
-          <button type="button" onClick={signOut} className="mt-2 rounded-md bg-[#14223d] px-4 py-3 text-left text-sm font-semibold text-white">Log Out</button>
+          <Link aria-label={onTripsPage?"Dashboard":"Trips"} title={onTripsPage?"Dashboard":"Trips"} onClick={() => setOpen(false)} to={onTripsPage ? "/shore" : "/shore/trips"} className="flex justify-center rounded-md px-3 py-3 hover:bg-slate-50">{onTripsPage ? <House size={22}/> : <Ship size={22}/>}</Link>
+          <Link aria-label="Settings" title="Settings" onClick={() => setOpen(false)} to="/shore" className="flex justify-center rounded-md px-3 py-3 hover:bg-slate-50"><Settings size={22}/></Link>
+          <button type="button" onClick={signOut} aria-label="Log out" title="Log out" className="mt-2 flex justify-center rounded-md bg-[#14223d] px-4 py-3 text-white"><LogOut size={22}/></button>
         </nav>
       )}
     </header>

@@ -4,9 +4,11 @@ import { Icon } from '../../components/ui/icon';
 import ShineButton from '../../components/ShineButton';
 import { useNavigate } from 'react-router-dom';
 import { register } from '../../auth/authApi';
+import { useAuth } from '../../auth/useAuth';
 
 const SignUp = () => {
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [step, setStep] = useState(1);
   
   const [formData, setFormData] = useState({
@@ -43,17 +45,19 @@ const SignUp = () => {
     }
     setIsSubmitting(true);
     try {
+      const role = formData.role === 'Boat Owner' ? 'BoatOwner' : 'BoatCrew';
+      const email = formData.email.trim();
       await register({
-        userName: formData.username,
-        displayName: formData.fullName,
-        nicNumber: formData.nicNumber,
-        email: formData.email,
-        phoneNumber: formData.phone,
+        userName: formData.username.trim(),
+        displayName: formData.fullName.trim(),
+        nicNumber: formData.nicNumber.trim(),
+        email,
+        phoneNumber: formData.phone.trim(),
         password: formData.password,
-        role: formData.role === 'Boat Owner' ? 'BoatOwner' : 'BoatCrew',
+        role,
       });
-      window.alert('Account created successfully. You can now sign in.');
-      navigate('/login', { replace: true });
+      const session = await login({ email, password: formData.password });
+      navigate(session.roles.includes('BoatOwner') ? '/owner' : '/crew', { replace: true });
     } catch (error) {
       window.alert(error instanceof Error ? error.message : 'Account creation failed.');
     } finally {
@@ -134,6 +138,10 @@ const SignUp = () => {
                   value={formData.username}
                   onChange={handleChange}
                   placeholder="Enter Username" 
+                  minLength={3}
+                  maxLength={64}
+                  pattern="[a-zA-Z0-9._-]+"
+                  title="Use 3–64 letters, numbers, dots, underscores, or hyphens."
                   className="w-full px-4 py-3 rounded-md bg-white text-gray-900 placeholder-indigo-900/60 focus:outline-none focus:ring-2 focus:ring-teal-400 font-medium text-sm"
                   required
                 />
@@ -143,6 +151,7 @@ const SignUp = () => {
                   value={formData.fullName}
                   onChange={handleChange}
                   placeholder="Enter Full Name"
+                  maxLength={160}
                   autoComplete="name"
                   className="w-full px-4 py-3 rounded-md bg-white text-gray-900 placeholder-indigo-900/60 focus:outline-none focus:ring-2 focus:ring-teal-400 font-medium text-sm"
                   required
@@ -173,6 +182,7 @@ const SignUp = () => {
                   value={formData.phone}
                   onChange={handleChange}
                   placeholder="Enter Phone" 
+                  maxLength={32}
                   className="w-full px-4 py-3 rounded-md bg-white text-gray-900 placeholder-indigo-900/60 focus:outline-none focus:ring-2 focus:ring-teal-400 font-medium text-sm"
                   required
                 />
@@ -180,7 +190,7 @@ const SignUp = () => {
                 <div className="mt-2 w-full">
                   <ShineButton
                     text="Continue"
-                    onClick={() => setStep(3)}
+                    type="submit"
                     className="w-full py-3"
                   />
                 </div>
@@ -219,6 +229,10 @@ const SignUp = () => {
                     value={formData.password}
                     onChange={handleChange}
                     placeholder="New Password" 
+                    minLength={12}
+                    maxLength={128}
+                    pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^a-zA-Z0-9]).{12,}"
+                    title="Use at least 12 characters with uppercase, lowercase, a number, and a symbol."
                     className="w-full px-4 py-3 rounded-md bg-white text-gray-900 placeholder-indigo-900/60 focus:outline-none focus:ring-2 focus:ring-teal-400 font-medium text-sm pr-12"
                     required
                   />
@@ -238,6 +252,8 @@ const SignUp = () => {
                     value={formData.confirmPassword}
                     onChange={handleChange}
                     placeholder="Confirm Password" 
+                    minLength={12}
+                    maxLength={128}
                     className="w-full px-4 py-3 rounded-md bg-white text-gray-900 placeholder-indigo-900/60 focus:outline-none focus:ring-2 focus:ring-teal-400 font-medium text-sm pr-12"
                     required
                   />
@@ -254,7 +270,8 @@ const SignUp = () => {
                   {/* Fixed: Wrapped the function call in an anonymous arrow function */}
                   <ShineButton
                     text="Create Account"
-                    onClick={() => void handleFinalSubmit()}
+                    type="submit"
+                    disabled={isSubmitting}
                     className="w-full py-3"
                   />
                 </div>

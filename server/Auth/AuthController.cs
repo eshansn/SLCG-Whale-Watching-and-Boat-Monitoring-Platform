@@ -1,6 +1,9 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.AspNetCore.Identity;
+using System.Security.Claims;
+using WhaleWatching.Api.Domain;
 using WhaleWatching.Api.Auth.Dtos;
 
 namespace WhaleWatching.Api.Auth;
@@ -9,7 +12,7 @@ namespace WhaleWatching.Api.Auth;
 [Route("api/auth")]
 [Authorize]
 [EnableRateLimiting("auth")]
-public sealed class AuthController(IAuthService authService) : ControllerBase
+public sealed class AuthController(IAuthService authService, UserManager<ApplicationUser> userManager) : ControllerBase
 {
     [HttpPost("register")]
     [AllowAnonymous]
@@ -73,6 +76,27 @@ public sealed class AuthController(IAuthService authService) : ControllerBase
             : Ok(response);
     }
 
+    [HttpPost("change-password")]
+    public async Task<IActionResult> ChangePassword(ChangePasswordRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.CurrentPassword) || string.IsNullOrWhiteSpace(request.NewPassword))
+            return ValidationProblem("Current and new passwords are required.");
+        if (request.CurrentPassword == request.NewPassword)
+            return ValidationProblem("The new password must be different from the current password.");
+        var id = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
+        var user = id is null ? null : await userManager.FindByIdAsync(id);
+        if (user is null) return Unauthorized();
+        var result = await userManager.ChangePasswordAsync(user, request.CurrentPassword, request.NewPassword);
+        if (!result.Succeeded)
+        {
+            foreach (var error in result.Errors) ModelState.AddModelError(error.Code, error.Description);
+            return ValidationProblem(ModelState);
+        }
+        return Ok(new { message = "Password updated successfully." });
+    }
+
     private string GetClientIp() =>
         HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
 }
+
+public sealed record ChangePasswordRequest(string CurrentPassword, string NewPassword);

@@ -15,6 +15,7 @@ class _State extends State<OwnerTripsScreen> {
   void initState() {
     super.initState();
     store.addListener(refresh);
+    store.refresh();
   }
 
   @override

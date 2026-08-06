@@ -4,6 +4,7 @@ import {
 } from "react";
 import {
   Menu as MenuIcon,
+  Plus,
   Settings,
   X,
 } from "lucide-react";
@@ -16,6 +17,9 @@ import infoIcon from "../../assets/icons/info.svg";
 import notificationIcon from "../../assets/icons/notification.svg";
 import userIcon from "../../assets/icons/user.svg";
 import vesselIcon from "../../assets/icons/vessel.svg";
+import dashboardIcon from "../../assets/icons/dashboard.svg";
+import crewIcon from "../../assets/icons/crew.svg";
+import tripsIcon from "../../assets/icons/trips.svg";
 
 interface Boat {
   id: string;
@@ -37,7 +41,7 @@ const menuItems: MenuItem[] = [
   {
     label: "Dashboard",
     path: "/owner",
-    icon: infoIcon,
+    icon: dashboardIcon,
   },
   {
     label: "Profile",
@@ -47,7 +51,7 @@ const menuItems: MenuItem[] = [
   {
     label: "My Crew",
     path: "/owner/crew",
-    icon: groupIcon,
+    icon: crewIcon,
   },
   {
     label: "My Boats",
@@ -57,7 +61,7 @@ const menuItems: MenuItem[] = [
   {
     label: "My Trips",
     path: "/owner/trips",
-    icon: infoIcon,
+    icon: tripsIcon,
   },
   {
     label: "Settings",
@@ -253,6 +257,8 @@ function BoatOwnerBoatsPage() {
 
               <button
                 type="button"
+                aria-label={`Open ${boat.name} details`}
+                title="Open details"
                 onClick={() =>
                   navigate(`/owner/boats/${boat.id}`)
                 }
@@ -273,12 +279,11 @@ function BoatOwnerBoatsPage() {
                 "
               >
                 <span>Info</span>
-
                 <img
                   src={infoIcon}
                   alt=""
                   aria-hidden="true"
-                  className="h-4 w-4 brightness-0 invert"
+                  className="h-5 w-5 brightness-0 invert"
                 />
               </button>
             </article>
@@ -294,21 +299,21 @@ function BoatOwnerBoatsPage() {
           {/* Register boat panel */}
           <section
             className="
-              flex w-full flex-col
-              items-center justify-center
-              rounded-[16px] bg-[#162d54]
-              px-5 py-7 text-center
+              relative flex w-full flex-col overflow-hidden
+              items-start justify-center
+              rounded-[24px] border border-cyan-300/20 bg-gradient-to-br from-[#101d3b] via-[#162d54] to-[#16738a]
+              px-7 py-8 text-left shadow-[0_18px_45px_rgba(22,45,84,.22)]
               md:col-span-2
               sm:px-8 sm:py-9
               lg:col-span-1 lg:min-h-[270px]
               xl:min-h-[300px]
             "
           >
-            <h2 className="text-[19px] font-semibold text-white sm:text-[22px]">
+            <span className="mb-5 grid h-12 w-12 place-items-center rounded-2xl bg-white/12 text-white ring-1 ring-white/20"><Plus size={25}/></span><h2 className="text-[21px] font-semibold text-white sm:text-[25px]">
               Register New Boats
             </h2>
 
-            <p className="mt-1 text-[11px] font-normal text-white/90 sm:text-[13px]">
+            <p className="mt-2 text-[13px] font-normal leading-6 text-white/75 sm:text-[14px]">
               Initialize your boat&apos;s digital profile.
             </p>
 
@@ -318,13 +323,13 @@ function BoatOwnerBoatsPage() {
                 navigate("/owner/boats/register")
               }
               className="
-                mt-7 min-h-8 w-full
-                max-w-[230px] rounded-[5px]
-                bg-white px-5 py-2
-                text-[11px] font-semibold
+                mt-7 inline-flex min-h-12 w-full items-center justify-center gap-2
+                max-w-[260px] rounded-xl
+                bg-white px-6 py-3
+                text-[14px] font-semibold shadow-lg shadow-black/10
                 text-[#162d54]
                 transition-colors
-                hover:bg-gray-100
+                hover:-translate-y-0.5 hover:bg-cyan-50 hover:shadow-xl
                 focus:outline-none
                 focus-visible:ring-2
                 focus-visible:ring-white
@@ -333,7 +338,7 @@ function BoatOwnerBoatsPage() {
                 sm:max-w-[280px] sm:text-[12px]
               "
             >
-              Add More
+              <Plus size={19}/> Register Boat
             </button>
           </section>
         </div>
@@ -448,7 +453,7 @@ function BoatCard({boat,onOpen}:{boat:Boat;onOpen:()=>void}){
    <div className="min-w-0"><p className="text-[16px] font-semibold sm:text-[18px]">Name</p><p className="mt-1 truncate text-[16px] sm:text-[18px]">{boat.name}</p><p className="mt-3 text-[16px] font-semibold sm:text-[18px]">Reg No</p><p className="mt-1 text-[16px] sm:text-[18px]">{boat.registrationNumber}</p><div className="mt-3 flex items-center gap-1"><span className={`h-2 w-2 rounded-full ${declined?"bg-red-500":"bg-amber-400"}`} aria-hidden="true"/><span className={`text-[8px] font-medium uppercase sm:text-[9px] ${declined?"text-red-500":"text-amber-600"}`}>{declined?"Approval declined":"Approval pending"}</span></div></div>
    <img src={boat.image} alt={`${boat.name} boat`} className="h-[145px] w-full rounded-[12px] object-cover object-center sm:h-[180px] lg:h-[190px] xl:h-[210px]"/>
   </div>
-  <button type="button" onClick={onOpen} className="mt-3 flex min-h-9 w-full items-center justify-center gap-1 rounded-[9px] bg-[#162d54] px-4 py-2 text-[12px] text-white transition-colors hover:bg-[#203d6c] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#162d54] focus-visible:ring-offset-2 sm:min-h-10 sm:text-[13px]"><span>Info</span><img src={infoIcon} alt="" aria-hidden="true" className="h-4 w-4 brightness-0 invert"/></button>
+  <button type="button" onClick={onOpen} aria-label={`Open ${boat.name} details`} title="Open details" className="mt-3 flex min-h-9 w-full items-center justify-center gap-2 rounded-[9px] bg-[#162d54] px-4 py-2 text-white transition-colors hover:bg-[#203d6c] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#162d54] focus-visible:ring-offset-2 sm:min-h-10"><img src={infoIcon} alt="" aria-hidden="true" className="h-5 w-5 brightness-0 invert"/><span>Info</span></button>
  </article>;
 }
 
