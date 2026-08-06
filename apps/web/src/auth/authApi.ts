@@ -16,6 +16,28 @@ export class AuthApiError extends Error {
   }
 }
 
+interface ApiProblemDetails {
+  detail?: string;
+  title?: string;
+  message?: string;
+  errors?: Record<string, string[]>;
+}
+
+async function getErrorMessage(response: Response): Promise<string> {
+  try {
+    const problem = await response.json() as ApiProblemDetails;
+    const validationMessage = problem.errors
+      ? Object.values(problem.errors).flat().find(Boolean)
+      : undefined;
+    return validationMessage
+      ?? problem.detail
+      ?? problem.message
+      ?? (response.status === 401 ? 'Invalid email or password.' : 'Authentication request failed.');
+  } catch {
+    return response.status === 401 ? 'Invalid email or password.' : 'Authentication request failed.';
+  }
+}
+
 async function post<T>(path: string, body: unknown, accessToken?: string): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method: 'POST',
@@ -27,10 +49,7 @@ async function post<T>(path: string, body: unknown, accessToken?: string): Promi
   });
 
   if (!response.ok) {
-    throw new AuthApiError(
-      response.status === 401 ? 'Invalid email or password.' : 'Authentication request failed.',
-      response.status,
-    );
+    throw new AuthApiError(await getErrorMessage(response), response.status);
   }
 
   return response.json() as Promise<T>;
@@ -83,6 +102,10 @@ export interface PublicRegistration {
 
 export async function register(details: PublicRegistration): Promise<{ message: string }> {
   return post<{ message: string }>('/api/auth/register', details);
+}
+
+export async function changePassword(accessToken:string,currentPassword:string,newPassword:string):Promise<{message:string}>{
+  return post<{message:string}>('/api/auth/change-password',{currentPassword,newPassword},accessToken);
 }
 
 async function performRestore(): Promise<AuthSession | null> {

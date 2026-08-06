@@ -14,6 +14,7 @@ class _State extends State<OwnerMyCrewScreen> {
   void initState() {
     super.initState();
     store.addListener(refresh);
+    store.refresh();
   }
 
   @override
@@ -168,12 +169,14 @@ class _State extends State<OwnerMyCrewScreen> {
                       child: const Text('Send invitation'))
                 ]));
     if (email == null) return;
-    final ok = store.inviteCrew(email);
-    if (mounted)
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(ok
-              ? 'Invitation sent to $email'
-              : 'Enter a registered, certified crew email that has not already been invited.')));
+    try {
+      await store.inviteCrew(email);
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('$email was added to your crew.')));
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(e.toString().replaceFirst('Exception: ', ''))));
+    }
   }
 
   Future<void> remove(OwnerCrewMember m) async {
@@ -189,7 +192,14 @@ class _State extends State<OwnerMyCrewScreen> {
                       child: const Text('Remove'))
                 ])) ??
         false;
-    if (ok) store.removeCrew(m.id);
+    if (ok) {
+      try {
+        await store.removeCrew(m.id);
+      } catch (e) {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(e.toString().replaceFirst('Exception: ', ''))));
+      }
+    }
   }
 
   void details(OwnerCrewMember m) => showDialog(

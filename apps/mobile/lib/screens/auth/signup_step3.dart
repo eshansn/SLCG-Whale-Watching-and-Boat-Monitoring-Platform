@@ -14,11 +14,9 @@ class SignupStep3 extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.end,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text("Let's Get You Secured!",
-              style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold)),
+          Text("Let's Get You Secured!", style: authHeadingStyle()),
           const SizedBox(height: 8),
-          const Text("One Last Step.",
-              style: TextStyle(fontSize: 16, color: Colors.white70)),
+          Text("One Last Step.", style: authSubheadingStyle()),
           const SizedBox(height: 32),
           const CustomTextField(hintText: "New Password", isPassword: true),
           const CustomTextField(hintText: "Confirm Password", isPassword: true),

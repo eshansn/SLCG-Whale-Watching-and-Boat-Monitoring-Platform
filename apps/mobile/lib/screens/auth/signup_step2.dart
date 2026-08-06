@@ -21,11 +21,9 @@ class SignupStep2 extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.end,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text("Tell Us Who You Are!",
-              style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold)),
+          Text("Tell Us Who You Are!", style: authHeadingStyle()),
           const SizedBox(height: 8),
-          const Text("Almost There.",
-              style: TextStyle(fontSize: 16, color: Colors.white70)),
+          Text("Almost There.", style: authSubheadingStyle()),
           const SizedBox(height: 32),
           CyanButton(
               text: "Boat Owner",

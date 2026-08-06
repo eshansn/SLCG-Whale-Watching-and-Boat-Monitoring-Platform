@@ -1,5 +1,5 @@
-import 'dart:math';
 import 'package:flutter/foundation.dart';
+import '../services/api_service.dart';
 
 enum CertificationStatus { pending, underReview, certified, rejected }
 
@@ -117,227 +117,134 @@ class OwnerSettings {
 }
 
 class OwnerStore extends ChangeNotifier {
-  OwnerStore._();
-  static final instance = OwnerStore._().._seed();
-  late OwnerProfile profile;
+  OwnerStore._() {
+    ApiService.instance.addListener(_apiChanged);
+  }
+  static final instance = OwnerStore._();
+  OwnerProfile profile = OwnerProfile(
+      fullName: '', email: '', nic: '', phone: '', address: '', about: '');
   final settings = OwnerSettings();
   final List<OwnerBoat> boats = [];
   final List<OwnerCrewMember> crew = [];
   final List<OwnerTrip> trips = [];
   final List<OwnerNotification> notifications = [];
   final List<CrewInvitation> invitations = [];
-  String localPassword = 'Owner#WWMS2026!Secure';
-  final List<OwnerCrewMember> registeredCrewAccounts = [
-    OwnerCrewMember(
-        id: 'crew-4',
-        name: 'Tharindu Silva',
-        email: 'tharindu@wwms.test',
-        role: 'Lifesaver',
-        phone: '+94 75 555 0198',
-        certified: true),
-    OwnerCrewMember(
-        id: 'crew-5',
-        name: 'Ayesh Perera',
-        email: 'ayesh@wwms.test',
-        role: 'Diver',
-        phone: '+94 72 881 2277',
-        certified: true),
-  ];
+  bool loading = false;
+  String? error;
   String get ownerEmail => profile.email;
   List<OwnerBoat> get ownedBoats =>
       boats.where((b) => b.ownerEmail == ownerEmail).toList();
   int get unreadCount => notifications.where((n) => !n.isRead).length;
 
-  void _seed() {
-    profile = OwnerProfile(
-        fullName: 'Kamal Silva',
-        email: 'owner@wwms.test',
-        nic: '091019029019',
-        phone: '+94 77 123 4567',
-        address: '42 Beach Road, Mirissa',
-        about: 'Whale watching boat owner and operator.');
-    boats.addAll([
-      OwnerBoat(
-          id: 'boat-2047',
-          ownerEmail: profile.email,
-          name: 'Mirissa King',
-          registrationNumber: 'SL-WB-2047',
-          type: 'Whale Watching',
-          capacity: 35,
-          engineDetails: 'Twin Yamaha 250 HP',
-          status: CertificationStatus.certified),
-      OwnerBoat(
-          id: 'boat-2038',
-          ownerEmail: profile.email,
-          name: 'Sea Princess',
-          registrationNumber: 'SL-WB-2038',
-          type: 'Passenger',
-          capacity: 28,
-          engineDetails: 'Volvo Penta D6',
-          status: CertificationStatus.underReview)
-    ]);
-    crew.addAll([
-      OwnerCrewMember(
-          id: 'crew-1',
-          name: 'Kasun Mendis',
-          email: 'kasun@wwms.test',
-          role: 'Lifesaver',
-          phone: '+94 77 456 8890',
-          certified: true),
-      OwnerCrewMember(
-          id: 'crew-2',
-          name: 'Nimal Perera',
-          email: 'crew@wwms.test',
-          role: 'Coxswain',
-          phone: '+94 71 223 4567',
-          certified: true),
-      OwnerCrewMember(
-          id: 'crew-3',
-          name: 'Sahan Fernando',
-          email: 'sahan@wwms.test',
-          role: 'Diver',
-          phone: '+94 76 332 9876',
-          certified: false)
-    ]);
-    trips.addAll([
-      OwnerTrip(
-          id: 'TRIP-26001',
-          boatId: 'boat-2047',
-          departure: DateTime.now().add(const Duration(hours: 2)),
-          returnTime: DateTime.now().add(const Duration(hours: 7)),
-          destination: 'Dondra Head',
-          passengerCapacity: 30,
-          status: OwnerTripStatus.upcoming,
-          shoreApproval: 'Approved',
-          wildlifeApproval: 'Pending',
-          qrToken: 'WWMS-TRIP-26001'),
-      OwnerTrip(
-          id: 'TRIP-25998',
-          boatId: 'boat-2047',
-          departure: DateTime.now().subtract(const Duration(hours: 1)),
-          returnTime: DateTime.now().add(const Duration(hours: 3)),
-          destination: 'Weligama Bay',
-          passengerCapacity: 25,
-          status: OwnerTripStatus.active,
-          shoreApproval: 'Approved',
-          wildlifeApproval: 'Approved',
-          qrToken: 'WWMS-TRIP-25998')
-    ]);
-    notifications.addAll([
-      OwnerNotification(
-          id: 'n1',
-          title: 'Boat under review',
-          message: 'Sea Princess documentation is under review.',
-          category: 'Boat',
-          timestamp: DateTime.now().subtract(const Duration(minutes: 18))),
-      OwnerNotification(
-          id: 'n2',
-          title: 'Trip approval updated',
-          message: 'Shore approval was granted for TRIP-26001.',
-          category: 'Trip',
-          timestamp: DateTime.now().subtract(const Duration(hours: 2))),
-      OwnerNotification(
-          id: 'n3',
-          title: 'Crew certification',
-          message: 'Nimal Perera is certified and available.',
-          category: 'Crew',
-          timestamp: DateTime.now().subtract(const Duration(days: 1)),
-          isRead: true)
-    ]);
+  void _apiChanged() {
+    if (ApiService.instance.role == 'BoatOwner') refresh();
+  }
+
+  Future<void> refresh() async {
+    if (loading || ApiService.instance.session == null) return;
+    loading = true;
+    notifyListeners();
+    try {
+      final values = await Future.wait([
+        ApiService.instance.ownerProfile(),
+        ApiService.instance.boats(),
+        ApiService.instance.trips(),
+        ApiService.instance.ownerCrew(),
+      ]);
+      final p = values[0] as Map<String, dynamic>;
+      profile = OwnerProfile(
+          fullName: p['displayName']?.toString() ?? '',
+          email: p['email']?.toString() ?? '',
+          nic: p['nicNumber']?.toString() ?? '',
+          phone: p['phoneNumber']?.toString() ?? '',
+          address: '',
+          about: p['bio']?.toString() ?? '');
+      boats
+        ..clear()
+        ..addAll((values[1] as List<Map<String, dynamic>>).map(_boatFromJson));
+      trips
+        ..clear()
+        ..addAll((values[2] as List<Map<String, dynamic>>).map(_tripFromJson));
+      crew
+        ..clear()
+        ..addAll((values[3] as List<Map<String, dynamic>>).map(_crewFromJson));
+      await Future.wait(trips.map(_loadPassengers));
+      _buildNotifications();
+      error = null;
+    } catch (e) {
+      error = e.toString().replaceFirst('Exception: ', '');
+    } finally {
+      loading = false;
+      notifyListeners();
+    }
+  }
+
+  OwnerBoat _boatFromJson(Map<String, dynamic> value) => OwnerBoat(
+      id: value['id'].toString(), ownerEmail: profile.email,
+      name: value['name']?.toString() ?? '',
+      registrationNumber: value['registrationNumber']?.toString() ?? '',
+      type: 'Boat', capacity: (value['maximumCapacity'] as num?)?.toInt() ?? 0,
+      engineDetails: value['hullNumber']?.toString() ?? '',
+      status: _certification(value['approval']?.toString()));
+  OwnerCrewMember _crewFromJson(Map<String, dynamic> value) => OwnerCrewMember(
+      id: value['assignmentId'].toString(), name: value['name']?.toString() ?? '',
+      email: value['email']?.toString() ?? '', role: value['position']?.toString() ?? 'Crew Member',
+      phone: value['phoneNumber']?.toString() ?? '', certified: value['certified'] == true);
+  OwnerTrip _tripFromJson(Map<String, dynamic> value) {
+    final departure = DateTime.parse(value['scheduledDepartureUtc'].toString());
+    final tripBoat = boat(value['boatId'].toString());
+    return OwnerTrip(id: value['id'].toString(), boatId: value['boatId'].toString(),
+      departure: departure, returnTime: DateTime.tryParse(value['actualArrivalUtc']?.toString() ?? '') ?? departure.add(const Duration(hours: 5)),
+      destination: value['route']?.toString() ?? '', passengerCapacity: tripBoat?.capacity ?? (value['passengerCount'] as num?)?.toInt() ?? 0,
+      status: _tripStatus(value['status']?.toString()), shoreApproval: value['shoreApproval']?.toString() ?? 'Pending',
+      wildlifeApproval: value['wildlifeShoreApproval']?.toString() ?? 'Pending', qrToken: value['invitationCode']?.toString() ?? value['id'].toString());
+  }
+  Future<void> _loadPassengers(OwnerTrip trip) async {
+    final data = await ApiService.instance.tripPassengers(trip.id);
+    trip.passengers.addAll(data.map((p) => OwnerPassenger(id: p['id'].toString(), name: p['name']?.toString() ?? '',
+      nicOrPassport: p['identificationNumber']?.toString() ?? '', phone: p['phoneNumber']?.toString() ?? '',
+      nationality: p['passengerType']?.toString() ?? '', emergencyContact: '',
+      registeredAt: DateTime.parse(p['registeredAtUtc'].toString()))));
+  }
+  CertificationStatus _certification(String? value) => switch (value?.toLowerCase()) {
+    'approved' => CertificationStatus.certified, 'rejected' => CertificationStatus.rejected,
+    'underreview' || 'under review' => CertificationStatus.underReview, _ => CertificationStatus.pending};
+  OwnerTripStatus _tripStatus(String? value) => switch (value?.toLowerCase()) {
+    'ongoing' => OwnerTripStatus.active, 'completed' => OwnerTripStatus.completed,
+    'cancelled' => OwnerTripStatus.cancelled, _ => OwnerTripStatus.upcoming};
+  void _buildNotifications() {
+    final read = {for (final n in notifications) n.id: n.isRead};
+    notifications
+      ..clear()
+      ..addAll(trips.map((t) => OwnerNotification(id: 'trip-${t.id}', title: 'Trip ${t.status.name}',
+        message: '${t.destination}: shore ${t.shoreApproval}, wildlife ${t.wildlifeApproval}.', category: 'Trip',
+        timestamp: t.departure, isRead: read['trip-${t.id}'] ?? false)));
   }
 
   OwnerBoat? boat(String id) => boats.where((x) => x.id == id).firstOrNull;
   OwnerTrip? trip(String id) => trips.where((x) => x.id == id).firstOrNull;
-  void updateProfile(
+  Future<void> updateProfile(
       {required String phone,
       required String address,
       required String about,
-      String? imagePath}) {
-    profile.phone = phone;
-    profile.address = address;
-    profile.about = about;
-    if (imagePath != null) profile.imagePath = imagePath;
-    notifyListeners();
+      String? imagePath}) async {
+    await ApiService.instance.updateOwnerProfile(email: profile.email, phoneNumber: phone, bio: about);
+    if (imagePath != null) await ApiService.instance.uploadOwnerPhoto(imagePath);
+    await refresh();
   }
 
-  void addBoat(OwnerBoat value) {
-    boats.add(value);
-    notifications.insert(
-        0,
-        OwnerNotification(
-            id: 'n${DateTime.now().microsecondsSinceEpoch}',
-            title: 'Boat submitted',
-            message: '${value.name} is pending approval.',
-            category: 'Boat',
-            timestamp: DateTime.now()));
-    notifyListeners();
+  Future<void> removeCrew(String id) async {
+    await ApiService.instance.removeOwnerCrew(id);
+    await refresh();
   }
 
-  void removeCrew(String id) {
-    crew.removeWhere((x) => x.id == id);
-    notifyListeners();
+  Future<void> inviteCrew(String email) async {
+    await ApiService.instance.addOwnerCrew(email);
+    await refresh();
   }
 
-  bool inviteCrew(String email) {
-    if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email) ||
-        !registeredCrewAccounts
-            .any((x) => x.email.toLowerCase() == email.toLowerCase()) ||
-        invitations.any((x) => x.email.toLowerCase() == email.toLowerCase()))
-      return false;
-    invitations
-        .add(CrewInvitation(email, InvitationStatus.pending, DateTime.now()));
-    notifyListeners();
-    return true;
-  }
+  Future<void> acceptInvitation(String email) => inviteCrew(email);
 
-  void acceptInvitation(String email) {
-    final invitation = invitations.where((x) => x.email == email).firstOrNull,
-        account =
-            registeredCrewAccounts.where((x) => x.email == email).firstOrNull;
-    if (invitation != null && account != null) {
-      invitation.status = InvitationStatus.accepted;
-      if (!crew.any((x) => x.email == email)) crew.add(account);
-      notifyListeners();
-    }
-  }
-
-  bool changePassword(String value) {
-    if (value.length < 12) return false;
-    localPassword = value;
-    notifyListeners();
-    return true;
-  }
-
-  void deleteLocalAccount() {
-    boats.clear();
-    crew.clear();
-    trips.clear();
-    notifications.clear();
-    invitations.clear();
-    notifyListeners();
-  }
-
-  void addTrip(OwnerTrip value) {
-    trips.add(value);
-    notifyListeners();
-  }
-
-  bool registerPassenger(String tripId, OwnerPassenger passenger) {
-    final value = trip(tripId);
-    if (value == null || value.passengers.length >= value.passengerCapacity)
-      return false;
-    value.passengers.add(passenger);
-    notifyListeners();
-    return true;
-  }
-
-  void regenerateQr(String tripId) {
-    final value = trip(tripId);
-    if (value != null) {
-      value.qrToken = 'WWMS-${tripId}-${Random().nextInt(999999)}';
-      notifyListeners();
-    }
-  }
 
   void markRead(String id) {
     final n = notifications.where((x) => x.id == id).firstOrNull;

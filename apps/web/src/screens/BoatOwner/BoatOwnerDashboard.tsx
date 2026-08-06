@@ -4,29 +4,25 @@ import {
 } from "react";
 import {
   Menu as MenuIcon,
+  CalendarPlus,
+  Plus,
+  Ship,
   Settings,
   X,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../auth/useAuth";
+import { operationsApi, type Boat, type Trip } from "../../operations/operationsApi";
+import { ownerProfileApi } from "../../profiles/ownerProfileApi";
 
 import groupIcon from "../../assets/icons/group.svg";
 import infoIcon from "../../assets/icons/info.svg";
 import notificationIcon from "../../assets/icons/notification.svg";
 import userIcon from "../../assets/icons/user.svg";
 import vesselIcon from "../../assets/icons/vessel.svg";
-
-interface Boat {
-  id: string;
-  name: string;
-  registrationNumber: string;
-  image: string;
-}
-
-interface Trip {
-  id: string;
-  boatName: string;
-  registrationNumber: string;
-}
+import dashboardIcon from "../../assets/icons/dashboard.svg";
+import crewIcon from "../../assets/icons/crew.svg";
+import tripsIcon from "../../assets/icons/trips.svg";
 
 interface MenuItem {
   label: string;
@@ -35,39 +31,42 @@ interface MenuItem {
   type?: "settings";
 }
 
-const boats: Boat[] = [
-  {
-    id: "boat-001",
-    name: "Mirissa King",
-    registrationNumber: "SL-WB-2047",
-    image: "/OwnerBoat1.png",
-  },
-  {
-    id: "boat-002",
-    name: "Sea Princess",
-    registrationNumber: "SL-WB-2038",
-    image: "/OwnerBoat2.png",
-  },
-];
-
-const ongoingTrips: Trip[] = [
-  {
-    id: "trip-001",
-    boatName: "Mirissa King",
-    registrationNumber: "SL-WB-2047",
-  },
-  {
-    id: "trip-002",
-    boatName: "Sea Princess",
-    registrationNumber: "SL-WB-2048",
-  },
-];
+function EmptyActionPanel({
+  title,
+  description,
+  onAdd,
+  kind,
+  className = "",
+}: {
+  title: string;
+  description: string;
+  onAdd: () => void;
+  kind: "boat" | "trip";
+  className?: string;
+}) {
+  const ActionIcon=kind==="trip"?CalendarPlus:Ship;
+  const actionLabel=kind==="trip"?"Schedule Trip":"Register Boat";
+  return (
+    <section className={`relative flex min-h-[270px] w-full flex-col items-start justify-center overflow-hidden rounded-[24px] border border-blue-300/20 bg-gradient-to-br from-[#101d3b] via-[#162d54] to-${kind==="trip"?'[#24558b]':'[#16738a]'} px-7 py-8 text-left shadow-[0_18px_45px_rgba(22,45,84,.22)] sm:px-9 sm:py-10 xl:min-h-[300px] ${className}`}>
+      <span className="mb-5 grid h-12 w-12 place-items-center rounded-2xl bg-white/12 text-white ring-1 ring-white/20"><ActionIcon size={25}/></span>
+      <h2 className="text-[22px] font-semibold text-white sm:text-[26px]">{title}</h2>
+      <p className="mt-2 max-w-sm text-[13px] font-normal leading-6 text-white/75 sm:text-[14px]">{description}</p>
+      <button
+        type="button"
+        onClick={onAdd}
+        className="mt-7 flex min-h-12 w-full max-w-[260px] items-center justify-center gap-2 rounded-xl bg-white px-6 py-3 text-[14px] font-semibold text-[#162d54] shadow-lg shadow-black/10 transition-all hover:-translate-y-0.5 hover:bg-blue-50 hover:shadow-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#162d54]"
+      >
+        {kind==="trip"?<CalendarPlus size={19}/>:<Plus size={19}/>} {actionLabel}
+      </button>
+    </section>
+  );
+}
 
 const menuItems: MenuItem[] = [
   {
     label: "Dashboard",
     path: "/owner",
-    icon: infoIcon,
+    icon: dashboardIcon,
   },
   {
     label: "Profile",
@@ -77,7 +76,7 @@ const menuItems: MenuItem[] = [
   {
     label: "My Crew",
     path: "/owner/crew",
-    icon: groupIcon,
+    icon: crewIcon,
   },
   {
     label: "My Boats",
@@ -87,7 +86,7 @@ const menuItems: MenuItem[] = [
   {
     label: "My Trips",
     path: "/owner/trips",
-    icon: infoIcon,
+    icon: tripsIcon,
   },
   {
     label: "Settings",
@@ -98,7 +97,60 @@ const menuItems: MenuItem[] = [
 
 function BoatOwnerDashboard() {
   const navigate = useNavigate();
+  const { session } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [boats, setBoats] = useState<Boat[]>([]);
+  const [trips, setTrips] = useState<Trip[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [profileName, setProfileName] = useState("");
+  const [profilePhoto, setProfilePhoto] = useState(userIcon);
+
+  useEffect(() => {
+    if (!session) return;
+    let active = true;
+    Promise.all([
+      operationsApi.boats(session.accessToken),
+      operationsApi.trips(session.accessToken),
+    ]).then(([nextBoats, nextTrips]) => {
+      if (!active) return;
+      setBoats(nextBoats);
+      setTrips(nextTrips);
+      setError("");
+    }).catch((requestError: unknown) => {
+      if (active) setError(requestError instanceof Error ? requestError.message : "Unable to load owner data.");
+    }).finally(() => {
+      if (active) setLoading(false);
+    });
+    return () => { active = false; };
+  }, [session]);
+
+  useEffect(() => {
+    if (!session) return;
+    let active = true;
+    let photoUrl: string | undefined;
+    Promise.all([
+      ownerProfileApi.get(session.accessToken),
+      ownerProfileApi.photo(session.accessToken),
+    ]).then(([profile, nextPhoto]) => {
+      photoUrl = nextPhoto;
+      if (!active) {
+        if (photoUrl?.startsWith("blob:")) URL.revokeObjectURL(photoUrl);
+        return;
+      }
+      setProfileName(profile.displayName);
+      if (photoUrl) setProfilePhoto(photoUrl);
+    }).catch(() => {
+      // The boats and trips can still render if optional profile media fails.
+    });
+    return () => {
+      active = false;
+      if (photoUrl?.startsWith("blob:")) URL.revokeObjectURL(photoUrl);
+    };
+  }, [session]);
+
+  const ongoingTrips = trips.filter((trip) => trip.status === "Ongoing");
+  const ownerName = profileName || boats[0]?.ownerName || session?.email.split("@")[0] || "Boat Owner";
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
@@ -225,8 +277,8 @@ function BoatOwnerDashboard() {
           "
         >
           <img
-            src="/OwnerProfile.png"
-            alt="Kamal Silva"
+            src={profilePhoto}
+            alt={ownerName}
             className="
               h-[68px] w-[68px]
               rounded-full border-2
@@ -257,7 +309,7 @@ function BoatOwnerDashboard() {
                 lg:text-[36px]
               "
             >
-              Kamal Silva
+              {ownerName}
             </h1>
           </div>
         </div>
@@ -298,6 +350,17 @@ function BoatOwnerDashboard() {
             lg:gap-6
           "
         >
+          {loading && <p className="col-span-full py-10 text-center text-sm text-gray-500">Loading your boats…</p>}
+          {!loading && error && <p className="col-span-full py-10 text-center text-sm text-red-600">{error}</p>}
+          {!loading && !error && boats.length === 0 && (
+            <EmptyActionPanel
+              kind="boat"
+              title="Register New Boats"
+              description="Initialize your boat's digital profile."
+              onAdd={() => navigate('/owner/boats/register')}
+              className="md:col-span-2"
+            />
+          )}
           {boats.map((boat) => (
             <article
               key={boat.id}
@@ -339,17 +402,17 @@ function BoatOwnerDashboard() {
                   <div className="mt-3 flex items-center gap-1">
                     <span
                       aria-hidden="true"
-                      className="h-2 w-2 rounded-full bg-[#20e620]"
+                      className={`h-2 w-2 rounded-full ${boat.approval === "Approved" ? "bg-[#20e620]" : boat.approval === "Rejected" ? "bg-red-500" : "bg-amber-500"}`}
                     />
 
-                    <span className="text-[8px] font-medium uppercase text-[#20d820] sm:text-[9px]">
-                      Approved
+                    <span className={`text-[8px] font-medium uppercase sm:text-[9px] ${boat.approval === "Approved" ? "text-[#20d820]" : boat.approval === "Rejected" ? "text-red-600" : "text-amber-600"}`}>
+                      {boat.approval}
                     </span>
                   </div>
                 </div>
 
                 <img
-                  src={boat.image}
+                  src={boat.imageUrl || "/OwnerBoat1.png"}
                   alt={`${boat.name} boat`}
                   className="
                     h-[145px] w-full
@@ -364,6 +427,8 @@ function BoatOwnerDashboard() {
 
               <button
                 type="button"
+                aria-label={`Open ${boat.name} details`}
+                title="Open details"
                 onClick={() =>
                   navigate(`/owner/boats/${boat.id}`)
                 }
@@ -384,12 +449,11 @@ function BoatOwnerDashboard() {
                 "
               >
                 <span>Info</span>
-
                 <img
                   src={infoIcon}
                   alt=""
                   aria-hidden="true"
-                  className="h-4 w-4 brightness-0 invert"
+                  className="h-5 w-5 brightness-0 invert"
                 />
               </button>
             </article>
@@ -397,8 +461,17 @@ function BoatOwnerDashboard() {
         </section>
 
         {/* Ongoing trips */}
-        <section
-          className="
+        {!loading && !error && ongoingTrips.length === 0 ? (
+          <EmptyActionPanel
+            kind="trip"
+            title="Schedule New Trips"
+            description="Initialize your trip's digital profile."
+            onAdd={() => navigate('/owner/trips/schedule')}
+            className="mt-5 lg:mt-0"
+          />
+        ) : (
+          <section
+            className="
             mt-5 w-full rounded-[24px]
             bg-white px-6 py-7
             shadow-[0_6px_12px_rgba(0,0,0,0.15)]
@@ -427,7 +500,7 @@ function BoatOwnerDashboard() {
               >
                 <div>
                   <h3 className="text-[14px] font-semibold sm:text-[16px] lg:text-[18px]">
-                    {trip.boatName}
+                    {trip.vesselName}
                   </h3>
 
                   <p className="text-[8px] font-normal sm:text-[9px] lg:text-[10px]">
@@ -437,7 +510,7 @@ function BoatOwnerDashboard() {
 
                 <button
                   type="button"
-                  aria-label={`View ${trip.boatName} trip`}
+                  aria-label={`View ${trip.vesselName} trip`}
                   onClick={() =>
                     navigate(
                       `/owner/trips/${trip.id}`,
@@ -462,7 +535,8 @@ function BoatOwnerDashboard() {
               </article>
             ))}
           </div>
-        </section>
+          </section>
+        )}
       </div>
 
       {/* Menu overlay */}

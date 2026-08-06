@@ -1,0 +1,6 @@
+const BASE=(import.meta.env.VITE_API_BASE_URL??'').replace(/\/$/,'');
+export const STAFF_ROLES=['Admin','OPS','ShoreCrew','Wildlife','ShoreWildlife'] as const;
+export type StaffRole=typeof STAFF_ROLES[number];
+export interface StaffMember{id:string;displayName:string;role:StaffRole;phoneNumber?:string;email:string;lockoutEnd?:string}
+async function req<T>(token:string,path:string,init?:RequestInit):Promise<T>{const r=await fetch(`${BASE}/api/admin/staff${path}`,{...init,headers:{'Content-Type':'application/json',Authorization:`Bearer ${token}`,...init?.headers}});if(!r.ok){const p=await r.json().catch(()=>null) as {message?:string;detail?:string;title?:string}|null;throw new Error(p?.message??p?.detail??p?.title??`Request failed (${r.status})`)}return r.status===204?undefined as T:r.json() as Promise<T>}
+export const staffApi={list:(t:string)=>req<StaffMember[]>(t,''),get:(t:string,id:string)=>req<StaffMember>(t,`/${id}`),create:(t:string,v:{displayName:string;role:StaffRole;email:string;password:string;phoneNumber?:string})=>req<StaffMember>(t,'',{method:'POST',body:JSON.stringify(v)}),update:(t:string,id:string,role:StaffRole)=>req<StaffMember>(t,`/${id}`,{method:'PATCH',body:JSON.stringify({role})}),remove:(t:string,id:string)=>req<void>(t,`/${id}`,{method:'DELETE'})};

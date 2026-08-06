@@ -1,5 +1,3 @@
-import 'dart:async';
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:qr_flutter/qr_flutter.dart';
@@ -14,26 +12,17 @@ class OwnerTripInfoScreen extends StatefulWidget {
 
 class _State extends State<OwnerTripInfoScreen> {
   final store = OwnerStore.instance, search = TextEditingController();
-  Timer? timer;
   String? id;
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     id ??= ModalRoute.of(context)?.settings.arguments as String?;
-    timer ??= Timer.periodic(const Duration(seconds: 4), (_) {
-      final t = id == null ? null : store.trip(id!);
-      if (t != null && mounted) {
-        t.latitude += ((Random().nextDouble() - .5) / 1000);
-        t.longitude += ((Random().nextDouble() - .5) / 1000);
-        setState(() {});
-      }
-    });
     store.addListener(refresh);
+    store.refresh();
   }
 
   @override
   void dispose() {
-    timer?.cancel();
     store.removeListener(refresh);
     search.dispose();
     super.dispose();
@@ -90,25 +79,6 @@ class _State extends State<OwnerTripInfoScreen> {
                 Text(trip.qrToken),
                 Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                   TextButton(
-                      onPressed: () => showDialog(
-                          context: context,
-                          builder: (d) => AlertDialog(
-                                  title: const Text('Regenerate QR code?'),
-                                  content: const Text(
-                                      'The previous code will no longer identify this trip.'),
-                                  actions: [
-                                    TextButton(
-                                        onPressed: () => Navigator.pop(d),
-                                        child: const Text('Cancel')),
-                                    TextButton(
-                                        onPressed: () {
-                                          store.regenerateQr(trip.id);
-                                          Navigator.pop(d);
-                                        },
-                                        child: const Text('Regenerate'))
-                                  ])),
-                      child: const Text('Regenerate QR')),
-                  TextButton(
                       onPressed: () {
                         Clipboard.setData(ClipboardData(text: trip.qrToken));
                         ScaffoldMessenger.of(context).showSnackBar(
@@ -118,7 +88,7 @@ class _State extends State<OwnerTripInfoScreen> {
                   TextButton(
                       onPressed: () => Navigator.pushNamed(
                           context, '/trip-register',
-                          arguments: trip.id),
+                          arguments: trip.qrToken),
                       child: const Text('Open Registration'))
                 ])
               ])),

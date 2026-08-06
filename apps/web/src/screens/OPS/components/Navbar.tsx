@@ -2,6 +2,7 @@ import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../auth/useAuth';
 import { Icon } from '../../../components/ui/icon';
+import { House, LogOut, Radar, Ship, Siren } from 'lucide-react';
 
 const OPS_HOME_PATH = '/ops'; 
 
@@ -13,9 +14,9 @@ export default function Navbar() {
 
   // The core navigation destinations (use full /ops paths)
   const navLinks = [
-    { name: 'SOS', path: `${OPS_HOME_PATH}/sos` },
-    { name: 'Trips', path: `${OPS_HOME_PATH}/trips` },
-    { name: 'Monitor', path: `${OPS_HOME_PATH}/monitor` },
+    { name: 'SOS', path: `${OPS_HOME_PATH}/sos`, icon: Siren },
+    { name: 'Trips', path: `${OPS_HOME_PATH}/trips`, icon: Ship },
+    { name: 'Monitor', path: `${OPS_HOME_PATH}/monitor`, icon: Radar },
   ];
 
   return (
@@ -53,13 +54,13 @@ export default function Navbar() {
             <Link
               key={link.name}
               to={isActivePage ? OPS_HOME_PATH : link.path}
-              className={`transition-colors tracking-wide ${
+              aria-label={isActivePage?'Dashboard':link.name} title={isActivePage?'Dashboard':link.name} className={`rounded-full p-2 transition-colors ${
                 isActivePage
                   ? 'text-[#1A2B4C] font-bold' // Active state (No underline)
                   : 'text-slate-500 hover:text-[#1A2B4C]' // Inactive state
               }`}
             >
-              {isActivePage ? 'Home' : link.name}
+              <span className="flex items-center gap-2">{isActivePage?<House size={18}/>:<link.icon size={18}/>}<span>{isActivePage?'Dashboard':link.name}</span></span>
             </Link>
           );
         })}
@@ -71,9 +72,9 @@ export default function Navbar() {
             logout();
             navigate('/login', { replace: true });
           }}
-          className="ml-2 bg-[#1A2B4C] text-white px-6 py-2 rounded-md shadow-sm hover:bg-[#111C33] hover:shadow transition-all text-sm font-semibold tracking-wide flex items-center"
+          aria-label="Log out" title="Log out" className="ml-2 rounded-full bg-[#1A2B4C] p-2.5 text-white shadow-sm hover:bg-[#111C33] hover:shadow transition-all"
         >
-          Log Out
+          <span className="flex items-center gap-2"><LogOut size={18}/><span>Log out</span></span>
         </button>
         
       </nav>

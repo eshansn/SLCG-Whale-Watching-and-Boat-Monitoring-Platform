@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Icon } from "../../components/ui/icon";
 import { formatTripDate, type Trip } from "../../operations/operationsApi";
 import { useOperations } from "../../operations/useOperations";
+import { Eye } from "lucide-react";
 
 const ShoreTrips = () => {
   const navigate = useNavigate();
@@ -55,7 +56,7 @@ const ShoreTrips = () => {
 };
 
 function TripRow({ trip, onOpen }: { trip: Trip; onOpen: () => void }) {
-  return <tr className="transition hover:bg-slate-50/70"><td className="px-8 py-5 font-medium text-[#14223d]">{trip.vesselName}</td><td className="px-5 py-5 text-slate-600">{trip.ownerName}</td><td className="px-5 py-5 text-slate-600">{trip.registrationNumber}</td><td className="px-5 py-5 text-slate-600">{formatTripDate(trip.scheduledDepartureUtc)}</td><td className="px-5 py-5"><Status status={trip.shoreApproval} /></td><td className="px-8 py-5 text-right"><button type="button" onClick={onOpen} aria-label={`Review ${trip.vesselName}`} className="rounded-full border border-indigo-200 px-3 py-1 text-xs font-medium text-indigo-700 transition hover:bg-indigo-50">Review</button></td></tr>;
+  return <tr className="transition hover:bg-slate-50/70"><td className="px-8 py-5 font-medium text-[#14223d]">{trip.vesselName}</td><td className="px-5 py-5 text-slate-600">{trip.ownerName}</td><td className="px-5 py-5 text-slate-600">{trip.registrationNumber}</td><td className="px-5 py-5 text-slate-600">{formatTripDate(trip.scheduledDepartureUtc)}</td><td className="px-5 py-5"><Status status={trip.shoreApproval} /></td><td className="px-8 py-5 text-right"><button type="button" onClick={onOpen} aria-label={`Review ${trip.vesselName}`} title="Review" className="rounded-full border border-indigo-200 p-2 text-indigo-700 transition hover:bg-indigo-50"><Eye size={18}/></button></td></tr>;
 }
 
 function Status({ status }: { status: string }) {

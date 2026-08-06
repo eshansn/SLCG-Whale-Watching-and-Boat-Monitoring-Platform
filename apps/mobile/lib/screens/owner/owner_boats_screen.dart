@@ -16,6 +16,7 @@ class _State extends State<OwnerBoatsScreen> {
   void initState() {
     super.initState();
     store.addListener(refresh);
+    store.refresh();
   }
 
   @override

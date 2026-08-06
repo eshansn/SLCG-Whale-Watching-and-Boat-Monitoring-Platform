@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../owner/owner_store.dart';
+import '../../services/api_service.dart';
 import '../../widgets/owner_layout.dart';
 
 class OwnerNewTripScreen extends StatefulWidget {
@@ -9,12 +9,42 @@ class OwnerNewTripScreen extends StatefulWidget {
 }
 
 class _State extends State<OwnerNewTripScreen> {
-  final store = OwnerStore.instance,
-      destination = TextEditingController(),
+  final destination = TextEditingController(),
       capacity = TextEditingController();
+  List<Map<String, dynamic>> boats = [];
   String? boatId;
+  String? loadError;
+  bool loading = true, saving = false;
   DateTime departure = DateTime.now().add(const Duration(days: 1)),
       returnTime = DateTime.now().add(const Duration(days: 1, hours: 5));
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBoats();
+  }
+
+  Future<void> _loadBoats() async {
+    try {
+      final data = await ApiService.instance.boats();
+      if (!mounted) return;
+      setState(() {
+        boats = data
+            .where((boat) => boat['approval']?.toString() == 'Approved')
+            .toList();
+        boatId = boats.firstOrNull?['id']?.toString();
+        loadError = null;
+        loading = false;
+      });
+    } catch (exception) {
+      if (!mounted) return;
+      setState(() {
+        loadError = exception.toString().replaceFirst('Exception: ', '');
+        loading = false;
+      });
+    }
+  }
+
   @override
   void dispose() {
     destination.dispose();
@@ -37,14 +67,15 @@ class _State extends State<OwnerNewTripScreen> {
     setState(() {
       final value =
           DateTime(date.year, date.month, date.day, time.hour, time.minute);
-      if (returning)
+      if (returning) {
         returnTime = value;
-      else
+      } else {
         departure = value;
+      }
     });
   }
 
-  void save() {
+  Future<void> save() async {
     final cap = int.tryParse(capacity.text);
     if (boatId == null ||
         destination.text.trim().isEmpty ||
@@ -56,34 +87,29 @@ class _State extends State<OwnerNewTripScreen> {
               'Enter a valid vessel, schedule, destination and capacity.')));
       return;
     }
-    final boat = store.boat(boatId!)!;
-    if (cap > boat.capacity) {
+    final boat = boats.firstWhere((item) => item['id']?.toString() == boatId);
+    final maximumCapacity = boat['maximumCapacity'] as int? ?? 0;
+    if (cap > maximumCapacity) {
       ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Capacity cannot exceed ${boat.capacity}.')));
+          SnackBar(content: Text('Capacity cannot exceed $maximumCapacity.')));
       return;
     }
-    final id =
-        'TRIP-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
-    store.addTrip(OwnerTrip(
-        id: id,
-        boatId: boatId!,
-        departure: departure,
-        returnTime: returnTime,
-        destination: destination.text.trim(),
-        passengerCapacity: cap,
-        status: OwnerTripStatus.upcoming,
-        shoreApproval: 'Pending',
-        wildlifeApproval: 'Pending',
-        qrToken: 'WWMS-$id'));
-    Navigator.pop(context);
+    setState(() => saving = true);
+    try {
+      await ApiService.instance.createTrip(boatId!, departure,
+          route: destination.text.trim(), passengerCount: cap);
+      if (mounted) Navigator.pop(context, true);
+    } catch (exception) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(exception.toString().replaceFirst('Exception: ', ''))));
+    } finally {
+      if (mounted) setState(() => saving = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final certified = store.ownedBoats
-        .where((b) => b.status == CertificationStatus.certified)
-        .toList();
-    boatId ??= certified.firstOrNull?.id;
     return OwnerLayout(
         child: Column(children: [
       Expanded(
@@ -92,14 +118,26 @@ class _State extends State<OwnerNewTripScreen> {
               child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    if (loading)
+                      const Center(child: CircularProgressIndicator())
+                    else if (loadError != null) ...[
+                      Text(loadError!,
+                          style: const TextStyle(color: Colors.red)),
+                      TextButton.icon(
+                          onPressed: _loadBoats,
+                          icon: const Icon(Icons.refresh),
+                          label: const Text('Try Again'))
+                    ],
                     label('Select A Certified Vessel'),
                     box(DropdownButtonHideUnderline(
                         child: DropdownButton<String>(
                             isExpanded: true,
                             value: boatId,
-                            items: certified
+                            items: boats
                                 .map((b) => DropdownMenuItem(
-                                    value: b.id, child: Text(b.name)))
+                                    value: b['id']?.toString(),
+                                    child: Text(b['name']?.toString() ??
+                                        'Unnamed boat')))
                                 .toList(),
                             onChanged: (v) => setState(() => boatId = v)))),
                     label('Departure Date & Time'),
@@ -115,7 +153,7 @@ class _State extends State<OwnerNewTripScreen> {
                         controller: capacity,
                         keyboardType: TextInputType.number,
                         decoration: input('30')),
-                    if (certified.isEmpty)
+                    if (!loading && boats.isEmpty)
                       const Padding(
                           padding: EdgeInsets.only(top: 16),
                           child: Text('No certified boats are available.',
@@ -130,7 +168,7 @@ class _State extends State<OwnerNewTripScreen> {
                   style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF0F172A),
                       foregroundColor: Colors.white),
-                  onPressed: certified.isEmpty ? null : save,
+                  onPressed: boats.isEmpty || saving ? null : save,
                   child: const Text('Schedule Trip'))))
     ]));
   }

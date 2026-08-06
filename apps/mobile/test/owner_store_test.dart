@@ -2,26 +2,37 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:wwms_app/owner/owner_store.dart';
 
 void main() {
-  test('owner data relationships and certification rules are coherent', () {
-    final store = OwnerStore.instance;
-    expect(store.ownedBoats, isNotEmpty);
-    expect(store.ownedBoats.every((boat) => boat.ownerEmail == store.ownerEmail), isTrue);
-    expect(store.trips.every((trip) => store.boat(trip.boatId) != null), isTrue);
-    expect(store.ownedBoats.where((boat) => boat.status == CertificationStatus.certified), isNotEmpty);
+  test('trip approval reflects both shore approvals', () {
+    final trip = OwnerTrip(
+      id: 'trip-id',
+      boatId: 'boat-id',
+      departure: DateTime.utc(2026, 8, 5),
+      returnTime: DateTime.utc(2026, 8, 5, 5),
+      destination: 'Dondra Head',
+      passengerCapacity: 30,
+      status: OwnerTripStatus.upcoming,
+      shoreApproval: 'Approved',
+      wildlifeApproval: 'Approved',
+      qrToken: 'invitation-code',
+    );
+
+    expect(trip.approved, isTrue);
+    trip.wildlifeApproval = 'Pending';
+    expect(trip.approved, isFalse);
   });
 
-  test('notifications and passenger registration update shared state', () {
-    final store = OwnerStore.instance;
-    store.markAllRead();
-    expect(store.unreadCount, 0);
-    final trip = store.trips.first;
-    final before = trip.passengers.length;
-    final registered = store.registerPassenger(trip.id, OwnerPassenger(
-      id: 'test-passenger', name: 'Test Passenger', nicOrPassport: 'P12345',
-      phone: '+94770000000', nationality: 'Sri Lankan',
-      emergencyContact: '+94771111111', registeredAt: DateTime.now(),
-    ));
-    expect(registered, isTrue);
-    expect(trip.passengers.length, before + 1);
+  test('owner passenger model retains API passenger identity', () {
+    final passenger = OwnerPassenger(
+      id: 'passenger-id',
+      name: 'Test Passenger',
+      nicOrPassport: 'P12345',
+      phone: '+94770000000',
+      nationality: 'local',
+      emergencyContact: '',
+      registeredAt: DateTime.utc(2026, 8, 5),
+    );
+
+    expect(passenger.id, 'passenger-id');
+    expect(passenger.nicOrPassport, 'P12345');
   });
 }

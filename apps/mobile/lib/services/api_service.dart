@@ -57,6 +57,73 @@ class ApiService extends ChangeNotifier {
   Future<List<Map<String, dynamic>>> boats() async =>
       (await _get('/api/operations/boats') as List)
           .cast<Map<String, dynamic>>();
+  Future<Map<String, dynamic>> ownerProfile() async =>
+      (await _get('/api/owner/profile') as Map).cast<String, dynamic>();
+  Future<Map<String, dynamic>> updateOwnerProfile(
+          {required String email,
+          required String phoneNumber,
+          required String bio}) =>
+      _sendMap('PATCH', '/api/owner/profile', {
+        'email': email,
+        'phoneNumber': phoneNumber,
+        'bio': bio,
+      });
+  Future<void> uploadOwnerPhoto(String filePath) async {
+    final request = http.MultipartRequest(
+        'POST', Uri.parse('$baseUrl/api/owner/profile/photo'))
+      ..headers['Authorization'] = 'Bearer ${session!.accessToken}'
+      ..files.add(await http.MultipartFile.fromPath('photo', filePath));
+    final response = await http.Response.fromStream(
+        await request.send().timeout(const Duration(seconds: 20)));
+    _decode(response);
+  }
+
+  Future<List<Map<String, dynamic>>> ownerCrew() async =>
+      (await _get('/api/operations/owner/crew') as List)
+          .cast<Map<String, dynamic>>();
+  Future<List<Map<String, dynamic>>> searchOwnerCrew(String query) async =>
+      (await _get('/api/operations/owner/crew/search?query=${Uri.encodeQueryComponent(query)}')
+              as List)
+          .cast<Map<String, dynamic>>();
+  Future<Map<String, dynamic>> addOwnerCrew(String email) =>
+      _sendMap('POST', '/api/operations/owner/crew', {'email': email});
+  Future<void> removeOwnerCrew(String assignmentId) async =>
+      _send('DELETE', '/api/operations/owner/crew/$assignmentId', const {});
+  Future<void> changePassword(String currentPassword, String newPassword) =>
+      _send('POST', '/api/auth/change-password', {
+        'currentPassword': currentPassword,
+        'newPassword': newPassword,
+      });
+  Future<Map<String, dynamic>> crewProfile() async =>
+      (await _get('/api/crew/profile') as Map).cast<String, dynamic>();
+  Future<Map<String, dynamic>> updateCrewProfile(
+          {required String email,
+          required String phoneNumber,
+          required String bio}) =>
+      _sendMap('PATCH', '/api/crew/profile', {
+        'email': email,
+        'phoneNumber': phoneNumber,
+        'bio': bio,
+      });
+  Future<Map<String, dynamic>> crewAttendance(String tripId) async =>
+      (await _get('/api/shore/trips/$tripId/attendance') as Map)
+          .cast<String, dynamic>();
+  Future<List<Map<String, dynamic>>> vesselMap() async =>
+      (await _get('/api/operations/vessel-map') as List)
+          .cast<Map<String, dynamic>>();
+  Future<void> raiseCrewSos(String tripId) =>
+      _send('POST', '/api/operations/trips/$tripId/sos', const {});
+  Future<Map<String, dynamic>> passengerTrip(String invitationCode) async =>
+      (await _getPublic(
+                  '/api/passenger/trips/${Uri.encodeComponent(invitationCode)}')
+              as Map)
+          .cast<String, dynamic>();
+  Future<Map<String, dynamic>> registerPassenger(
+          String invitationCode, Map<String, dynamic> passenger) =>
+      _post(
+          '/api/passenger/trips/${Uri.encodeComponent(invitationCode)}/passengers',
+          passenger,
+          authenticated: false);
   Future<List<Map<String, dynamic>>> shoreWildlifeTrips() async =>
       (await _get('/api/shore-wildlife/trips') as List)
           .cast<Map<String, dynamic>>();
@@ -99,7 +166,8 @@ class ApiService extends ChangeNotifier {
         'boatId': boatId,
         'scheduledDepartureUtc': departure.toUtc().toIso8601String(),
         'route': route,
-        'passengerCount': passengerCount
+        'passengerCount': passengerCount,
+        'crewUserIds': <String>[]
       });
   Future<void> createBoat(
           {required String name,
@@ -136,6 +204,22 @@ class ApiService extends ChangeNotifier {
           .get(Uri.parse('$baseUrl$path'), headers: _headers)
           .timeout(const Duration(seconds: 15));
       return _decode(r);
+    } on TimeoutException {
+      throw Exception(
+          'The WWMS API did not respond. Check the server and your connection.');
+    } on http.ClientException {
+      throw Exception(
+          'Cannot reach the WWMS API at $baseUrl. Check the server and your connection.');
+    }
+  }
+
+  Future<dynamic> _getPublic(String path) async {
+    try {
+      final response = await http.get(Uri.parse('$baseUrl$path'),
+          headers: const {
+            'Content-Type': 'application/json'
+          }).timeout(const Duration(seconds: 15));
+      return _decode(response);
     } on TimeoutException {
       throw Exception(
           'The WWMS API did not respond. Check the server and your connection.');

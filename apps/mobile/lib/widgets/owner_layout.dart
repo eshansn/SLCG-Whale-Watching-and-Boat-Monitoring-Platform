@@ -6,7 +6,7 @@ class OwnerDrawer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: MediaQuery.of(context).size.width * 0.45,
+      width: 290,
       child: Drawer(
         backgroundColor: Colors.white,
         child: SafeArea(
@@ -81,9 +81,9 @@ class OwnerLayout extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF8F9FB),
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        backgroundColor: Colors.white,
         elevation: 0,
         iconTheme: const IconThemeData(color: Color(0xFF152238)),
         leading: IconButton(

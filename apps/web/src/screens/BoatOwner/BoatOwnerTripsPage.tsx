@@ -5,6 +5,7 @@ import {
 } from "react";
 import {
   ChevronDown,
+  CalendarPlus,
   Menu as MenuIcon,
   Mic,
   Search,
@@ -18,6 +19,9 @@ import infoIcon from "../../assets/icons/info.svg";
 import notificationIcon from "../../assets/icons/notification.svg";
 import userIcon from "../../assets/icons/user.svg";
 import vesselIcon from "../../assets/icons/vessel.svg";
+import dashboardIcon from "../../assets/icons/dashboard.svg";
+import crewIcon from "../../assets/icons/crew.svg";
+import tripsIcon from "../../assets/icons/trips.svg";
 import { useOperations } from "../../operations/useOperations";
 
 interface Trip {
@@ -40,7 +44,7 @@ const menuItems: MenuItem[] = [
   {
     label: "Dashboard",
     path: "/owner",
-    icon: infoIcon,
+    icon: dashboardIcon,
   },
   {
     label: "Profile",
@@ -50,7 +54,7 @@ const menuItems: MenuItem[] = [
   {
     label: "My Crew",
     path: "/owner/crew",
-    icon: groupIcon,
+    icon: crewIcon,
   },
   {
     label: "My Boats",
@@ -60,7 +64,7 @@ const menuItems: MenuItem[] = [
   {
     label: "My Trips",
     path: "/owner/trips",
-    icon: infoIcon,
+    icon: tripsIcon,
   },
   {
     label: "Settings",
@@ -224,24 +228,22 @@ function BoatOwnerTripsPage() {
         {/* Schedule trip panel */}
         <section
           className="
-            flex w-full flex-col
-            items-center rounded-[16px]
-            bg-[#162d54]
-            px-6 py-7 text-center
-            sm:px-10 sm:py-9
-            lg:py-10
+            relative flex w-full flex-col overflow-hidden
+            items-start rounded-[24px] border border-blue-400/20
+            bg-gradient-to-br from-[#101d3b] via-[#162d54] to-[#24558b]
+            px-7 py-8 text-left shadow-[0_18px_50px_rgba(22,45,84,.24)]
+            sm:px-10 sm:py-10
           "
         >
-          <h1 className="text-[19px] font-semibold text-white sm:text-[24px]">
+          <span className="mb-5 grid h-12 w-12 place-items-center rounded-2xl bg-white/12 text-white ring-1 ring-white/20"><CalendarPlus size={25}/></span><h1 className="text-[22px] font-semibold text-white sm:text-[28px]">
             Start New Trips!
           </h1>
 
           <p
             className="
-              mt-1 max-w-[250px]
-              text-[11px] font-normal
-              leading-[1.5] text-white/80
-              sm:max-w-[380px] sm:text-[13px]
+              mt-2 max-w-[470px]
+              text-[13px] font-normal
+              leading-6 text-white/75 sm:text-[14px]
             "
           >
             Set up the schedule and preferences
@@ -254,14 +256,13 @@ function BoatOwnerTripsPage() {
               navigate("/owner/trips/schedule")
             }
             className="
-              mt-6 min-h-8 w-full
-              max-w-[230px]
-              rounded-[5px] bg-white
-              px-5 py-2
-              text-[11px] font-semibold
+              mt-7 inline-flex min-h-12 w-full
+              max-w-[260px] items-center justify-center
+              rounded-xl bg-white px-6 py-3
+              text-[14px] font-semibold shadow-lg shadow-black/10
               text-[#162d54]
               transition-colors
-              hover:bg-gray-100
+              hover:-translate-y-0.5 hover:bg-blue-50 hover:shadow-xl
               focus:outline-none
               focus-visible:ring-2
               focus-visible:ring-white
@@ -271,7 +272,7 @@ function BoatOwnerTripsPage() {
               sm:text-[12px]
             "
           >
-            Schedule Trip
+            <span className="inline-flex items-center gap-2"><CalendarPlus size={18}/>Schedule Trip</span>
           </button>
         </section>
 
@@ -505,6 +506,8 @@ function BoatOwnerTripsPage() {
 
                 <button
                   type="button"
+                  aria-label={`Open ${trip.boatName} trip details`}
+                  title="Open trip details"
                   onClick={() =>
                     navigate(
                       `/owner/trips/${trip.id}`,
@@ -527,7 +530,6 @@ function BoatOwnerTripsPage() {
                   "
                 >
                   <span>Info</span>
-
                   <img
                     src={infoIcon}
                     alt=""

@@ -63,11 +63,10 @@ class _LoginScreenState extends State<LoginScreen> {
         mainAxisAlignment: MainAxisAlignment.end,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text("Welcome Back!",
-              style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold)),
+          Text("Welcome Back!", style: authHeadingStyle()),
           const SizedBox(height: 8),
-          const Text("Continue Where You Left Off With Secure Account Access.",
-              style: TextStyle(fontSize: 14, color: Colors.white70)),
+          Text("Continue Where You Left Off With Secure Account Access.",
+              style: authSubheadingStyle(fontSize: 14)),
           const SizedBox(height: 32),
           CustomTextField(
               hintText: "Enter email or user name",

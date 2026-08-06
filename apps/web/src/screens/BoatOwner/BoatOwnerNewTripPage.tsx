@@ -7,6 +7,7 @@ import {
   ChevronDown,
   Menu as MenuIcon,
   Settings,
+  CalendarPlus,
   X,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -19,6 +20,9 @@ import infoIcon from "../../assets/icons/info.svg";
 import notificationIcon from "../../assets/icons/notification.svg";
 import userIcon from "../../assets/icons/user.svg";
 import vesselIcon from "../../assets/icons/vessel.svg";
+import dashboardIcon from "../../assets/icons/dashboard.svg";
+import crewIcon from "../../assets/icons/crew.svg";
+import tripsIcon from "../../assets/icons/trips.svg";
 
 interface MenuItem {
   label: string;
@@ -31,7 +35,7 @@ const menuItems: MenuItem[] = [
   {
     label: "Dashboard",
     path: "/owner",
-    icon: infoIcon,
+    icon: dashboardIcon,
   },
   {
     label: "Profile",
@@ -41,7 +45,7 @@ const menuItems: MenuItem[] = [
   {
     label: "My Crew",
     path: "/owner/crew",
-    icon: groupIcon,
+    icon: crewIcon,
   },
   {
     label: "My Boats",
@@ -51,7 +55,7 @@ const menuItems: MenuItem[] = [
   {
     label: "My Trips",
     path: "/owner/trips",
-    icon: infoIcon,
+    icon: tripsIcon,
   },
   {
     label: "Settings",
@@ -351,7 +355,7 @@ function BoatOwnerNewTripPage() {
             sm:text-[15px]
           "
         >
-          {submitting ? 'Scheduling...' : 'Schedule Trip'}
+          <span className="inline-flex items-center gap-2"><CalendarPlus size={19}/>{submitting ? 'Scheduling...' : 'Schedule Trip'}</span>
         </button>
       </form>
 

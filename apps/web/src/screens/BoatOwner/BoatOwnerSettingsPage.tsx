@@ -4,17 +4,26 @@ import {
 } from "react";
 import {
   ChevronRight,
+  Eye,
+  EyeOff,
+  KeyRound,
+  Save,
   Menu as MenuIcon,
   Settings,
   X,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../auth/useAuth";
+import { changePassword } from "../../auth/authApi";
 
 import groupIcon from "../../assets/icons/group.svg";
 import infoIcon from "../../assets/icons/info.svg";
 import notificationIcon from "../../assets/icons/notification.svg";
 import userIcon from "../../assets/icons/user.svg";
 import vesselIcon from "../../assets/icons/vessel.svg";
+import dashboardIcon from "../../assets/icons/dashboard.svg";
+import crewIcon from "../../assets/icons/crew.svg";
+import tripsIcon from "../../assets/icons/trips.svg";
 
 interface MenuItem {
   label: string;
@@ -33,7 +42,7 @@ const menuItems: MenuItem[] = [
   {
     label: "Dashboard",
     path: "/owner",
-    icon: infoIcon,
+    icon: dashboardIcon,
   },
   {
     label: "Profile",
@@ -43,7 +52,7 @@ const menuItems: MenuItem[] = [
   {
     label: "My Crew",
     path: "/owner/crew",
-    icon: groupIcon,
+    icon: crewIcon,
   },
   {
     label: "My Boats",
@@ -53,7 +62,7 @@ const menuItems: MenuItem[] = [
   {
     label: "My Trips",
     path: "/owner/trips",
-    icon: infoIcon,
+    icon: tripsIcon,
   },
   {
     label: "Settings",
@@ -112,12 +121,18 @@ function ToggleSwitch({
 
 function BoatOwnerSettingsPage() {
   const navigate = useNavigate();
+  const {session,logout}=useAuth();
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [appNotifications, setAppNotifications] =
     useState(true);
   const [autoUpdates, setAutoUpdates] = useState(true);
   const [statusMessage, setStatusMessage] = useState("");
+  const [passwordOpen,setPasswordOpen]=useState(false);
+  const [passwords,setPasswords]=useState({currentPassword:"",newPassword:"",confirmPassword:""});
+  const [passwordVisible,setPasswordVisible]=useState(false);
+  const [passwordBusy,setPasswordBusy]=useState(false);
+  const [passwordError,setPasswordError]=useState("");
 
   useEffect(() => {
     const previousOverflow =
@@ -139,15 +154,11 @@ function BoatOwnerSettingsPage() {
   };
 
   const handleLogout = (): void => {
-    /*
-     * Connect your authentication logout function here.
-     * For example:
-     *
-     * logout();
-     */
-
-    navigate("/login");
+    void logout();
+    navigate("/login",{replace:true});
   };
+
+  const submitPassword=async(event:React.FormEvent)=>{event.preventDefault();if(!session)return;if(passwords.newPassword!==passwords.confirmPassword){setPasswordError("New passwords do not match.");return}setPasswordBusy(true);setPasswordError("");try{const result=await changePassword(session.accessToken,passwords.currentPassword,passwords.newPassword);setStatusMessage(result.message);setPasswords({currentPassword:"",newPassword:"",confirmPassword:""});setPasswordOpen(false)}catch(error){setPasswordError(error instanceof Error?error.message:"Unable to update password.")}finally{setPasswordBusy(false)}};
 
   const handleDeleteAccount = (): void => {
     const shouldDelete = window.confirm(
@@ -298,11 +309,7 @@ function BoatOwnerSettingsPage() {
         {/* Password */}
         <button
           type="button"
-          onClick={() =>
-            navigate(
-              "/owner/settings/password",
-            )
-          }
+          onClick={() => {setPasswordError("");setPasswordOpen(true)}}
           className="
             flex min-h-[100px] w-full
             items-center justify-between
@@ -434,6 +441,8 @@ function BoatOwnerSettingsPage() {
           </p>
         )}
       </div>
+
+      {passwordOpen&&<div className="fixed inset-0 z-[100] grid place-items-center bg-slate-950/55 p-4 backdrop-blur-sm"><form onSubmit={submitPassword} className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl sm:p-8"><div className="flex items-start justify-between"><div className="flex gap-3"><span className="grid h-11 w-11 place-items-center rounded-xl bg-indigo-50 text-[#162d54]"><KeyRound size={22}/></span><div><h2 className="text-xl font-semibold text-[#162d54]">Update password</h2><p className="mt-1 text-xs text-slate-500">Choose a strong, unique password.</p></div></div><button type="button" onClick={()=>setPasswordOpen(false)} aria-label="Close password dialog" className="rounded-full p-2 hover:bg-slate-100"><X size={20}/></button></div><div className="mt-6 space-y-4">{[["currentPassword","Current password"],["newPassword","New password"],["confirmPassword","Confirm new password"]].map(([key,label])=><label key={key} className="block text-sm font-semibold text-slate-700">{label}<div className="relative mt-2"><input required minLength={12} type={passwordVisible?"text":"password"} autoComplete={key==="currentPassword"?"current-password":"new-password"} value={passwords[key as keyof typeof passwords]} onChange={e=>setPasswords(current=>({...current,[key]:e.target.value}))} className="h-12 w-full rounded-xl border border-slate-200 px-4 pr-11 font-normal outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"/>{key==="newPassword"&&<button type="button" onClick={()=>setPasswordVisible(v=>!v)} aria-label={passwordVisible?"Hide passwords":"Show passwords"} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">{passwordVisible?<EyeOff size={18}/>:<Eye size={18}/>}</button>}</div></label>)}</div><p className="mt-4 text-xs leading-5 text-slate-500">Use at least 12 characters with uppercase, lowercase, number, symbol, and varied characters.</p>{passwordError&&<p role="alert" className="mt-4 rounded-xl bg-red-50 p-3 text-sm text-red-700">{passwordError}</p>}<button disabled={passwordBusy} className="mt-6 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#162d54] font-semibold text-white shadow-lg shadow-slate-900/10 transition hover:bg-[#203d6c] disabled:opacity-50"><Save size={18}/>{passwordBusy?"Updating…":"Update password"}</button></form></div>}
 
       {/* Side menu */}
       {isMenuOpen && (
