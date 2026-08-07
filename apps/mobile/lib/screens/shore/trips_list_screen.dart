@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
+import '../../widgets/mobile_search_field.dart';
 import '../../widgets/shore_layout.dart';
 
 class TripsListScreen extends StatefulWidget {
@@ -67,9 +68,7 @@ class _State extends State<TripsListScreen> {
         'vessel': t['vesselName'],
         'owner': t['ownerName'],
         'reg': t['registrationNumber'],
-        'time': DateTime.tryParse(t['scheduledDepartureUtc']?.toString() ?? '')
-            ?.toLocal()
-            .toString(),
+        'time': formatShoreDate(t['scheduledDepartureUtc']),
         'status': t['shoreApproval'],
         'crew': t['crew'] ?? const [],
         'raw': t
@@ -123,68 +122,62 @@ class _State extends State<TripsListScreen> {
                                       style: TextStyle(color: shoreMuted)))
                           ])))))));
   Widget _heading(double width) {
-    final controls = width >= 520
-        ? Row(children: [
-            Expanded(
-                child: TextField(
-                    onChanged: (v) => setState(() => search = v),
-                    decoration: InputDecoration(
-                        isDense: true,
-                        hintText: 'Search',
-                        prefixIcon: const Icon(Icons.search, size: 18),
-                        border: OutlineInputBorder(
-                            borderSide:
-                                const BorderSide(color: Color(0xFFE2E8F0)),
-                            borderRadius: BorderRadius.circular(6))))),
-            const SizedBox(width: 12),
-            Expanded(
-                child: DropdownButtonFormField<String>(
-                    initialValue: sort,
-                    decoration: InputDecoration(
-                        isDense: true,
-                        border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(6))),
-                    items: const [
-                      DropdownMenuItem(
-                          value: 'time', child: Text('Sort by Time')),
-                      DropdownMenuItem(
-                          value: 'vessel', child: Text('Sort by Vessel'))
-                    ],
-                    onChanged: (v) => setState(() => sort = v ?? 'time'))),
-          ])
-        : Column(children: [
-            TextField(
-                onChanged: (v) => setState(() => search = v),
-                decoration: InputDecoration(
-                    isDense: true,
-                    hintText: 'Search',
-                    prefixIcon: const Icon(Icons.search, size: 18),
-                    border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(6)))),
-            const SizedBox(height: 10),
-            DropdownButtonFormField<String>(
-                initialValue: sort,
-                isExpanded: true,
-                decoration: InputDecoration(
-                    isDense: true,
-                    border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(6))),
-                items: const [
-                  DropdownMenuItem(value: 'time', child: Text('Sort by Time')),
-                  DropdownMenuItem(
-                      value: 'vessel', child: Text('Sort by Vessel'))
-                ],
-                onChanged: (v) => setState(() => sort = v ?? 'time')),
-          ]);
+    final searchField = SizedBox(
+        height: 40,
+        child: TextField(
+            onChanged: (v) => setState(() => search = v),
+            style: mobileSearchTextStyle,
+            decoration: mobileSearchDecoration('Search')));
+    final sortField = SizedBox(
+        width: 144,
+        height: 40,
+        child: DropdownButtonFormField<String>(
+            initialValue: sort,
+            isExpanded: true,
+            icon: const Icon(Icons.keyboard_arrow_down, size: 18),
+            style: const TextStyle(fontSize: 13, color: Color(0xFF475569)),
+            decoration: const InputDecoration(
+                isDense: true,
+                filled: true,
+                fillColor: Colors.white,
+                contentPadding: EdgeInsets.fromLTRB(12, 10, 8, 10),
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(6)),
+                    borderSide: BorderSide(color: Color(0xFFE2E8F0))),
+                enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(6)),
+                    borderSide: BorderSide(color: Color(0xFFE2E8F0))),
+                focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(6)),
+                    borderSide: BorderSide(color: Color(0xFF818CF8)))),
+            items: const [
+              DropdownMenuItem(value: 'time', child: Text('Sort by Time')),
+              DropdownMenuItem(value: 'vessel', child: Text('Sort by Vessel'))
+            ],
+            onChanged: (v) => setState(() => sort = v ?? 'time')));
+    final controls = Row(mainAxisSize: MainAxisSize.min, children: [
+      if (width >= 760)
+        SizedBox(width: 190, child: searchField)
+      else
+        Expanded(child: searchField),
+      const SizedBox(width: 10),
+      sortField,
+    ]);
     return Padding(
         padding: EdgeInsets.symmetric(
             horizontal: width >= 900 ? 28 : 18,
             vertical: width >= 700 ? 22 : 16),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          _title(),
-          const SizedBox(height: 16),
-          SizedBox(width: double.infinity, child: controls)
-        ]));
+        child: width >= 760
+            ? Row(children: [
+                Expanded(child: _title()),
+                const SizedBox(width: 20),
+                controls
+              ])
+            : Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                _title(),
+                const SizedBox(height: 14),
+                SizedBox(width: double.infinity, child: controls)
+              ]));
   }
 
   Widget _title() =>
@@ -211,7 +204,7 @@ class _State extends State<TripsListScreen> {
                       WidgetStateProperty.all(const Color(0xFFF8FAFC)),
                   headingTextStyle: const TextStyle(
                       fontSize: 12,
-                      fontWeight: FontWeight.w500,
+                      fontWeight: FontWeight.w700,
                       color: Color(0xFF64748B)),
                   dataTextStyle:
                       const TextStyle(fontSize: 13, color: Color(0xFF475569)),
@@ -232,32 +225,27 @@ class _State extends State<TripsListScreen> {
                             DataCell(Text(t['ownerName']?.toString() ?? '')),
                             DataCell(Text(
                                 t['registrationNumber']?.toString() ?? '')),
-                            DataCell(Text(DateTime.tryParse(
-                                        t['scheduledDepartureUtc']
-                                                ?.toString() ??
-                                            '')
-                                    ?.toLocal()
-                                    .toString() ??
-                                '')),
+                            DataCell(Text(
+                                formatShoreDate(t['scheduledDepartureUtc']))),
                             DataCell(_status(
                                 t['shoreApproval']?.toString() ?? 'Pending')),
-                            DataCell(OutlinedButton(
+                            DataCell(IconButton.outlined(
                                 onPressed: () => Navigator.pushNamed(
-                                    context, '/vessel_details',
+                                    context, '/trip_details',
                                     arguments: _args(t)),
-                                style: OutlinedButton.styleFrom(
+                                tooltip: 'Review ${t['vesselName']}',
+                                style: IconButton.styleFrom(
                                     foregroundColor: shoreIndigo,
                                     side: const BorderSide(
-                                        color: Color(0xFFC7D2FE)),
-                                    shape: const StadiumBorder()),
-                                child: const Text('Review',
-                                    style: TextStyle(fontSize: 12))))
+                                        color: Color(0xFFC7D2FE))),
+                                icon: const Icon(Icons.visibility_outlined,
+                                    size: 18)))
                           ]))
                       .toList()))));
   Widget _cards() => Column(
       children: visible
           .map((t) => InkWell(
-              onTap: () => Navigator.pushNamed(context, '/vessel_details',
+              onTap: () => Navigator.pushNamed(context, '/trip_details',
                   arguments: _args(t)),
               child: Container(
                   width: double.infinity,
@@ -286,13 +274,7 @@ class _State extends State<TripsListScreen> {
                             style: const TextStyle(
                                 fontSize: 12, color: Color(0xFF64748B))),
                         const SizedBox(height: 4),
-                        Text(
-                            DateTime.tryParse(t['scheduledDepartureUtc']
-                                            ?.toString() ??
-                                        '')
-                                    ?.toLocal()
-                                    .toString() ??
-                                '',
+                        Text(formatShoreDate(t['scheduledDepartureUtc']),
                             style: const TextStyle(
                                 fontSize: 12, color: shoreMuted))
                       ]))))

@@ -92,16 +92,19 @@ class _LoginScreenState extends State<LoginScreen> {
             child: GestureDetector(
               onTap: () =>
                   Navigator.pushReplacementNamed(context, '/signup_step1'),
-              child: RichText(
-                text: const TextSpan(
+              child: Text.rich(
+                const TextSpan(
                   text: "Don't have an account? ",
-                  style: TextStyle(color: Colors.white54),
                   children: [
                     TextSpan(
                         text: "Sign Up",
                         style: TextStyle(color: Color(0xFF6FFFE9)))
                   ],
                 ),
+                style: Theme.of(context)
+                    .textTheme
+                    .bodyMedium
+                    ?.copyWith(color: Colors.white54),
               ),
             ),
           ),

@@ -11,11 +11,18 @@ dependencies:
     sdk: flutter
   cupertino_icons: ^1.0.6
   http: ^1.5.0
+  http_parser: ^4.1.2
   flutter_secure_storage: ^9.2.4
   signalr_netcore: ^1.4.4
   image_picker: ^1.2.1
   qr_flutter: ^4.1.0
-  google_fonts: ^8.2.1
+  mobile_scanner: ^7.4.0
+  intl: ^0.20.3
+  share_plus: ^12.0.2
+  file_picker: ^11.0.2
+  flutter_map: ^8.3.1
+  latlong2: ^0.10.1
+  uuid: ^4.6.0
 
 dev_dependencies:
   flutter_test:
@@ -33,3 +40,29 @@ flutter:
     - assets/images/profile_kamal.jpg
     - assets/images/qr_image.png
     - assets/images/map_image.png
+    - assets/images/wildlife_authority.png
+  fonts:
+    - family: Montserrat
+      fonts:
+        - asset: assets/fonts/Montserrat-400.ttf
+          weight: 400
+        - asset: assets/fonts/Montserrat-500.ttf
+          weight: 500
+        - asset: assets/fonts/Montserrat-600.ttf
+          weight: 600
+        - asset: assets/fonts/Montserrat-700.ttf
+          weight: 700
+        - asset: assets/fonts/Montserrat-800.ttf
+          weight: 800
+    - family: Poppins
+      fonts:
+        - asset: assets/fonts/Poppins-400.ttf
+          weight: 400
+        - asset: assets/fonts/Poppins-500.ttf
+          weight: 500
+        - asset: assets/fonts/Poppins-600.ttf
+          weight: 600
+        - asset: assets/fonts/Poppins-700.ttf
+          weight: 700
+        - asset: assets/fonts/Poppins-800.ttf
+          weight: 800

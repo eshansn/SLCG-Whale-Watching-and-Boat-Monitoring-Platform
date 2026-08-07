@@ -1,167 +1,186 @@
 import 'package:flutter/material.dart';
-import '../../owner/owner_store.dart';
+
+import '../../services/api_service.dart';
 import '../../widgets/owner_layout.dart';
+import 'owner_portal_common.dart';
 
 class OwnerBoatsScreen extends StatefulWidget {
   const OwnerBoatsScreen({super.key});
+
   @override
-  State<OwnerBoatsScreen> createState() => _State();
+  State<OwnerBoatsScreen> createState() => _OwnerBoatsScreenState();
 }
 
-class _State extends State<OwnerBoatsScreen> {
-  final store = OwnerStore.instance, search = TextEditingController();
-  CertificationStatus? filter;
-  bool nameSort = true;
+class _OwnerBoatsScreenState extends State<OwnerBoatsScreen> {
+  final _api = ApiService.instance;
+  List<Map<String, dynamic>> _boats = const [];
+  bool _loading = true;
+  String? _error;
+
   @override
   void initState() {
     super.initState();
-    store.addListener(refresh);
-    store.refresh();
+    _api.addListener(_realtimeRefresh);
+    _load();
   }
 
   @override
   void dispose() {
-    store.removeListener(refresh);
-    search.dispose();
+    _api.removeListener(_realtimeRefresh);
     super.dispose();
   }
 
-  void refresh() => setState(() {});
-  @override
-  Widget build(BuildContext context) {
-    final q = search.text.toLowerCase();
-    final boats = store.ownedBoats
-        .where((b) =>
-            (b.name.toLowerCase().contains(q) ||
-                b.registrationNumber.toLowerCase().contains(q)) &&
-            (filter == null || b.status == filter))
-        .toList()
-      ..sort((a, b) => nameSort
-          ? a.name.compareTo(b.name)
-          : a.registrationNumber.compareTo(b.registrationNumber));
-    return OwnerLayout(
-        child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child:
-                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              const Text('My Boats',
-                  style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black)),
-              const SizedBox(height: 16),
-              Row(children: [
-                Expanded(
-                    child: TextField(
-                        controller: search,
-                        onChanged: (_) => setState(() {}),
-                        decoration: const InputDecoration(
-                            prefixIcon: Icon(Icons.search),
-                            hintText: 'Search boats'))),
-                PopupMenuButton<CertificationStatus?>(
-                    icon: const Icon(Icons.filter_list),
-                    onSelected: (v) => setState(() => filter = v),
-                    itemBuilder: (_) => [
-                          const PopupMenuItem(
-                              value: null, child: Text('All statuses')),
-                          ...CertificationStatus.values.map((s) =>
-                              PopupMenuItem(value: s, child: Text(label(s))))
-                        ]),
-                IconButton(
-                    onPressed: () => setState(() => nameSort = !nameSort),
-                    icon: const Icon(Icons.sort))
-              ]),
-              const SizedBox(height: 16),
-              ...boats.map(card),
-              const SizedBox(height: 16),
-              Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                      color: const Color(0xFF1F2937),
-                      borderRadius: BorderRadius.circular(16)),
-                  child: Column(children: [
-                    const Text('Register New Boats',
-                        style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white)),
-                    const SizedBox(height: 8),
-                    const Text("Initialize your boat's digital profile.",
-                        style: TextStyle(color: Colors.white70, fontSize: 12)),
-                    const SizedBox(height: 24),
-                    SizedBox(
-                        width: double.infinity,
-                        height: 48,
-                        child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.white,
-                                foregroundColor: const Color(0xFF1F2937)),
-                            onPressed: () =>
-                                Navigator.pushNamed(context, '/owner_new_boat'),
-                            child: const Text('Add More',
-                                style: TextStyle(fontWeight: FontWeight.bold))))
-                  ]))
-            ])));
+  void _realtimeRefresh() => _load(silent: true);
+
+  Future<void> _load({bool silent = false}) async {
+    if (!silent && mounted) {
+      setState(() {
+        _loading = true;
+        _error = null;
+      });
+    }
+    try {
+      final boats = await _api.boats();
+      if (!mounted) return;
+      setState(() {
+        _boats = boats;
+        _loading = false;
+        _error = null;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        if (!silent) _error = ownerError(error);
+      });
+    }
   }
 
-  Widget card(OwnerBoat b) => Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.grey.shade200)),
-          child: Column(children: [
-            Row(children: [
-              Expanded(
+  Future<void> _open(String route, {Object? arguments}) async {
+    await Navigator.pushNamed(context, route, arguments: arguments);
+    await _load(silent: true);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final approved = _boats
+        .where((boat) => boat['approval']?.toString() == 'Approved')
+        .toList();
+    final awaiting = _boats
+        .where((boat) => boat['approval']?.toString() != 'Approved')
+        .toList();
+    return OwnerLayout(
+      active: 'boats',
+      title: 'My Boats',
+      child: RefreshIndicator(
+        onRefresh: _load,
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(16, 18, 16, 40),
+          children: [
+            if (_loading)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 90),
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else if (_error != null)
+              OwnerErrorPanel(message: _error!, retry: _load)
+            else ...[
+              const Text('Approved Boats',
+                  style: TextStyle(fontSize: 19, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 12),
+              if (approved.isEmpty)
+                const Text('No boats have completed approval yet.',
+                    style: TextStyle(color: ownerMuted))
+              else
+                _boatGrid(approved),
+              const SizedBox(height: 26),
+              const Text('Yet to be Approved',
+                  style: TextStyle(fontSize: 19, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 12),
+              if (awaiting.isEmpty)
+                const Text('No boats are awaiting approval.',
+                    style: TextStyle(color: ownerMuted))
+              else
+                _boatGrid(awaiting),
+              const SizedBox(height: 26),
+              OwnerEmptyPanel(
+                title: 'Register New Boats',
+                message: "Initialize your boat's digital profile.",
+                actionLabel: 'Register Boat',
+                icon: Icons.add_circle_outline_rounded,
+                onAction: () => _open('/owner_new_boat'),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _boatGrid(List<Map<String, dynamic>> boats) => LayoutBuilder(
+        builder: (context, constraints) {
+          final columns = constraints.maxWidth >= 900
+              ? 3
+              : constraints.maxWidth >= 600
+                  ? 2
+                  : 1;
+          final width = (constraints.maxWidth - (columns - 1) * 14) / columns;
+          return Wrap(
+            spacing: 14,
+            runSpacing: 14,
+            children: boats
+                .map((boat) => SizedBox(width: width, child: _boatCard(boat)))
+                .toList(),
+          );
+        },
+      );
+
+  Widget _boatCard(Map<String, dynamic> boat) => OwnerCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
                   child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                    const Text('Name',
-                        style: TextStyle(fontWeight: FontWeight.bold)),
-                    Text(b.name),
-                    const SizedBox(height: 10),
-                    const Text('Reg No',
-                        style: TextStyle(fontWeight: FontWeight.bold)),
-                    Text(b.registrationNumber),
-                    const SizedBox(height: 10),
-                    Text(label(b.status).toUpperCase(),
-                        style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            color: color(b.status)))
-                  ])),
-              Expanded(
-                  child: Container(
-                      height: 110,
-                      color: Colors.blueGrey.shade100,
-                      child: const Icon(Icons.directions_boat,
-                          size: 60, color: Colors.white)))
-            ]),
-            const SizedBox(height: 16),
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Name',
+                          style: TextStyle(fontWeight: FontWeight.w600)),
+                      Text(boat['name']?.toString() ?? 'Unnamed vessel'),
+                      const SizedBox(height: 10),
+                      const Text('Reg No',
+                          style: TextStyle(fontWeight: FontWeight.w600)),
+                      Text(boat['registrationNumber']?.toString() ?? ''),
+                      const SizedBox(height: 10),
+                      OwnerStatusBadge(
+                        boat['approval'],
+                        label: boat['approval']?.toString() == 'Rejected'
+                            ? 'Approval declined'
+                            : boat['approval']?.toString() == 'Approved'
+                                ? 'Approved'
+                                : 'Approval pending',
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(child: OwnerBoatImage(boat['imageUrl'], height: 135)),
+              ],
+            ),
+            const SizedBox(height: 14),
             SizedBox(
-                width: double.infinity,
-                height: 44,
-                child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF0F172A),
-                        foregroundColor: Colors.white),
-                    onPressed: () => Navigator.pushNamed(
-                        context, '/owner_boat_info',
-                        arguments: b.id),
-                    child: const Text('Info')))
-          ])));
-  static String label(CertificationStatus s) => switch (s) {
-        CertificationStatus.pending => 'Pending',
-        CertificationStatus.underReview => 'Under Review',
-        CertificationStatus.certified => 'Certified',
-        CertificationStatus.rejected => 'Rejected'
-      };
-  Color color(CertificationStatus s) => s == CertificationStatus.certified
-      ? Colors.green
-      : s == CertificationStatus.rejected
-          ? Colors.red
-          : Colors.orange;
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: () => _open('/owner_boat_info',
+                    arguments: boat['id']?.toString()),
+                icon: const Icon(Icons.info_outline_rounded, size: 18),
+                label: const Text('Info'),
+              ),
+            ),
+          ],
+        ),
+      );
 }

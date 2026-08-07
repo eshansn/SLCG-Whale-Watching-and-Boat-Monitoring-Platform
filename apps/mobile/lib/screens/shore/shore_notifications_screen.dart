@@ -48,9 +48,7 @@ class _State extends State<ShoreNotificationsScreen> {
         'vessel': t['vesselName'],
         'owner': t['ownerName'],
         'reg': t['registrationNumber'],
-        'time': DateTime.tryParse(t['scheduledDepartureUtc']?.toString() ?? '')
-            ?.toLocal()
-            .toString(),
+        'time': formatShoreDate(t['scheduledDepartureUtc']),
         'status': t['shoreApproval'],
         'crew': t['crew'] ?? const [],
         'raw': t
@@ -131,7 +129,7 @@ class _State extends State<ShoreNotificationsScreen> {
           return ListTile(
               contentPadding:
                   const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
-              onTap: () => Navigator.pushNamed(context, '/vessel_details',
+              onTap: () => Navigator.pushNamed(context, '/trip_details',
                   arguments: _args(t)),
               leading: Container(
                   width: 42,

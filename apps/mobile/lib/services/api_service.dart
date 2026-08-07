@@ -1,14 +1,24 @@
 import 'dart:convert';
 import 'dart:async';
+import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 import 'package:signalr_netcore/signalr_client.dart';
 
 class Session {
   final String accessToken, refreshToken;
   final List<String> roles;
   const Session(this.accessToken, this.refreshToken, this.roles);
+}
+
+class DownloadedFile {
+  final Uint8List bytes;
+  final String fileName;
+  final String contentType;
+
+  const DownloadedFile(this.bytes, this.fileName, this.contentType);
 }
 
 class ApiService extends ChangeNotifier {
@@ -59,6 +69,15 @@ class ApiService extends ChangeNotifier {
           .cast<Map<String, dynamic>>();
   Future<Map<String, dynamic>> ownerProfile() async =>
       (await _get('/api/owner/profile') as Map).cast<String, dynamic>();
+  Future<Uint8List?> ownerProfilePhoto() async {
+    final response = await http
+        .get(Uri.parse('$baseUrl/api/owner/profile/photo'), headers: _headers)
+        .timeout(const Duration(seconds: 15));
+    if (response.statusCode == 404) return null;
+    _ensureSuccess(response);
+    return response.bodyBytes;
+  }
+
   Future<Map<String, dynamic>> updateOwnerProfile(
           {required String email,
           required String phoneNumber,
@@ -76,6 +95,18 @@ class ApiService extends ChangeNotifier {
     final response = await http.Response.fromStream(
         await request.send().timeout(const Duration(seconds: 20)));
     _decode(response);
+  }
+
+  Future<Map<String, dynamic>> uploadOwnerPhotoBytes(
+      Uint8List bytes, String fileName, String contentType) async {
+    final request = http.MultipartRequest(
+        'POST', Uri.parse('$baseUrl/api/owner/profile/photo'))
+      ..headers['Authorization'] = 'Bearer ${session!.accessToken}'
+      ..files.add(http.MultipartFile.fromBytes('photo', bytes,
+          filename: fileName, contentType: _mediaType(contentType)));
+    final response = await http.Response.fromStream(
+        await request.send().timeout(const Duration(seconds: 20)));
+    return (_decode(response) as Map).cast<String, dynamic>();
   }
 
   Future<List<Map<String, dynamic>>> ownerCrew() async =>
@@ -108,6 +139,33 @@ class ApiService extends ChangeNotifier {
   Future<Map<String, dynamic>> crewAttendance(String tripId) async =>
       (await _get('/api/shore/trips/$tripId/attendance') as Map)
           .cast<String, dynamic>();
+  Future<Map<String, dynamic>> shoreAttendance(String tripId) async =>
+      (await _get('/api/shore/trips/$tripId/attendance') as Map)
+          .cast<String, dynamic>();
+  Future<Map<String, dynamic>> scanShorePassenger(
+          String tripId, String qrValue) =>
+      _sendMap('POST', '/api/shore/trips/$tripId/attendance/scan',
+          {'qrValue': qrValue});
+  Future<Map<String, dynamic>> shorePassengerGroup(
+          String tripId, String primaryPassengerId) async =>
+      (await _get('/api/shore/trips/$tripId/attendance/groups/${Uri.encodeComponent(primaryPassengerId)}')
+              as Map)
+          .cast<String, dynamic>();
+  Future<List<Map<String, dynamic>>> searchShorePassengerGroups(
+          String tripId, String query) async =>
+      (await _get('/api/shore/trips/$tripId/attendance/search?query=${Uri.encodeQueryComponent(query)}')
+              as List)
+          .cast<Map<String, dynamic>>();
+  Future<Map<String, dynamic>> saveShorePassengerGroup(String tripId,
+          String primaryPassengerId, List<Map<String, dynamic>> items) =>
+      _sendMap(
+          'PUT',
+          '/api/shore/trips/$tripId/attendance/groups/${Uri.encodeComponent(primaryPassengerId)}',
+          {'items': items});
+  Future<Map<String, dynamic>> finalizeShoreAttendance(
+          String tripId, bool confirmIncomplete) =>
+      _sendMap('POST', '/api/shore/trips/$tripId/attendance/finalize',
+          {'confirmIncomplete': confirmIncomplete});
   Future<List<Map<String, dynamic>>> vesselMap() async =>
       (await _get('/api/operations/vessel-map') as List)
           .cast<Map<String, dynamic>>();
@@ -133,6 +191,10 @@ class ApiService extends ChangeNotifier {
   Future<List<Map<String, dynamic>>> shoreWildlifeRecords() async =>
       (await _get('/api/shore-wildlife/records') as List)
           .cast<Map<String, dynamic>>();
+  Future<Map<String, dynamic>> shoreWildlifeRecord(String id) async =>
+      (await _get('/api/shore-wildlife/records/${Uri.encodeComponent(id)}')
+              as Map)
+          .cast<String, dynamic>();
   Future<Map<String, dynamic>> createShoreWildlifeRecord(
           Map<String, dynamic> body) =>
       _sendMap('POST', '/api/shore-wildlife/records', body);
@@ -150,6 +212,59 @@ class ApiService extends ChangeNotifier {
       (await _get('/api/operations/trips/$tripId/passengers?updated=${DateTime.now().millisecondsSinceEpoch}')
               as List)
           .cast<Map<String, dynamic>>();
+  Future<Map<String, dynamic>> createOwnerBoat(Map<String, dynamic> details) =>
+      _sendMap('POST', '/api/operations/boats', details);
+  Future<Map<String, dynamic>> uploadBoatDocument(String boatId, String name,
+      Uint8List bytes, String fileName, String contentType) async {
+    final request = http.MultipartRequest(
+        'POST', Uri.parse('$baseUrl/api/operations/boats/$boatId/documents'))
+      ..headers['Authorization'] = 'Bearer ${session!.accessToken}'
+      ..fields['name'] = name
+      ..files.add(http.MultipartFile.fromBytes('file', bytes,
+          filename: fileName, contentType: _mediaType(contentType)));
+    final response = await http.Response.fromStream(
+        await request.send().timeout(const Duration(seconds: 30)));
+    return (_decode(response) as Map).cast<String, dynamic>();
+  }
+
+  Future<DownloadedFile> downloadBoatDocument(String boatId, String documentId,
+      String fileName, String contentType) async {
+    final response = await http
+        .get(
+            Uri.parse(
+                '$baseUrl/api/operations/boats/$boatId/documents/$documentId'),
+            headers: _headers)
+        .timeout(const Duration(seconds: 20));
+    _ensureSuccess(response);
+    return DownloadedFile(response.bodyBytes, fileName,
+        response.headers['content-type'] ?? contentType);
+  }
+
+  Future<Map<String, dynamic>> createOwnerTrip(
+          String boatId, DateTime departure, List<String> crewUserIds) =>
+      _sendMap('POST', '/api/operations/trips', {
+        'boatId': boatId,
+        'scheduledDepartureUtc': departure.toUtc().toIso8601String(),
+        'route': 'To be confirmed',
+        'passengerCount': 0,
+        'crewUserIds': crewUserIds,
+      });
+
+  Future<Map<String, dynamic>> transferOptions(String sourceTripId) async =>
+      (await _get('/api/operations/transfers/source/$sourceTripId') as Map)
+          .cast<String, dynamic>();
+  Future<List<Map<String, dynamic>>> searchTransferBoats(
+          String sourceTripId, String query) async =>
+      (await _get('/api/operations/transfers/destination-boats?sourceTripId=${Uri.encodeQueryComponent(sourceTripId)}&query=${Uri.encodeQueryComponent(query)}')
+              as List)
+          .cast<Map<String, dynamic>>();
+  Future<List<Map<String, dynamic>>> transferBoatTrips(
+          String sourceTripId, String boatId) async =>
+      (await _get('/api/operations/transfers/destination-boats/${Uri.encodeComponent(boatId)}/trips?sourceTripId=${Uri.encodeQueryComponent(sourceTripId)}')
+              as List)
+          .cast<Map<String, dynamic>>();
+  Future<Map<String, dynamic>> transferPeople(Map<String, dynamic> details) =>
+      _sendMap('POST', '/api/operations/transfers', details);
   Future<void> refreshData() async {
     await trips();
     notifyListeners();
@@ -283,12 +398,26 @@ class ApiService extends ChangeNotifier {
   }
 
   dynamic _decode(http.Response r) {
+    _ensureSuccess(r);
+    return r.body.isEmpty ? null : jsonDecode(r.body);
+  }
+
+  void _ensureSuccess(http.Response r) {
     if (r.statusCode < 200 || r.statusCode >= 300) {
       String? serverMessage;
       try {
         final payload = jsonDecode(r.body);
         if (payload is Map) {
-          serverMessage = payload['message']?.toString() ??
+          final errors = payload['errors'];
+          if (errors is Map) {
+            for (final value in errors.values) {
+              if (value is List && value.isNotEmpty) {
+                serverMessage = value.first.toString();
+                break;
+              }
+            }
+          }
+          serverMessage ??= payload['message']?.toString() ??
               payload['detail']?.toString() ??
               payload['title']?.toString();
         }
@@ -302,7 +431,11 @@ class ApiService extends ChangeNotifier {
                   ? 'You do not have permission to perform this action.'
                   : 'Request failed (${r.statusCode}).'));
     }
-    return r.body.isEmpty ? null : jsonDecode(r.body);
+  }
+
+  MediaType _mediaType(String value) {
+    final parts = value.split('/');
+    return MediaType(parts.first, parts.length > 1 ? parts[1] : 'octet-stream');
   }
 
   Future<void> _connect() async {

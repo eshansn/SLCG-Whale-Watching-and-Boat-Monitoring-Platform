@@ -1,300 +1,475 @@
+import 'dart:async';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
+
 import '../../services/api_service.dart';
 import '../../widgets/owner_layout.dart';
+import 'owner_portal_common.dart';
 
 class BoatOwnerDashboard extends StatefulWidget {
   const BoatOwnerDashboard({super.key});
+
   @override
   State<BoatOwnerDashboard> createState() => _BoatOwnerDashboardState();
 }
 
-class _BoatOwnerDashboardState extends State<BoatOwnerDashboard> {
-  List<Map<String, dynamic>> boats = [];
-  List<Map<String, dynamic>> trips = [];
-  bool loading = true;
-  String? error;
+class _BoatOwnerDashboardState extends State<BoatOwnerDashboard>
+    with SingleTickerProviderStateMixin {
+  final _api = ApiService.instance;
+  late final AnimationController _gradientController;
+  List<Map<String, dynamic>> _boats = const [];
+  List<Map<String, dynamic>> _crew = const [];
+  List<Map<String, dynamic>> _trips = const [];
+  Map<String, dynamic>? _profile;
+  Uint8List? _profilePhoto;
+  bool _loading = true;
+  String? _error;
+  Timer? _clockTimer;
 
   @override
   void initState() {
     super.initState();
+    _gradientController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 11),
+    )..repeat(reverse: true);
+    _clockTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (mounted) setState(() {});
+    });
+    _api.addListener(_realtimeRefresh);
     _load();
   }
 
-  Future<void> _load() async {
-    if (mounted) setState(() => loading = true);
+  @override
+  void dispose() {
+    _api.removeListener(_realtimeRefresh);
+    _clockTimer?.cancel();
+    _gradientController.dispose();
+    super.dispose();
+  }
+
+  void _realtimeRefresh() => _load(silent: true);
+
+  Future<void> _load({bool silent = false}) async {
+    if (!silent && mounted) {
+      setState(() {
+        _loading = true;
+        _error = null;
+      });
+    }
     try {
-      final results = await Future.wait([
-        ApiService.instance.boats(),
-        ApiService.instance.trips(),
+      final values = await Future.wait([
+        _api.boats(),
+        _api.trips(),
+        _api.ownerCrew(),
+        _api.ownerProfile(),
+        _api.ownerProfilePhoto(),
       ]);
       if (!mounted) return;
       setState(() {
-        boats = results[0];
-        trips = results[1];
-        loading = false;
-        error = null;
+        _boats = values[0] as List<Map<String, dynamic>>;
+        _trips = values[1] as List<Map<String, dynamic>>;
+        _crew = values[2] as List<Map<String, dynamic>>;
+        _profile = values[3] as Map<String, dynamic>;
+        _profilePhoto = values[4] as Uint8List?;
+        _loading = false;
+        _error = null;
       });
-    } catch (exception) {
+    } catch (error) {
       if (!mounted) return;
       setState(() {
-        loading = false;
-        error = exception.toString().replaceFirst('Exception: ', '');
+        _loading = false;
+        if (!silent) _error = ownerError(error);
       });
     }
   }
 
-  Future<void> _openAndReload(String route) async {
-    final changed = await Navigator.pushNamed(context, route);
-    if (changed == true) await _load();
-  }
-
-  bool _isActive(Map<String, dynamic> trip) =>
-      trip['status']?.toString().toLowerCase() == 'ongoing';
-
-  bool _isUpcoming(Map<String, dynamic> trip) {
-    final status = trip['status']?.toString().toLowerCase();
-    return status == 'scheduled' || status == 'boarding';
+  Future<void> _open(String route, {Object? arguments}) async {
+    await Navigator.pushNamed(context, route, arguments: arguments);
+    await _load(silent: true);
   }
 
   @override
   Widget build(BuildContext context) {
-    final active = trips.where(_isActive).toList();
-    final upcoming = trips.where(_isUpcoming).toList();
-    final visibleTrips = [...active, ...upcoming];
-    final certified = boats
-        .where((boat) => boat['approval']?.toString() == 'Approved')
-        .length;
-    final pending =
-        boats.where((boat) => boat['approval']?.toString() == 'Pending').length;
-
-    return Scaffold(
-      backgroundColor: const Color(0xFFF4F6F9),
-      endDrawer: const OwnerDrawer(),
-      body: SafeArea(
+    final now = DateTime.now();
+    final ongoing = _trips
+        .where((trip) => ownerTripIsDashboardOngoing(trip, _boats, now))
+        .toList()
+      ..sort((a, b) => '${a['scheduledDepartureUtc']}'
+          .compareTo('${b['scheduledDepartureUtc']}'));
+    final name = _profile?['displayName']?.toString().trim();
+    return OwnerLayout(
+      active: 'dashboard',
+      darkHeader: true,
+      child: AnimatedBuilder(
+        animation: _gradientController,
         child: RefreshIndicator(
           onRefresh: _load,
-          child: SingleChildScrollView(
+          child: ListView(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            padding: EdgeInsets.only(
+              top: MediaQuery.paddingOf(context).top + kToolbarHeight + 18,
+            ),
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Row(
                   children: [
-                    IconButton(
-                      onPressed: () =>
-                          Navigator.pushNamed(context, '/owner_notifications'),
-                      icon: const Icon(Icons.notifications_none, size: 28),
-                    ),
-                    Builder(
-                      builder: (drawerContext) => IconButton(
-                        onPressed: () =>
-                            Scaffold.of(drawerContext).openEndDrawer(),
-                        icon: const Icon(Icons.menu, size: 32),
+                    OwnerProfileImage(bytes: _profilePhoto, radius: 42),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Welcome Back',
+                              style: TextStyle(
+                                  fontSize: 11, color: Color(0xFFBFD2E8))),
+                          Text(
+                            name?.isNotEmpty == true ? name! : 'Boat Owner',
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 20),
-                Row(children: [
-                  const CircleAvatar(
-                    radius: 32,
-                    child: Icon(Icons.person_outline, size: 34),
+              ),
+              const SizedBox(height: 26),
+              if (_loading)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 100),
+                  child: Center(
+                    child: CircularProgressIndicator(color: Colors.white),
                   ),
-                  const SizedBox(width: 16),
-                  Column(
+                )
+              else if (_error != null)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: OwnerErrorPanel(message: _error!, retry: _load),
+                )
+              else ...[
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  child: _dashboardNavigationCards(),
+                ),
+                const SizedBox(height: 22),
+                Container(
+                  width: double.infinity,
+                  constraints: BoxConstraints(
+                    minHeight: MediaQuery.sizeOf(context).height * .55,
+                  ),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFF9FAFC),
+                    borderRadius:
+                        BorderRadius.vertical(top: Radius.circular(26)),
+                  ),
+                  padding: const EdgeInsets.fromLTRB(18, 24, 18, 42),
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Welcome Back',
-                          style: TextStyle(fontSize: 12)),
-                      Text(
-                          boats.firstOrNull?['ownerName']?.toString() ??
-                              'Boat Owner',
-                          style: const TextStyle(
-                              fontSize: 22, fontWeight: FontWeight.bold)),
+                      Row(
+                        children: [
+                          const Expanded(
+                            child: Text(
+                              'Ongoing Trips',
+                              style: TextStyle(
+                                color: ownerInk,
+                                fontSize: 21,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () => _open('/owner_trips'),
+                            child: const Text('See all'),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      if (ongoing.isEmpty)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 20),
+                          child: Text(
+                            'No ongoing trips right now.',
+                            style: TextStyle(color: ownerMuted),
+                          ),
+                        )
+                      else
+                        ...ongoing.take(3).map(_tripRow),
+                      const SizedBox(height: 26),
+                      OwnerEmptyPanel(
+                        title: 'Schedule New Trips',
+                        message: "Initialize your trip's digital profile.",
+                        actionLabel: 'Schedule Trip',
+                        icon: Icons.calendar_month_outlined,
+                        onAction: () => _open('/owner_new_trip'),
+                      ),
                     ],
                   ),
-                ]),
-                const SizedBox(height: 28),
-                if (loading)
-                  const Center(child: CircularProgressIndicator())
-                else if (error != null)
-                  _errorState()
-                else ...[
-                  Wrap(spacing: 12, runSpacing: 12, children: [
-                    _metric('Registered Boats', boats.length,
-                        Icons.directions_boat),
-                    _metric('Certified', certified, Icons.verified),
-                    _metric('Active Trips', active.length, Icons.sailing),
-                    _metric('Upcoming Trips', upcoming.length, Icons.schedule),
-                    _metric('Pending Approvals', pending, Icons.hourglass_top),
-                  ]),
-                  const SizedBox(height: 28),
-                  const Text('My Boats',
-                      style:
-                          TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 12),
-                  if (boats.isEmpty)
-                    _emptyState(
-                      icon: Icons.directions_boat_outlined,
-                      message: 'There are no boats registered yet.',
-                      buttonLabel: 'Register a Boat',
-                      route: '/owner_new_boat',
-                    )
-                  else
-                    ...boats.map(_boatTile),
-                  const SizedBox(height: 24),
-                  const Text('Quick Actions',
-                      style:
-                          TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 12),
-                  Row(children: [
-                    Expanded(
-                        child: _action('Register Boat', Icons.add,
-                            () => _openAndReload('/owner_new_boat'))),
-                    const SizedBox(width: 12),
-                    Expanded(
-                        child: _action('Schedule Trip', Icons.calendar_month,
-                            () => _openAndReload('/owner_new_trip'))),
-                    const SizedBox(width: 12),
-                    Expanded(
-                        child: _action(
-                            'Manage Crew',
-                            Icons.people,
-                            () => Navigator.pushNamed(
-                                context, '/owner_my_crew'))),
-                  ]),
-                  const SizedBox(height: 24),
-                  const Text('Active & Upcoming Trips',
-                      style:
-                          TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 12),
-                  if (visibleTrips.isEmpty)
-                    _emptyState(
-                      icon: Icons.calendar_month_outlined,
-                      message: 'There are no active or upcoming trips yet.',
-                      buttonLabel: 'Schedule a Trip',
-                      route: '/owner_new_trip',
-                    )
-                  else
-                    ...visibleTrips.map(_tripTile),
-                ],
+                ),
               ],
-            ),
+            ],
           ),
         ),
+        builder: (context, child) {
+          final progress =
+              Curves.easeInOut.transform(_gradientController.value);
+          return Stack(
+            fit: StackFit.expand,
+            children: [
+              Image.asset(
+                'assets/images/bg_whale_boat.jpg',
+                fit: BoxFit.cover,
+                alignment: Alignment.center,
+              ),
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment(-1.45 + (progress * 1.15), -1.05),
+                    end: Alignment(1.35 - (progress * .85), 1.1),
+                    colors: const [
+                      Color(0xF201050C),
+                      Color(0xE3030D1B),
+                      Color(0xCF071B31),
+                      Color(0xBD0B2948),
+                    ],
+                    stops: [
+                      0,
+                      .24 + (progress * .12),
+                      .63 - (progress * .08),
+                      1,
+                    ],
+                    transform: GradientRotation((progress - .5) * .16),
+                  ),
+                ),
+              ),
+              if (child != null) child,
+            ],
+          );
+        },
       ),
     );
   }
 
-  Widget _boatTile(Map<String, dynamic> boat) => Padding(
-        padding: const EdgeInsets.only(bottom: 8),
-        child: ListTile(
-          tileColor: Colors.white,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          leading: const Icon(Icons.directions_boat),
-          title: Text(boat['name']?.toString() ?? 'Unnamed boat'),
-          subtitle: Text(
-              '${boat['registrationNumber'] ?? 'No registration'} · ${boat['approval'] ?? 'Pending'}'),
-          trailing: IconButton(
-            icon: const Icon(Icons.chevron_right),
-            onPressed: () => Navigator.pushNamed(context, '/owner_boats'),
-          ),
+  Widget _dashboardNavigationCards() => SizedBox(
+        height: 244,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              child: _navigationSurface(
+                route: '/owner_boats',
+                colors: const [Color(0xFF102CCB), Color(0xFF164BE8)],
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Expanded(
+                          child: Text('My Boats',
+                              style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w700)),
+                        ),
+                        Text('${_boats.length}',
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 24,
+                                fontWeight: FontWeight.w700)),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      _boats.length == 1
+                          ? '1 registered boat'
+                          : '${_boats.length} registered boats',
+                      style: const TextStyle(
+                          color: Color(0xFFD8E5FF), fontSize: 10),
+                    ),
+                    const SizedBox(height: 9),
+                    if (_boats.isEmpty)
+                      const Expanded(
+                        child: Center(
+                          child: Icon(Icons.directions_boat_outlined,
+                              color: Colors.white, size: 54),
+                        ),
+                      )
+                    else
+                      Expanded(
+                        child: Column(
+                          children: _boats
+                              .take(2)
+                              .map((boat) => Expanded(
+                                    child: Padding(
+                                      padding: const EdgeInsets.only(bottom: 6),
+                                      child: _miniBoat(boat),
+                                    ),
+                                  ))
+                              .toList(),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                children: [
+                  Expanded(
+                    child: _statNavigationCard(
+                      title: 'My Crew',
+                      count: _crew.length,
+                      noun: _crew.length == 1 ? 'member' : 'members',
+                      icon: Icons.group_outlined,
+                      route: '/owner_my_crew',
+                      colors: const [Color(0xFF087CF3), Color(0xFF0B5EE8)],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Expanded(
+                    child: _statNavigationCard(
+                      title: 'My Trips',
+                      count: _trips.length,
+                      noun: _trips.length == 1 ? 'trip' : 'trips',
+                      icon: Icons.sailing_outlined,
+                      route: '/owner_trips',
+                      colors: const [Color(0xFF05070B), Color(0xFF111927)],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       );
 
-  Widget _tripTile(Map<String, dynamic> trip) => Padding(
-        padding: const EdgeInsets.only(bottom: 8),
-        child: ListTile(
-          tileColor: Colors.white,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          title: Text(trip['vesselName']?.toString() ?? 'Unnamed boat'),
-          subtitle: Text(
-              '${trip['route'] ?? 'Route not set'} · ${trip['scheduledDepartureUtc'] ?? ''}\nSLCG ${trip['shoreApproval'] ?? 'Pending'} · Wildlife Shore ${trip['wildlifeShoreApproval'] ?? 'Pending'}'),
-          isThreeLine: true,
-          trailing: IconButton(
-            icon: const Icon(Icons.chevron_right),
-            onPressed: () => Navigator.pushNamed(context, '/owner_trips'),
-          ),
-        ),
-      );
-
-  Widget _emptyState({
+  Widget _statNavigationCard({
+    required String title,
+    required int count,
+    required String noun,
     required IconData icon,
-    required String message,
-    required String buttonLabel,
     required String route,
+    required List<Color> colors,
   }) =>
-      Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
+      _navigationSurface(
+        route: route,
+        colors: colors,
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(title,
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 17,
+                          fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 5),
+                  Text('$count $noun',
+                      style: const TextStyle(
+                          color: Color(0xFFD8E5F3), fontSize: 11)),
+                ],
+              ),
+            ),
+            Icon(icon, color: Colors.white, size: 42),
+          ],
         ),
-        child: Column(children: [
-          Icon(icon, size: 42, color: Colors.blueGrey),
-          const SizedBox(height: 12),
-          Text(message, textAlign: TextAlign.center),
-          const SizedBox(height: 16),
-          ElevatedButton.icon(
-            onPressed: () => _openAndReload(route),
-            icon: const Icon(Icons.add),
-            label: Text(buttonLabel),
-          ),
-        ]),
       );
 
-  Widget _errorState() => Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(children: [
-          const Icon(Icons.cloud_off, size: 42, color: Colors.redAccent),
-          const SizedBox(height: 12),
-          Text(error!, textAlign: TextAlign.center),
-          const SizedBox(height: 16),
-          ElevatedButton.icon(
-            onPressed: _load,
-            icon: const Icon(Icons.refresh),
-            label: const Text('Try Again'),
-          ),
-        ]),
-      );
-
-  Widget _metric(String title, int value, IconData icon) => SizedBox(
-      width: 155,
-      child: Container(
-          padding: const EdgeInsets.all(16),
+  Widget _navigationSurface({
+    required String route,
+    required List<Color> colors,
+    required Widget child,
+  }) =>
+      Material(
+        color: Colors.transparent,
+        child: Ink(
           decoration: BoxDecoration(
-              color: Colors.white, borderRadius: BorderRadius.circular(12)),
-          child:
-              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Icon(icon, color: const Color(0xFF152238)),
-            const SizedBox(height: 8),
-            Text('$value',
-                style:
-                    const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-            Text(title, style: const TextStyle(fontSize: 11))
-          ])));
+            gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: colors),
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: const [
+              BoxShadow(
+                  color: Color(0x3D000000),
+                  blurRadius: 15,
+                  offset: Offset(0, 7)),
+            ],
+          ),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(20),
+            onTap: () => _open(route),
+            child: Padding(padding: const EdgeInsets.all(12), child: child),
+          ),
+        ),
+      );
 
-  Widget _action(
-          String title, IconData icon, VoidCallback onTap) =>
-      ElevatedButton(
-          style:
-              ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF152238),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 18)),
-          onPressed: onTap,
-          child: Column(children: [
-            Icon(icon),
-            Text(title, textAlign: TextAlign.center)
-          ]));
+  Widget _miniBoat(Map<String, dynamic> boat) => Container(
+        padding: const EdgeInsets.all(5),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(9),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('${boat['name'] ?? 'Unnamed boat'}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                          color: ownerInk,
+                          fontSize: 9,
+                          fontWeight: FontWeight.w700)),
+                  Text('${boat['registrationNumber'] ?? ''}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: ownerMuted, fontSize: 7)),
+                  const SizedBox(height: 2),
+                  Text('● ${boat['approval'] ?? 'Pending'}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                          color: ownerStatusColor(boat['approval']),
+                          fontSize: 7,
+                          fontWeight: FontWeight.w600)),
+                ],
+              ),
+            ),
+            const SizedBox(width: 5),
+            SizedBox(
+                width: 58, child: OwnerBoatImage(boat['imageUrl'], height: 48)),
+          ],
+        ),
+      );
+
+  Widget _tripRow(Map<String, dynamic> trip) => ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 2),
+        title: Text(trip['vesselName']?.toString() ?? 'Unnamed vessel',
+            style:
+                const TextStyle(color: ownerInk, fontWeight: FontWeight.w700)),
+        subtitle: Text(trip['registrationNumber']?.toString() ?? '',
+            style: const TextStyle(color: ownerMuted, fontSize: 11)),
+        trailing: IconButton(
+          tooltip: 'View trip',
+          color: ownerInk,
+          icon: const Icon(Icons.info_outline_rounded),
+          onPressed: () =>
+              _open('/owner_trip_info', arguments: trip['id']?.toString()),
+        ),
+      );
 }

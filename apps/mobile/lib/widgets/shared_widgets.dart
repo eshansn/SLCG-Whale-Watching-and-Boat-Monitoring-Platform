@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
-TextStyle authHeadingStyle({double fontSize = 36}) => GoogleFonts.montserrat(
+TextStyle authHeadingStyle({double fontSize = 36}) => TextStyle(
+      fontFamily: 'Montserrat',
       fontSize: fontSize,
       color: Colors.white,
       fontWeight: FontWeight.bold,
     );
 
 TextStyle authSubheadingStyle({double fontSize = 16, double? height}) =>
-    GoogleFonts.montserrat(
+    TextStyle(
+      fontFamily: 'Montserrat',
       fontSize: fontSize,
       color: Colors.white,
       height: height,
@@ -99,7 +100,8 @@ class CyanButton extends StatelessWidget {
           children: [
             Text(
               text,
-              style: GoogleFonts.montserrat(
+              style: const TextStyle(
+                fontFamily: 'Montserrat',
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),

@@ -1,114 +1,182 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 
+const ownerNavy = Color(0xFF162D54);
+const ownerInk = Color(0xFF14223D);
+const ownerCanvas = Color(0xFFF8F9FB);
+const ownerMuted = Color(0xFF64748B);
+
 class OwnerDrawer extends StatelessWidget {
-  const OwnerDrawer({Key? key}) : super(key: key);
+  final String active;
+  final bool dark;
+
+  const OwnerDrawer({super.key, this.active = 'dashboard', this.dark = false});
+
+  static const _items = [
+    ('dashboard', 'Dashboard', Icons.dashboard_outlined, '/boat_owner'),
+    ('profile', 'Profile', Icons.person_outline, '/owner_profile'),
+    ('crew', 'My Crew', Icons.people_outline, '/owner_my_crew'),
+    ('boats', 'My Boats', Icons.directions_boat_outlined, '/owner_boats'),
+    ('trips', 'My Trips', Icons.sailing_outlined, '/owner_trips'),
+    ('settings', 'Settings', Icons.settings_outlined, '/owner_settings'),
+  ];
 
   @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 290,
-      child: Drawer(
-        backgroundColor: Colors.white,
+  Widget build(BuildContext context) => Drawer(
+        width: 310,
+        backgroundColor: dark ? Colors.transparent : Colors.white,
+        surfaceTintColor: Colors.transparent,
         child: SafeArea(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Align(
-                alignment: Alignment.topRight,
-                child: IconButton(
-                  icon: const Icon(Icons.close, color: Colors.black, size: 28),
-                  onPressed: () => Navigator.pop(context),
+          child: ClipRect(
+            child: BackdropFilter(
+              filter: ui.ImageFilter.blur(
+                sigmaX: dark ? 20 : 0,
+                sigmaY: dark ? 20 : 0,
+              ),
+              child: ColoredBox(
+                color: dark ? const Color(0xC20A1B2E) : Colors.transparent,
+                child: Column(
+                  children: [
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: IconButton(
+                        tooltip: 'Close menu',
+                        color: dark ? Colors.white : ownerInk,
+                        icon: const Icon(Icons.close_rounded, size: 28),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 18, 24, 22),
+                      child: Row(
+                        children: [
+                          CircleAvatar(
+                            backgroundColor:
+                                dark ? const Color(0xFF24558B) : ownerNavy,
+                            child:
+                                const Icon(Icons.sailing, color: Colors.white),
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            'Boat Owner',
+                            style: TextStyle(
+                              fontSize: 19,
+                              fontWeight: FontWeight.w700,
+                              color: dark ? Colors.white : ownerInk,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    ..._items.map((item) {
+                      final selected = active == item.$1;
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        child: ListTile(
+                          selected: selected,
+                          iconColor: dark ? const Color(0xFFC8D9EA) : null,
+                          textColor: dark ? const Color(0xFFEAF2FB) : null,
+                          selectedTileColor: dark
+                              ? const Color(0xFF1D4773)
+                              : const Color(0xFFF1F5F9),
+                          selectedColor: dark ? Colors.white : ownerNavy,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          leading: Icon(item.$3),
+                          title: Text(
+                            item.$2,
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                          onTap: () {
+                            Navigator.pop(context);
+                            if (ModalRoute.of(context)?.settings.name !=
+                                item.$4) {
+                              Navigator.pushReplacementNamed(context, item.$4);
+                            }
+                          },
+                        ),
+                      );
+                    }),
+                  ],
                 ),
               ),
-              const SizedBox(height: 32),
-              _buildDrawerItem(context, Icons.dashboard_outlined, 'Dashboard',
-                  '/boat_owner'),
-              _buildDrawerItem(context, Icons.notifications_outlined,
-                  'Notifications', '/owner_notifications'),
-              _buildDrawerItem(
-                  context, Icons.person_outline, 'Profile', '/owner_profile'),
-              _buildDrawerItem(
-                  context, Icons.people_outline, 'My Crew', '/owner_my_crew'),
-              _buildDrawerItem(context, Icons.directions_boat_outlined,
-                  'My Boats', '/owner_boats'),
-              _buildDrawerItem(
-                  context, Icons.info_outline, 'My Trips', '/owner_trips'),
-              _buildDrawerItem(context, Icons.settings_outlined, 'Settings',
-                  '/owner_settings'),
-            ],
+            ),
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildDrawerItem(
-      BuildContext context, IconData icon, String title, String route) {
-    return InkWell(
-      onTap: () {
-        Navigator.pop(context);
-        if (route.isNotEmpty) {
-          if (ModalRoute.of(context)?.settings.name != route) {
-            Navigator.pushNamed(context, route);
-          }
-        }
-      },
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 24.0),
-        child: Row(
-          children: [
-            Icon(icon, color: Colors.black87, size: 24),
-            const SizedBox(width: 16),
-            Text(title,
-                style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87)),
-          ],
-        ),
-      ),
-    );
-  }
+      );
 }
 
 class OwnerLayout extends StatelessWidget {
   final Widget child;
   final String? title;
+  final String active;
+  final bool darkHeader;
 
-  const OwnerLayout({Key? key, required this.child, this.title})
-      : super(key: key);
+  const OwnerLayout({
+    super.key,
+    required this.child,
+    this.title,
+    this.active = 'dashboard',
+    this.darkHeader = false,
+  });
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FB),
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Color(0xFF152238)),
-        leading: IconButton(
-          icon: const Icon(Icons.notifications_none, size: 28),
-          onPressed: () => Navigator.pushNamed(context, '/owner_notifications'),
-        ),
-        title: title != null
-            ? Text(title!,
-                style: const TextStyle(
-                    color: Color(0xFF152238),
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18))
-            : null,
-        centerTitle: true,
-        actions: [
-          Builder(
-            builder: (context) => IconButton(
-              icon: const Icon(Icons.menu, size: 32),
-              onPressed: () => Scaffold.of(context).openEndDrawer(),
-            ),
+  Widget build(BuildContext context) => Scaffold(
+        extendBodyBehindAppBar: darkHeader,
+        backgroundColor: ownerCanvas,
+        appBar: AppBar(
+          backgroundColor: darkHeader ? Colors.transparent : Colors.white,
+          foregroundColor: darkHeader ? Colors.white : ownerInk,
+          surfaceTintColor: Colors.transparent,
+          shadowColor: Colors.transparent,
+          scrolledUnderElevation: 0,
+          flexibleSpace: darkHeader
+              ? ClipRect(
+                  child: BackdropFilter(
+                    filter: ui.ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                    child: Container(
+                      decoration: const BoxDecoration(
+                        color: Color(0x4D061326),
+                        border: Border(
+                          bottom: BorderSide(color: Color(0x2EFFFFFF)),
+                        ),
+                      ),
+                    ),
+                  ),
+                )
+              : null,
+          elevation: 0,
+          leading: IconButton(
+            tooltip: 'Dashboard',
+            icon: const Icon(Icons.notifications_none_rounded, size: 27),
+            onPressed: () {
+              if (ModalRoute.of(context)?.settings.name != '/boat_owner') {
+                Navigator.pushReplacementNamed(context, '/boat_owner');
+              }
+            },
           ),
-        ],
-      ),
-      endDrawer: const OwnerDrawer(),
-      body: child,
-    );
-  }
+          title: title == null
+              ? null
+              : Text(
+                  title!,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+          actions: [
+            Builder(
+              builder: (drawerContext) => IconButton(
+                tooltip: 'Menu',
+                icon: const Icon(Icons.menu_rounded, size: 30),
+                onPressed: () => Scaffold.of(drawerContext).openEndDrawer(),
+              ),
+            ),
+          ],
+        ),
+        endDrawer: OwnerDrawer(active: active, dark: darkHeader),
+        body: SafeArea(top: false, child: child),
+      );
 }

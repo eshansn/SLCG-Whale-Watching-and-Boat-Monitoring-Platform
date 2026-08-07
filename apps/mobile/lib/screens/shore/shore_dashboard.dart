@@ -48,9 +48,7 @@ class _State extends State<ShoreDashboard> {
         'vessel': t['vesselName'],
         'owner': t['ownerName'],
         'reg': t['registrationNumber'],
-        'time': DateTime.tryParse(t['scheduledDepartureUtc']?.toString() ?? '')
-            ?.toLocal()
-            .toString(),
+        'time': formatShoreDate(t['scheduledDepartureUtc']),
         'status': t['shoreApproval'],
         'crew': t['crew'] ?? const [],
         'raw': t
@@ -223,7 +221,7 @@ class _State extends State<ShoreDashboard> {
                     final t = trips[index];
                     return InkWell(
                         onTap: () => Navigator.pushNamed(
-                            context, '/vessel_details', arguments: _args(t)),
+                            context, '/trip_details', arguments: _args(t)),
                         child: Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
@@ -253,13 +251,8 @@ class _State extends State<ShoreDashboard> {
                                             color: shoreInk)),
                                     const SizedBox(height: 4),
                                     Text(
-                                        DateTime.tryParse(
-                                                    t['scheduledDepartureUtc']
-                                                            ?.toString() ??
-                                                        '')
-                                                ?.toLocal()
-                                                .toString() ??
-                                            '',
+                                        formatShoreDate(
+                                            t['scheduledDepartureUtc']),
                                         style: const TextStyle(
                                             fontSize: 10,
                                             color: Color(0xFF64748B)))

@@ -36,6 +36,7 @@ import OPSTrips from './screens/OPS/OPStrips';
 import OPSTripdetails from './screens/OPS/OPSTripdetails';
 import AdminNavbar from './screens/Admin/components/AdminNavbar';
 import ShoreDashboard from './screens/Shore/ShoreDashboard';
+import ShoreSettings from './screens/Shore/Shoresettings';
 import ShoreTrips from './screens/Shore/ShoreTrips';
 import ShoreTripInfo from './screens/Shore/ShoreTripInfo';
 import ShoreNavbar from './screens/Shore/components/ShoreNavbar';
@@ -197,6 +198,7 @@ export default function App() {
             <Route path="/ops/notifications" element={<OpsRoute><OPSNotifications /></OpsRoute>} />
 
             <Route path="/shore" element={<ShoreRoute><ShoreDashboard /></ShoreRoute>} />
+            <Route path="/shore/settings" element={<ShoreRoute><ShoreSettings /></ShoreRoute>} />
             <Route path="/shore/trips" element={<ShoreRoute><ShoreTrips /></ShoreRoute>} />
             <Route path="/shore/trips/:tripId" element={<ShoreRoute><ShoreTripInfo /></ShoreRoute>} />
             <Route path="/owner" element={<OwnerRoute><BoatOwnerDashboard /></OwnerRoute>} />

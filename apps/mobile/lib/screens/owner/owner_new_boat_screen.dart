@@ -1,323 +1,415 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+
 import '../../services/api_service.dart';
+import 'owner_portal_common.dart';
 
 class OwnerNewBoatScreen extends StatefulWidget {
-  const OwnerNewBoatScreen({Key? key}) : super(key: key);
+  const OwnerNewBoatScreen({super.key});
+
   @override
   State<OwnerNewBoatScreen> createState() => _OwnerNewBoatScreenState();
 }
 
+class _SelectedOwnerFile {
+  final String name;
+  final String contentType;
+  final Uint8List bytes;
+
+  const _SelectedOwnerFile(this.name, this.contentType, this.bytes);
+}
+
+class _OwnerCertificate {
+  final String name;
+  _SelectedOwnerFile? file;
+
+  _OwnerCertificate(this.name);
+}
+
 class _OwnerNewBoatScreenState extends State<OwnerNewBoatScreen> {
-  final name = TextEditingController(),
-      registration = TextEditingController(),
-      capacity = TextEditingController(),
-      length = TextEditingController(),
-      hull = TextEditingController(),
-      width = TextEditingController(),
-      type = TextEditingController(),
-      engine = TextEditingController();
-  bool saving = false;
+  final _api = ApiService.instance;
+  final _name = TextEditingController();
+  final _registration = TextEditingController();
+  final _capacity = TextEditingController();
+  final _length = TextEditingController();
+  final _hull = TextEditingController();
+  final _width = TextEditingController();
+  final _speed = TextEditingController();
+  final _lifeJackets = TextEditingController();
+  final _certificates = [
+    _OwnerCertificate('Certificate of registration of Sole Proprietorship'),
+    _OwnerCertificate('ME Certificate'),
+    _OwnerCertificate('Certificate of Vessel'),
+    _OwnerCertificate('Wildlife Certificate'),
+    _OwnerCertificate('Coxswain Certificate'),
+    _OwnerCertificate('Vessel Registration Certificate'),
+  ];
+
+  DateTime? _registrationDate;
+  _SelectedOwnerFile? _photo;
+  bool _submitting = false;
+  String? _status;
+
   @override
   void dispose() {
-    for (final c in [
-      name,
-      registration,
-      capacity,
-      length,
-      hull,
-      width,
-      type,
-      engine
+    for (final controller in [
+      _name,
+      _registration,
+      _capacity,
+      _length,
+      _hull,
+      _width,
+      _speed,
+      _lifeJackets,
     ]) {
-      c.dispose();
+      controller.dispose();
     }
     super.dispose();
   }
 
-  Future<void> _save() async {
-    final cap = int.tryParse(capacity.text),
-        boatLength = double.tryParse(length.text),
-        boatWidth = double.tryParse(width.text);
-    if (name.text.trim().isEmpty ||
-        registration.text.trim().isEmpty ||
-        cap == null ||
-        cap <= 0 ||
-        hull.text.trim().isEmpty ||
-        boatLength == null ||
-        boatLength <= 0 ||
-        boatWidth == null ||
-        boatWidth <= 0 ||
-        type.text.trim().isEmpty ||
-        engine.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Complete all required boat fields.')));
+  String _contentType(String extension) => switch (extension.toLowerCase()) {
+        'pdf' => 'application/pdf',
+        'png' => 'image/png',
+        'webp' => 'image/webp',
+        'jpg' || 'jpeg' => 'image/jpeg',
+        _ => 'application/octet-stream',
+      };
+
+  Future<_SelectedOwnerFile?> _pick({required bool imageOnly}) async {
+    final result = await FilePicker.pickFiles(
+      type: imageOnly ? FileType.image : FileType.custom,
+      allowedExtensions: imageOnly ? null : const ['pdf', 'jpg', 'jpeg', 'png'],
+      withData: true,
+    );
+    final file = result?.files.single;
+    if (file == null || file.bytes == null) return null;
+    return _SelectedOwnerFile(
+      file.name,
+      _contentType(file.extension ?? ''),
+      file.bytes!,
+    );
+  }
+
+  Future<void> _pickPhoto() async {
+    final file = await _pick(imageOnly: true);
+    if (file == null) return;
+    if (!file.contentType.startsWith('image/')) {
+      _setStatus('Please select a valid image of the boat.');
       return;
     }
-    setState(() => saving = true);
+    setState(() {
+      _photo = file;
+      _status = null;
+    });
+  }
+
+  Future<void> _pickCertificate(_OwnerCertificate certificate) async {
+    final file = await _pick(imageOnly: false);
+    if (file == null) return;
+    if (file.bytes.isEmpty || file.bytes.length > 10 * 1024 * 1024) {
+      _setStatus('Certificate must be between 1 byte and 10 MB.');
+      return;
+    }
+    setState(() {
+      certificate.file = file;
+      _status = null;
+    });
+  }
+
+  void _setStatus(String message) => setState(() => _status = message);
+
+  Future<void> _pickDate() async {
+    final date = await showDatePicker(
+      context: context,
+      firstDate: DateTime(1900),
+      lastDate: DateTime.now(),
+      initialDate: _registrationDate ?? DateTime.now(),
+    );
+    if (date != null && mounted) {
+      setState(() {
+        _registrationDate = date;
+        _status = null;
+      });
+    }
+  }
+
+  Future<void> _submit() async {
+    if (_submitting) return;
+    if (_photo == null) {
+      _setStatus('Please upload a photograph of the boat.');
+      return;
+    }
+    if (_name.text.trim().isEmpty) {
+      _setStatus('Please enter the boat name.');
+      return;
+    }
+    if (_registration.text.trim().isEmpty) {
+      _setStatus('Please enter the registration number.');
+      return;
+    }
+    if (_registrationDate == null) {
+      _setStatus('Please select the registration date.');
+      return;
+    }
+    final capacity = int.tryParse(
+        _capacity.text.trim().isEmpty ? '0' : _capacity.text.trim());
+    final length = double.tryParse(
+        _length.text.trim().isEmpty ? '0' : _length.text.trim());
+    final width =
+        double.tryParse(_width.text.trim().isEmpty ? '0' : _width.text.trim());
+    final speed =
+        double.tryParse(_speed.text.trim().isEmpty ? '0' : _speed.text.trim());
+    final jackets = int.tryParse(
+        _lifeJackets.text.trim().isEmpty ? '0' : _lifeJackets.text.trim());
+    if (capacity == null ||
+        capacity < 0 ||
+        length == null ||
+        length < 0 ||
+        width == null ||
+        width < 0 ||
+        speed == null ||
+        speed < 0 ||
+        jackets == null ||
+        jackets < 0) {
+      _setStatus('Enter valid non-negative vessel measurements and counts.');
+      return;
+    }
+    setState(() {
+      _submitting = true;
+      _status = 'Submitting your boat approval request...';
+    });
     try {
-      await ApiService.instance.createBoat(
-          name: name.text.trim(),
-          registrationNumber: registration.text.trim(),
-          hullNumber: hull.text.trim(),
-          length: boatLength,
-          width: boatWidth,
-          capacity: cap);
+      final photoUrl =
+          'data:${_photo!.contentType};base64,${base64Encode(_photo!.bytes)}';
+      final created = await _api.createOwnerBoat({
+        'name': _name.text.trim(),
+        'registrationNumber': _registration.text.trim(),
+        'registrationDate': DateFormat('yyyy-MM-dd').format(_registrationDate!),
+        'hullNumber': _hull.text.trim(),
+        'lengthMeters': length,
+        'widthMeters': width,
+        'maximumCapacity': capacity,
+        'imageUrl': photoUrl,
+        'maximumSpeedKnots': speed,
+        'lifeJacketCount': jackets,
+      });
+      final boatId = created['id']?.toString();
+      if (boatId == null || boatId.isEmpty) {
+        throw Exception('The server did not return the registered boat ID.');
+      }
+      for (final certificate in _certificates) {
+        final file = certificate.file;
+        if (file == null) continue;
+        await _api.uploadBoatDocument(
+          boatId,
+          certificate.name,
+          file.bytes,
+          file.name,
+          file.contentType,
+        );
+      }
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Boat submitted for approval.')));
-      Navigator.pop(context, true);
-    } catch (exception) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(exception.toString().replaceFirst('Exception: ', ''))));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content:
+              Text('Your boat approval request was submitted successfully.')));
+      Navigator.pushReplacementNamed(context, '/owner_boat_info',
+          arguments: boatId);
+    } catch (error) {
+      if (mounted) _setStatus(ownerError(error));
     } finally {
-      if (mounted) setState(() => saving = false);
+      if (mounted) setState(() => _submitting = false);
     }
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.black),
-        title: const Text("New Boat",
-            style: TextStyle(
-                color: Colors.black,
-                fontWeight: FontWeight.bold,
-                fontSize: 18)),
-        centerTitle: true,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text("Photograph of the Boat",
-                style: TextStyle(
-                    fontWeight: FontWeight.bold, color: Colors.black87)),
-            const SizedBox(height: 12),
-            Container(
-              width: double.infinity,
-              height: 160,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                    colors: [Colors.blue.shade100, Colors.blue.shade50],
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter),
-                borderRadius: BorderRadius.circular(16),
+  Widget build(BuildContext context) => Scaffold(
+        backgroundColor: Colors.white,
+        appBar: AppBar(title: const Text('New Boat')),
+        body: SafeArea(
+          top: false,
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 36),
+            children: [
+              const Text('Photograph of the Boat',
+                  style: TextStyle(fontWeight: FontWeight.w600)),
+              const SizedBox(height: 9),
+              InkWell(
+                borderRadius: BorderRadius.circular(18),
+                onTap: _submitting ? null : _pickPhoto,
+                child: Container(
+                  height: 200,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF8FB3E5), Color(0xFFBCE8F4)],
+                    ),
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: _photo == null
+                      ? const Center(
+                          child: Icon(Icons.attach_file_rounded,
+                              size: 62, color: Colors.white))
+                      : Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            Image.memory(_photo!.bytes, fit: BoxFit.cover),
+                            const Positioned(
+                              right: 10,
+                              bottom: 10,
+                              child: DecoratedBox(
+                                decoration: BoxDecoration(
+                                  color: Colors.black54,
+                                  borderRadius:
+                                      BorderRadius.all(Radius.circular(8)),
+                                ),
+                                child: Padding(
+                                  padding: EdgeInsets.symmetric(
+                                      horizontal: 10, vertical: 7),
+                                  child: Text('Change photo',
+                                      style: TextStyle(color: Colors.white)),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                ),
               ),
-              child: const Center(
-                  child:
-                      Icon(Icons.attach_file, size: 64, color: Colors.white)),
-            ),
-            const SizedBox(height: 24),
-
-            _buildLabel("Name"),
-            _buildTextField("Mirissa king", controller: name),
-            _buildLabel("Boat Type"),
-            _buildTextField("Whale Watching", controller: type),
-            _buildLabel("Engine Details"),
-            _buildTextField("Twin Yamaha 250 HP", controller: engine),
-
-            Row(
-              children: [
-                Expanded(
-                    child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                      _buildLabel("Registration No."),
-                      _buildTextField("SL-WB-0016", controller: registration)
-                    ])),
-                const SizedBox(width: 16),
-                Expanded(
-                    child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                      _buildLabel("Registration Date"),
-                      _buildTextField("10 June 2026",
-                          icon: Icons.calendar_today_outlined)
-                    ])),
-              ],
-            ),
-
-            Row(
-              children: [
-                Expanded(
-                    child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                      _buildLabel("Maximum Capacity"),
-                      _buildTextField("150", controller: capacity)
-                    ])),
-                const SizedBox(width: 16),
-                Expanded(
-                    child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                      _buildLabel("Boat length"),
-                      _buildTextField("25.7", controller: length)
-                    ])),
-              ],
-            ),
-
-            Row(
-              children: [
-                Expanded(
-                    child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                      _buildLabel("Hull Number"),
-                      _buildTextField("156466", controller: hull)
-                    ])),
-                const SizedBox(width: 16),
-                Expanded(
-                    child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                      _buildLabel("Boat Width"),
-                      _buildTextField("5.7", controller: width)
-                    ])),
-              ],
-            ),
-
-            const SizedBox(height: 24),
-            const Text("Hull Number",
-                style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Colors
-                        .black87)), // Assuming "Hull Number" here is a typo in mockup for "Documents", keeping for fidelity
-            const SizedBox(height: 12),
-
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey.shade300),
-                  borderRadius: BorderRadius.circular(12)),
-              child: Column(
-                children: [
-                  _buildDocumentSlot(
-                      "Certificate of registration of\nSole Propertiship",
-                      uploaded: true,
-                      filename: "Mirissaking.pdf"),
-                  const SizedBox(height: 12),
-                  _buildDocumentSlot("ME Certificate"),
-                  const SizedBox(height: 12),
-                  _buildDocumentSlot("Certificate of Vessel"),
-                  const SizedBox(height: 12),
-                  _buildDocumentSlot("Wildlife Certificate"),
-                  const SizedBox(height: 12),
-                  _buildDocumentSlot("Coxswain Certificate"),
-                  const SizedBox(height: 12),
-                  _buildDocumentSlot("Vessel Registration certificate"),
-                ],
+              _field(_name, 'Name', hint: 'Enter the boat name'),
+              _field(_registration, 'Registration No.',
+                  hint: 'Registration number'),
+              _dateField(),
+              _responsivePair(
+                _field(_capacity, 'Maximum Capacity',
+                    number: true, hint: 'Maximum capacity'),
+                _field(_length, 'Boat Length',
+                    decimal: true, hint: 'Boat length', suffix: 'm'),
               ),
-            ),
-
-            const SizedBox(height: 32),
-            SizedBox(
-              width: double.infinity,
-              height: 52,
-              child: OutlinedButton(
-                style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFF0F172A),
-                    side: const BorderSide(color: Color(0xFF0F172A)),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8))),
-                onPressed: saving ? null : _save,
-                child: const Text("Save as Draft",
-                    style:
-                        TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              _responsivePair(
+                _field(_hull, 'Hull Number', hint: 'Hull number'),
+                _field(_width, 'Boat Width',
+                    decimal: true, hint: 'Boat width', suffix: 'm'),
               ),
-            ),
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              height: 52,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF0F172A),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8))),
-                onPressed: saving ? null : _save,
-                child: const Text("Request Approval",
-                    style:
-                        TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              _responsivePair(
+                _field(_speed, 'Maximum Speed', decimal: true, suffix: 'knots'),
+                _field(_lifeJackets, 'Life Jackets', number: true),
               ),
-            ),
-            const SizedBox(height: 32),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLabel(String text) {
-    return Padding(
-        padding: const EdgeInsets.only(bottom: 8.0, top: 16.0),
-        child: Text(text,
-            style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
-                fontSize: 13)));
-  }
-
-  Widget _buildTextField(String hint,
-      {IconData? icon, TextEditingController? controller}) {
-    return TextField(
-      controller: controller,
-      decoration: InputDecoration(
-        hintText: hint,
-        hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
-        suffixIcon:
-            icon != null ? Icon(icon, color: Colors.black87, size: 20) : null,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: BorderSide(color: Colors.grey.shade200)),
-        focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: const BorderSide(color: Color(0xFF152238))),
-      ),
-    );
-  }
-
-  Widget _buildDocumentSlot(String title,
-      {bool uploaded = false, String? filename}) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-          border: Border.all(color: Colors.grey.shade200),
-          borderRadius: BorderRadius.circular(8)),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black,
-                        fontSize: 13)),
-                if (uploaded && filename != null) ...[
-                  const SizedBox(height: 4),
-                  Text(filename,
-                      style:
-                          TextStyle(color: Colors.grey.shade500, fontSize: 11)),
-                ]
+              const SizedBox(height: 20),
+              const Text('Certifications',
+                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 9),
+              OwnerCard(
+                child: Column(
+                  children: _certificates
+                      .map((certificate) => ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            title: Text(certificate.name,
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w500)),
+                            subtitle: certificate.file == null
+                                ? null
+                                : Text(certificate.file!.name,
+                                    overflow: TextOverflow.ellipsis),
+                            trailing: IconButton(
+                              tooltip: certificate.file == null
+                                  ? 'Upload certificate'
+                                  : 'Remove certificate',
+                              onPressed: _submitting
+                                  ? null
+                                  : certificate.file == null
+                                      ? () => _pickCertificate(certificate)
+                                      : () => setState(
+                                          () => certificate.file = null),
+                              icon: Icon(certificate.file == null
+                                  ? Icons.upload_outlined
+                                  : Icons.delete_outline_rounded),
+                            ),
+                          ))
+                      .toList(),
+                ),
+              ),
+              if (_status != null) ...[
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(13),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(_status!, textAlign: TextAlign.center),
+                ),
               ],
-            ),
+              const SizedBox(height: 20),
+              SizedBox(
+                height: 54,
+                child: FilledButton.icon(
+                  onPressed: _submitting ? null : _submit,
+                  icon: _submitting
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white),
+                        )
+                      : const Icon(Icons.send_rounded),
+                  label:
+                      Text(_submitting ? 'Submitting...' : 'Request Approval'),
+                ),
+              ),
+            ],
           ),
-          Icon(uploaded ? Icons.delete_outline : Icons.upload_outlined,
-              color: Colors.black87),
-        ],
-      ),
-    );
-  }
+        ),
+      );
+
+  Widget _field(TextEditingController controller, String label,
+          {String? hint,
+          bool number = false,
+          bool decimal = false,
+          String? suffix}) =>
+      Padding(
+        padding: const EdgeInsets.only(top: 15),
+        child: TextField(
+          controller: controller,
+          enabled: !_submitting,
+          keyboardType: number || decimal
+              ? TextInputType.numberWithOptions(decimal: decimal)
+              : TextInputType.text,
+          decoration: InputDecoration(
+            labelText: label,
+            hintText: hint,
+            suffixText: suffix,
+            border: const OutlineInputBorder(),
+          ),
+        ),
+      );
+
+  Widget _dateField() => Padding(
+        padding: const EdgeInsets.only(top: 15),
+        child: InkWell(
+          onTap: _submitting ? null : _pickDate,
+          child: InputDecorator(
+            decoration: const InputDecoration(
+              labelText: 'Registration Date',
+              suffixIcon: Icon(Icons.calendar_today_outlined),
+              border: OutlineInputBorder(),
+            ),
+            child: Text(_registrationDate == null
+                ? 'Select registration date'
+                : DateFormat('MMM d, y').format(_registrationDate!)),
+          ),
+        ),
+      );
+
+  Widget _responsivePair(Widget first, Widget second) => LayoutBuilder(
+        builder: (context, constraints) => constraints.maxWidth >= 520
+            ? Row(children: [
+                Expanded(child: first),
+                const SizedBox(width: 14),
+                Expanded(child: second),
+              ])
+            : Column(children: [first, second]),
+      );
 }

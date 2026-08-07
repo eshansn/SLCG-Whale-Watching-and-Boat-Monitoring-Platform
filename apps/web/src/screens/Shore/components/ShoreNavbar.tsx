@@ -30,7 +30,7 @@ const ShoreNavbar = () => {
           <Link aria-label={onTripsPage?"Dashboard":"Trips"} title={onTripsPage?"Dashboard":"Trips"} to={onTripsPage ? "/shore" : "/shore/trips"} className="rounded-full p-2 text-slate-500 transition hover:bg-slate-100 hover:text-[#14223d]">
             <span className="flex items-center gap-2">{onTripsPage ? <House size={18}/> : <Ship size={18}/>}<span>{onTripsPage ? "Dashboard" : "Trips"}</span></span>
           </Link>
-          <Link aria-label="Settings" title="Settings" to="/shore" className="rounded-full p-2 text-slate-500 transition hover:bg-slate-100 hover:text-[#14223d]"><span className="flex items-center gap-2"><Settings size={18}/><span>Settings</span></span></Link>
+          <Link aria-label="Settings" title="Settings" to="/shore/settings" className="rounded-full p-2 text-slate-500 transition hover:bg-slate-100 hover:text-[#14223d]"><span className="flex items-center gap-2"><Settings size={18}/><span>Settings</span></span></Link>
           <button type="button" onClick={signOut} aria-label="Log out" title="Log out" className="rounded-full bg-[#14223d] p-2.5 text-white shadow-sm transition hover:bg-[#22375f]"><span className="flex items-center gap-2"><LogOut size={18}/><span>Log out</span></span></button>
         </nav>
 
@@ -42,7 +42,7 @@ const ShoreNavbar = () => {
       {open && (
         <nav className="grid gap-1 border-t border-slate-200 bg-white px-4 py-4 shadow-lg lg:hidden">
           <Link aria-label={onTripsPage?"Dashboard":"Trips"} title={onTripsPage?"Dashboard":"Trips"} onClick={() => setOpen(false)} to={onTripsPage ? "/shore" : "/shore/trips"} className="flex justify-center rounded-md px-3 py-3 hover:bg-slate-50">{onTripsPage ? <House size={22}/> : <Ship size={22}/>}</Link>
-          <Link aria-label="Settings" title="Settings" onClick={() => setOpen(false)} to="/shore" className="flex justify-center rounded-md px-3 py-3 hover:bg-slate-50"><Settings size={22}/></Link>
+          <Link aria-label="Settings" title="Settings" onClick={() => setOpen(false)} to="/shore/settings" className="flex justify-center rounded-md px-3 py-3 hover:bg-slate-50"><Settings size={22}/></Link>
           <button type="button" onClick={signOut} aria-label="Log out" title="Log out" className="mt-2 flex justify-center rounded-md bg-[#14223d] px-4 py-3 text-white"><LogOut size={22}/></button>
         </nav>
       )}

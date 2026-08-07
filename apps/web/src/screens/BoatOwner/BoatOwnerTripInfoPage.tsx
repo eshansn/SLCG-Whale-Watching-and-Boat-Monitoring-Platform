@@ -11,6 +11,8 @@ import {
   ChevronDown,
   Menu as MenuIcon,
   Mic,
+  Play,
+  Square,
   Search,
   Settings,
   X,
@@ -97,6 +99,8 @@ function BoatOwnerTripInfoPage() {
   const [passengerError, setPassengerError] = useState("");
   const [transferOpen,setTransferOpen]=useState(false);
   const [transferStatus,setTransferStatus]=useState("");
+  const [startingTrip,setStartingTrip]=useState(false);
+  const [startError,setStartError]=useState("");
 
   useEffect(() => {
     if (!token || !trip?.id) return;
@@ -201,6 +205,20 @@ function BoatOwnerTripInfoPage() {
     const blob = new Blob([new XMLSerializer().serializeToString(svg)], { type: 'image/svg+xml' });
     const url = URL.createObjectURL(blob); const link = document.createElement('a');
     link.href = url; link.download = `trip-${trip.registrationNumber}-qr.svg`; link.click(); URL.revokeObjectURL(url);
+  };
+
+  const startTrip = async (): Promise<void> => {
+    if (!token || !trip || startingTrip) return;
+    const isOngoing = trip.status === "Ongoing";
+    setStartingTrip(true);
+    setStartError("");
+    try {
+      await operationsApi.status(token, trip.id, isOngoing ? "Completed" : "Ongoing");
+    } catch (startFailure) {
+      setStartError(startFailure instanceof Error ? startFailure.message : `Unable to ${isOngoing ? "end" : "start"} this trip.`);
+    } finally {
+      setStartingTrip(false);
+    }
   };
 
   if (loading) return <main className="grid min-h-dvh place-items-center">Loading trip information...</main>;
@@ -330,7 +348,7 @@ function BoatOwnerTripInfoPage() {
           </div>
         </section>
 
-        {(trip.status==="Scheduled"||trip.status==="Boarding")&&<div className="mt-7 flex flex-col items-center gap-3 border-t border-slate-100 pt-7"><button type="button" onClick={()=>{setTransferStatus("");setTransferOpen(true)}} className="flex min-h-11 items-center gap-2 rounded-lg bg-[#162d54] px-6 py-3 text-sm font-semibold text-white hover:bg-[#203d6c]"><ArrowRightLeft size={18}/>Transfer Passengers / Crew</button>{transferStatus&&<p role="status" className="text-center text-sm font-medium text-emerald-700">{transferStatus}</p>}</div>}
+        {(trip.status==="Scheduled"||trip.status==="Boarding"||trip.status==="Ongoing")&&<div className="mt-7 flex flex-col items-center gap-3 border-t border-slate-100 pt-7"><button type="button" disabled={startingTrip} onClick={()=>void startTrip()} className="flex min-h-11 items-center gap-2 rounded-lg bg-[#162d54] px-6 py-3 text-sm font-semibold text-white hover:bg-[#203d6c] disabled:opacity-50">{trip.status==="Ongoing"?<Square size={18}/>:<Play size={18}/>} {startingTrip?(trip.status==="Ongoing"?"Ending...":"Starting..."):(trip.status==="Ongoing"?"End Trip":"Start Trip")}</button>{trip.status!=="Ongoing"&&<button type="button" onClick={()=>{setTransferStatus("");setTransferOpen(true)}} className="flex min-h-11 items-center gap-2 rounded-lg bg-[#162d54] px-6 py-3 text-sm font-semibold text-white hover:bg-[#203d6c]"><ArrowRightLeft size={18}/>Transfer Passengers / Crew</button>}{startError&&<p role="alert" className="text-center text-sm font-medium text-red-600">{startError}</p>}{transferStatus&&<p role="status" className="text-center text-sm font-medium text-emerald-700">{transferStatus}</p>}</div>}
 
         {/* Passenger information */}
         <section className="mt-7 sm:mt-10">

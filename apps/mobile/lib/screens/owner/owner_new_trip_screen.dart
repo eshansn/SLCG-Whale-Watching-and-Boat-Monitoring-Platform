@@ -1,198 +1,221 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+
 import '../../services/api_service.dart';
 import '../../widgets/owner_layout.dart';
+import 'owner_portal_common.dart';
 
 class OwnerNewTripScreen extends StatefulWidget {
   const OwnerNewTripScreen({super.key});
+
   @override
-  State<OwnerNewTripScreen> createState() => _State();
+  State<OwnerNewTripScreen> createState() => _OwnerNewTripScreenState();
 }
 
-class _State extends State<OwnerNewTripScreen> {
-  final destination = TextEditingController(),
-      capacity = TextEditingController();
-  List<Map<String, dynamic>> boats = [];
-  String? boatId;
-  String? loadError;
-  bool loading = true, saving = false;
-  DateTime departure = DateTime.now().add(const Duration(days: 1)),
-      returnTime = DateTime.now().add(const Duration(days: 1, hours: 5));
+class _OwnerNewTripScreenState extends State<OwnerNewTripScreen> {
+  final _api = ApiService.instance;
+  List<Map<String, dynamic>> _boats = [];
+  List<Map<String, dynamic>> _crew = [];
+  final Set<String> _crewIds = {};
+  String? _boatId;
+  DateTime _departure = DateTime.now().add(const Duration(days: 1));
+  bool _loading = true;
+  bool _saving = false;
+  String? _error;
 
   @override
   void initState() {
     super.initState();
-    _loadBoats();
+    _load();
   }
 
-  Future<void> _loadBoats() async {
+  Future<void> _load() async {
+    setState(() => _loading = true);
     try {
-      final data = await ApiService.instance.boats();
+      final result = await Future.wait([_api.boats(), _api.ownerCrew()]);
       if (!mounted) return;
       setState(() {
-        boats = data
-            .where((boat) => boat['approval']?.toString() == 'Approved')
-            .toList();
-        boatId = boats.firstOrNull?['id']?.toString();
-        loadError = null;
-        loading = false;
+        _boats = result[0];
+        _crew =
+            result[1].where((member) => member['certified'] == true).toList();
+        _boatId = _boats.isEmpty ? null : '${_boats.first['id']}';
+        _error = null;
+        _loading = false;
       });
-    } catch (exception) {
+    } catch (error) {
       if (!mounted) return;
       setState(() {
-        loadError = exception.toString().replaceFirst('Exception: ', '');
-        loading = false;
+        _error = ownerError(error);
+        _loading = false;
       });
     }
   }
 
-  @override
-  void dispose() {
-    destination.dispose();
-    capacity.dispose();
-    super.dispose();
-  }
-
-  Future<void> pick(bool returning) async {
+  Future<void> _pickDeparture() async {
     final date = await showDatePicker(
-        context: context,
-        firstDate: DateTime.now(),
-        lastDate: DateTime.now().add(const Duration(days: 365)),
-        initialDate: returning ? returnTime : departure);
+      context: context,
+      initialDate: _departure,
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 730)),
+    );
     if (date == null || !mounted) return;
     final time = await showTimePicker(
-        context: context,
-        initialTime:
-            TimeOfDay.fromDateTime(returning ? returnTime : departure));
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(_departure),
+    );
     if (time == null) return;
-    setState(() {
-      final value =
-          DateTime(date.year, date.month, date.day, time.hour, time.minute);
-      if (returning) {
-        returnTime = value;
-      } else {
-        departure = value;
-      }
-    });
+    setState(() => _departure =
+        DateTime(date.year, date.month, date.day, time.hour, time.minute));
   }
 
-  Future<void> save() async {
-    final cap = int.tryParse(capacity.text);
-    if (boatId == null ||
-        destination.text.trim().isEmpty ||
-        cap == null ||
-        cap <= 0 ||
-        returnTime.isBefore(departure)) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text(
-              'Enter a valid vessel, schedule, destination and capacity.')));
+  Future<void> _save() async {
+    if (_boatId == null) {
+      _message('Select a vessel.');
       return;
     }
-    final boat = boats.firstWhere((item) => item['id']?.toString() == boatId);
-    final maximumCapacity = boat['maximumCapacity'] as int? ?? 0;
-    if (cap > maximumCapacity) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Capacity cannot exceed $maximumCapacity.')));
+    if (!_departure.isAfter(DateTime.now())) {
+      _message('Scheduled departure must be in the future.');
       return;
     }
-    setState(() => saving = true);
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
     try {
-      await ApiService.instance.createTrip(boatId!, departure,
-          route: destination.text.trim(), passengerCount: cap);
-      if (mounted) Navigator.pop(context, true);
-    } catch (exception) {
+      await _api.createOwnerTrip(_boatId!, _departure, _crewIds.toList());
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(exception.toString().replaceFirst('Exception: ', ''))));
+      _message('Trip scheduled successfully.');
+      Navigator.pop(context, true);
+    } catch (error) {
+      if (mounted) setState(() => _error = ownerError(error));
     } finally {
-      if (mounted) setState(() => saving = false);
+      if (mounted) setState(() => _saving = false);
     }
   }
+
+  void _message(String value) => ScaffoldMessenger.of(context)
+      .showSnackBar(SnackBar(content: Text(value)));
 
   @override
-  Widget build(BuildContext context) {
-    return OwnerLayout(
-        child: Column(children: [
-      Expanded(
-          child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+  Widget build(BuildContext context) => OwnerLayout(
+        active: 'trips',
+        title: 'Schedule Trip',
+        child: _loading
+            ? const Center(child: CircularProgressIndicator())
+            : RefreshIndicator(
+                onRefresh: _load,
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(20, 18, 20, 40),
                   children: [
-                    if (loading)
-                      const Center(child: CircularProgressIndicator())
-                    else if (loadError != null) ...[
-                      Text(loadError!,
-                          style: const TextStyle(color: Colors.red)),
-                      TextButton.icon(
-                          onPressed: _loadBoats,
-                          icon: const Icon(Icons.refresh),
-                          label: const Text('Try Again'))
+                    const Text('Schedule New Trip',
+                        style: TextStyle(
+                            fontSize: 24, fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 4),
+                    const Text(
+                        'Choose a vessel, departure time, and optional crew assignments.',
+                        style: TextStyle(color: ownerMuted)),
+                    const SizedBox(height: 22),
+                    if (_error != null) ...[
+                      OwnerErrorPanel(message: _error!, retry: _load),
+                      const SizedBox(height: 16),
                     ],
-                    label('Select A Certified Vessel'),
-                    box(DropdownButtonHideUnderline(
-                        child: DropdownButton<String>(
-                            isExpanded: true,
-                            value: boatId,
-                            items: boats
-                                .map((b) => DropdownMenuItem(
-                                    value: b['id']?.toString(),
-                                    child: Text(b['name']?.toString() ??
-                                        'Unnamed boat')))
-                                .toList(),
-                            onChanged: (v) => setState(() => boatId = v)))),
-                    label('Departure Date & Time'),
-                    dateBox(departure, () => pick(false)),
-                    label('Estimated Return'),
-                    dateBox(returnTime, () => pick(true)),
-                    label('Destination'),
-                    TextField(
-                        controller: destination,
-                        decoration: input('Dondra Head')),
-                    label('Passenger Capacity'),
-                    TextField(
-                        controller: capacity,
-                        keyboardType: TextInputType.number,
-                        decoration: input('30')),
-                    if (!loading && boats.isEmpty)
-                      const Padding(
-                          padding: EdgeInsets.only(top: 16),
-                          child: Text('No certified boats are available.',
-                              style: TextStyle(color: Colors.red)))
-                  ]))),
-      Padding(
-          padding: const EdgeInsets.all(24),
-          child: SizedBox(
-              width: double.infinity,
-              height: 56,
-              child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0F172A),
-                      foregroundColor: Colors.white),
-                  onPressed: boats.isEmpty || saving ? null : save,
-                  child: const Text('Schedule Trip'))))
-    ]));
-  }
+                    if (_boats.isEmpty)
+                      OwnerEmptyPanel(
+                        title: 'No vessels available',
+                        message: 'Register a vessel before scheduling a trip.',
+                        actionLabel: 'Register Boat',
+                        onAction: () =>
+                            Navigator.pushNamed(context, '/owner_new_boat'),
+                      )
+                    else ...[
+                      OwnerCard(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _label('Select A Vessel'),
+                            DropdownButtonFormField<String>(
+                              initialValue: _boatId,
+                              isExpanded: true,
+                              items: _boats
+                                  .map((boat) => DropdownMenuItem(
+                                        value: '${boat['id']}',
+                                        child: Text(
+                                            '${boat['name']} · ${boat['registrationNumber']}'),
+                                      ))
+                                  .toList(),
+                              onChanged: (value) =>
+                                  setState(() => _boatId = value),
+                            ),
+                            const SizedBox(height: 18),
+                            _label('Scheduled Departure'),
+                            InkWell(
+                              onTap: _pickDeparture,
+                              child: InputDecorator(
+                                decoration: const InputDecoration(
+                                    prefixIcon:
+                                        Icon(Icons.event_available_outlined)),
+                                child: Text(DateFormat('MMM d, y · h:mm a')
+                                    .format(_departure)),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      OwnerCard(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('Assign Certified Crew',
+                                style: TextStyle(
+                                    fontSize: 17, fontWeight: FontWeight.w700)),
+                            const SizedBox(height: 5),
+                            const Text(
+                              'Optional: leave every crew member unchecked to automatically assign all certified crew who are available at the selected date and time.',
+                              style: TextStyle(color: ownerMuted, fontSize: 12),
+                            ),
+                            const SizedBox(height: 12),
+                            if (_crew.isEmpty)
+                              const Text(
+                                  'No certified crew members are in your crew pool. Add them from My Crew first.',
+                                  style: TextStyle(color: ownerMuted))
+                            else
+                              ..._crew.map((member) {
+                                final id = '${member['crewUserId']}';
+                                return CheckboxListTile(
+                                  contentPadding: EdgeInsets.zero,
+                                  value: _crewIds.contains(id),
+                                  title: Text('${member['name']}',
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.w600)),
+                                  subtitle: Text('${member['position']}'),
+                                  onChanged: (checked) => setState(() {
+                                    checked == true
+                                        ? _crewIds.add(id)
+                                        : _crewIds.remove(id);
+                                  }),
+                                );
+                              }),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 22),
+                      FilledButton(
+                        onPressed: _saving ? null : _save,
+                        child: Text(_saving ? 'Scheduling…' : 'Schedule Trip'),
+                      ),
+                      TextButton(
+                          onPressed:
+                              _saving ? null : () => Navigator.pop(context),
+                          child: const Text('Cancel')),
+                    ],
+                  ],
+                ),
+              ),
+      );
 
-  Widget label(String t) => Padding(
-      padding: const EdgeInsets.only(top: 24, bottom: 8),
-      child: Text(t, style: const TextStyle(fontWeight: FontWeight.bold)));
-  Widget box(Widget c) => Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      decoration: BoxDecoration(
-          border: Border.all(color: Colors.grey.shade200),
-          borderRadius: BorderRadius.circular(12)),
-      child: c);
-  Widget dateBox(DateTime d, VoidCallback tap) => InkWell(
-      onTap: tap,
-      child: box(Padding(
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(d.toLocal().toString()),
-                const Icon(Icons.calendar_today_outlined)
-              ]))));
-  InputDecoration input(String hint) => InputDecoration(
-      hintText: hint,
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)));
+  Widget _label(String value) => Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: Text(value, style: const TextStyle(fontWeight: FontWeight.w700)),
+      );
 }

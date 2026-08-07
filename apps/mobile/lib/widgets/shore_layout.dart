@@ -1,10 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../services/api_service.dart';
+import 'app_typography.dart';
 
 const shoreInk = Color(0xFF14223D);
 const shoreBackground = Color(0xFFF8F9FB);
 const shoreMuted = Color(0xFF94A3B8);
 const shoreIndigo = Color(0xFF4F46E5);
+
+String formatShoreDate(Object? value) {
+  final parsed = DateTime.tryParse(value?.toString() ?? '');
+  return parsed == null
+      ? 'TBA'
+      : DateFormat('MMM d, y, h:mm a').format(parsed.toLocal());
+}
 
 enum ShorePortal { slcg, wildlife }
 
@@ -25,13 +34,13 @@ class ShoreLayout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Theme(
-        data: ThemeData.light().copyWith(
+        data: withWebsitePoppins(Theme.of(context)).copyWith(
           scaffoldBackgroundColor: shoreBackground,
           colorScheme: ColorScheme.fromSeed(seedColor: shoreIndigo),
-          textTheme: ThemeData.light().textTheme.apply(
-              fontFamily: 'Poppins',
-              bodyColor: shoreInk,
-              displayColor: shoreInk),
+          textTheme: withWebsitePoppins(Theme.of(context)).textTheme.apply(
+                bodyColor: shoreInk,
+                displayColor: shoreInk,
+              ),
         ),
         child: Scaffold(
           backgroundColor: shoreBackground,
@@ -51,8 +60,8 @@ class ShoreLayout extends StatelessWidget {
   Widget _navbar(BuildContext context) {
     final wide = MediaQuery.sizeOf(context).width >= 1100;
     return Container(
-      height: 56,
-      padding: EdgeInsets.symmetric(horizontal: wide ? 28 : 14),
+      height: 64,
+      padding: EdgeInsets.symmetric(horizontal: wide ? 32 : 16),
       decoration: const BoxDecoration(
           color: Colors.white,
           border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
@@ -67,21 +76,29 @@ class ShoreLayout extends StatelessWidget {
             child: _brand()),
         const Spacer(),
         if (wide) ...[
-          if (!_isWildlife) ...[
+          if (_isWildlife) ...[
+            _navLink(context, 'Trips', '/shore_wildlife', 'trips',
+                Icons.directions_boat_outlined),
+            const SizedBox(width: 14),
+            _navLink(context, 'Records', '/shore_wildlife_records', 'records',
+                Icons.assignment_outlined),
+          ] else ...[
             _iconLink(context, Icons.notifications_none, '/shore_notifications',
                 'notifications'),
-            const SizedBox(width: 16),
+            const SizedBox(width: 14),
+            _navLink(
+                context,
+                active == 'trips' ? 'Dashboard' : 'Trips',
+                active == 'trips' ? _homeRoute : _tripsRoute,
+                active == 'trips' ? 'home' : 'trips',
+                active == 'trips'
+                    ? Icons.home_outlined
+                    : Icons.directions_boat_outlined),
+            const SizedBox(width: 14),
+            _navLink(context, 'Settings', '/shore_settings', 'settings',
+                Icons.settings_outlined),
           ],
-          _textLink(
-              context,
-              active == 'trips' ? 'Home' : 'Trips',
-              active == 'trips' ? _homeRoute : _tripsRoute,
-              active == 'trips' ? 'home' : 'trips'),
-          if (!_isWildlife) ...[
-            const SizedBox(width: 18),
-            _textLink(context, 'Settings', '/shore_settings', 'settings'),
-          ],
-          const SizedBox(width: 18),
+          const SizedBox(width: 14),
           ElevatedButton(
               onPressed: () => _logout(context),
               style: ElevatedButton.styleFrom(
@@ -89,34 +106,57 @@ class ShoreLayout extends StatelessWidget {
                   foregroundColor: Colors.white,
                   elevation: 0,
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 11),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(6))),
-              child: const Text('Log Out',
-                  style: TextStyle(fontWeight: FontWeight.w600))),
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  shape: _isWildlife
+                      ? RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(6))
+                      : const StadiumBorder()),
+              child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                Icon(Icons.logout, size: 18),
+                SizedBox(width: 8),
+                Text('Log out', style: TextStyle(fontWeight: FontWeight.w600))
+              ])),
         ] else
-          IconButton(
-              onPressed: () => Scaffold.of(context).openDrawer(),
-              icon: const Icon(Icons.menu, color: shoreInk)),
+          Row(mainAxisSize: MainAxisSize.min, children: [
+            if (!_isWildlife)
+              _iconLink(context, Icons.notifications_none,
+                  '/shore_notifications', 'notifications'),
+            IconButton(
+                tooltip: 'Toggle navigation',
+                onPressed: () => Scaffold.of(context).openDrawer(),
+                icon: const Icon(Icons.menu, color: shoreInk))
+          ]),
       ]),
     );
   }
 
   Widget _brand() => _isWildlife
-      ? const Icon(Icons.eco_outlined, color: shoreInk, size: 34)
+      ? Image.asset('assets/images/wildlife_authority.png',
+          height: 40,
+          errorBuilder: (_, __, ___) =>
+              const Icon(Icons.eco_outlined, color: shoreInk, size: 34))
       : Image.asset('assets/images/slcg_logo.png',
           height: 34,
           errorBuilder: (_, __, ___) =>
               const Icon(Icons.anchor, color: shoreInk, size: 34));
 
-  Widget _textLink(
-          BuildContext context, String label, String route, String key) =>
+  Widget _navLink(BuildContext context, String label, String route, String key,
+          IconData icon) =>
       TextButton(
           onPressed: () => Navigator.pushNamed(context, route),
-          child: Text(label,
-              style: TextStyle(
-                  color: active == key ? shoreInk : const Color(0xFF64748B),
-                  fontWeight: FontWeight.w500)));
+          style: TextButton.styleFrom(
+              foregroundColor:
+                  active == key ? shoreInk : const Color(0xFF64748B),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+              shape: _isWildlife
+                  ? RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(6))
+                  : const StadiumBorder()),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            Icon(icon, size: 18),
+            const SizedBox(width: 8),
+            Text(label, style: const TextStyle(fontWeight: FontWeight.w500))
+          ]));
   Widget _iconLink(
           BuildContext context, IconData icon, String route, String key) =>
       IconButton(
@@ -130,16 +170,30 @@ class ShoreLayout extends StatelessWidget {
               child: ListView(padding: const EdgeInsets.all(16), children: [
         Align(alignment: Alignment.centerLeft, child: _brand()),
         const Divider(height: 36),
-        ListTile(
-            leading: const Icon(Icons.home_outlined),
-            title: const Text('Home'),
-            onTap: () => Navigator.pushNamedAndRemoveUntil(
-                context, _homeRoute, (_) => false)),
-        ListTile(
-            leading: const Icon(Icons.directions_boat_outlined),
-            title: const Text('Trips'),
-            onTap: () => Navigator.pushNamed(context, _tripsRoute)),
-        if (!_isWildlife) ...[
+        if (_isWildlife) ...[
+          ListTile(
+              leading: const Icon(Icons.directions_boat_outlined),
+              title: const Text('Trips'),
+              selected: active == 'trips',
+              onTap: () => Navigator.pushNamed(context, _tripsRoute)),
+          ListTile(
+              leading: const Icon(Icons.assignment_outlined),
+              title: const Text('Records'),
+              selected: active == 'records',
+              onTap: () =>
+                  Navigator.pushNamed(context, '/shore_wildlife_records')),
+        ] else ...[
+          ListTile(
+              leading: const Icon(Icons.home_outlined),
+              title: const Text('Dashboard'),
+              selected: active == 'home',
+              onTap: () => Navigator.pushNamedAndRemoveUntil(
+                  context, _homeRoute, (_) => false)),
+          ListTile(
+              leading: const Icon(Icons.directions_boat_outlined),
+              title: const Text('Trips'),
+              selected: active == 'trips',
+              onTap: () => Navigator.pushNamed(context, _tripsRoute)),
           ListTile(
               leading: const Icon(Icons.notifications_none),
               title: const Text('Notifications'),

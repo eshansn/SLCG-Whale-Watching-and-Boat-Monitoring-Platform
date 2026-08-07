@@ -8,7 +8,7 @@ import 'screens/auth/signup_step1.dart';
 // --- SHORE SCREENS ---
 import 'screens/shore/shore_dashboard.dart';
 import 'screens/shore/trips_list_screen.dart';
-import 'screens/shore/vessel_details_screen.dart';
+import 'screens/shore/trip_details_screen.dart';
 import 'screens/shore/shore_notifications_screen.dart';
 import 'screens/shore/shore_settings_screen.dart';
 
@@ -23,10 +23,10 @@ import 'screens/owner/owner_trip_info_screen.dart';
 import 'screens/owner/owner_my_crew_screen.dart';
 import 'screens/owner/owner_settings_screen.dart';
 import 'screens/owner/owner_boat_info_screen.dart';
-import 'screens/owner/owner_notifications_screen.dart';
 import 'screens/crew/boat_crew_dashboard.dart';
 import 'screens/passenger/trip_registration_screen.dart';
 import 'screens/shore_wildlife/shore_wildlife_portal.dart';
+import 'widgets/app_typography.dart';
 import 'widgets/auth_gate.dart';
 import 'services/api_service.dart';
 
@@ -41,54 +41,53 @@ class WwmsApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final baseTheme = ThemeData(
+      useMaterial3: true,
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: const Color(0xFF162D54),
+        primary: const Color(0xFF162D54),
+        surface: Colors.white,
+      ),
+      scaffoldBackgroundColor: const Color(0xFFF8F9FB),
+      appBarTheme: const AppBarTheme(
+        backgroundColor: Colors.white,
+        foregroundColor: Color(0xFF14223D),
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        centerTitle: true,
+      ),
+      cardTheme: CardThemeData(
+        color: Colors.white,
+        elevation: 2,
+        shadowColor: Colors.black.withValues(alpha: .12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: const Color(0xFFF8F9FB),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+        ),
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFF162D54),
+          foregroundColor: Colors.white,
+          minimumSize: const Size(0, 48),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+      ),
+    );
     return MaterialApp(
       title: 'WWMS Platform',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF162D54),
-          primary: const Color(0xFF162D54),
-          surface: Colors.white,
-        ),
-        scaffoldBackgroundColor: const Color(0xFFF8F9FB),
-        fontFamily: 'Poppins',
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.white,
-          foregroundColor: Color(0xFF14223D),
-          surfaceTintColor: Colors.transparent,
-          elevation: 0,
-          centerTitle: true,
-        ),
-        cardTheme: CardThemeData(
-          color: Colors.white,
-          elevation: 2,
-          shadowColor: Colors.black.withValues(alpha: .12),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        ),
-        inputDecorationTheme: InputDecorationTheme(
-          filled: true,
-          fillColor: const Color(0xFFF8F9FB),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide.none,
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
-          ),
-        ),
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF162D54),
-            foregroundColor: Colors.white,
-            minimumSize: const Size(0, 48),
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          ),
-        ),
-      ),
+      theme: withWebsiteMontserrat(baseTheme),
       initialRoute: switch (ApiService.instance.role) {
         'ShoreCrew' => '/shore_dashboard',
         'BoatOwner' => '/boat_owner',
@@ -106,8 +105,8 @@ class WwmsApp extends StatelessWidget {
             const AuthGate(roles: ['ShoreCrew'], child: ShoreDashboard()),
         '/trips_list': (context) =>
             const AuthGate(roles: ['ShoreCrew'], child: TripsListScreen()),
-        '/vessel_details': (context) =>
-            const AuthGate(roles: ['ShoreCrew'], child: VesselDetailsScreen()),
+        '/trip_details': (context) =>
+            const AuthGate(roles: ['ShoreCrew'], child: TripDetailsScreen()),
         '/shore_notifications': (context) => const AuthGate(
             roles: ['ShoreCrew'], child: ShoreNotificationsScreen()),
         '/shore_settings': (context) =>
@@ -134,8 +133,6 @@ class WwmsApp extends StatelessWidget {
             const AuthGate(roles: ['BoatOwner'], child: OwnerSettingsScreen()),
         '/owner_boat_info': (context) =>
             const AuthGate(roles: ['BoatOwner'], child: OwnerBoatInfoScreen()),
-        '/owner_notifications': (context) => const AuthGate(
-            roles: ['BoatOwner'], child: OwnerNotificationsScreen()),
         '/boat_crew': (context) =>
             const AuthGate(roles: ['BoatCrew'], child: BoatCrewDashboard()),
         '/crew_profile': (context) =>
@@ -152,6 +149,8 @@ class WwmsApp extends StatelessWidget {
             roles: ['ShoreWildlife'], child: ShoreWildlifeTripsScreen()),
         '/shore_wildlife_trip': (context) => const AuthGate(
             roles: ['ShoreWildlife'], child: ShoreWildlifeTripScreen()),
+        '/shore_wildlife_records': (context) => const AuthGate(
+            roles: ['ShoreWildlife'], child: ShoreWildlifeRecordsScreen()),
         '/trip-register': (context) => const TripRegistrationScreen(),
       },
     );

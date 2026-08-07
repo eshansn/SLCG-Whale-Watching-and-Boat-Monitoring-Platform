@@ -1,146 +1,215 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import '../../owner/owner_store.dart';
+
 import '../../services/api_service.dart';
 import '../../widgets/owner_layout.dart';
+import 'owner_portal_common.dart';
 
 class OwnerSettingsScreen extends StatefulWidget {
   const OwnerSettingsScreen({super.key});
+
   @override
-  State<OwnerSettingsScreen> createState() => _State();
+  State<OwnerSettingsScreen> createState() => _OwnerSettingsScreenState();
 }
 
-class _State extends State<OwnerSettingsScreen> {
-  final store = OwnerStore.instance;
+class _OwnerSettingsScreenState extends State<OwnerSettingsScreen> {
+  bool _notifications = true;
+  bool _autoUpdates = true;
+
   @override
-  Widget build(BuildContext context) {
-    final s = store.settings;
-    return OwnerLayout(
+  Widget build(BuildContext context) => OwnerLayout(
+        active: 'settings',
+        title: 'Settings',
         child: ListView(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-            children: [
-          toggle('App Notifications', 'Receive mobile app notifications',
-              s.notifications, (v) => setState(() => s.notifications = v)),
-          divider,
-          toggle('Auto Updates', 'Automatically update when available',
-              s.autoUpdates, (v) => setState(() => s.autoUpdates = v)),
-          divider,
-          toggle('Privacy', 'Keep profile private', s.privateProfile,
-              (v) => setState(() => s.privateProfile = v)),
-          divider,
-          toggle('Dark Theme', 'Use dark application theme', s.darkTheme,
-              (v) => setState(() => s.darkTheme = v)),
-          divider,
-          action('Password', 'Update your password', changePassword),
-          divider,
-          action('Language', s.language, language),
-          divider,
-          action('Need Help?', 'Contact our support center',
-              () => message('Support: support@wwms.test')),
-          divider,
-          action('Log Out', 'Log Out From WWMS', logout, red: true),
-        ]));
-  }
+          padding: const EdgeInsets.fromLTRB(20, 18, 20, 40),
+          children: [
+            const Text('Settings',
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700)),
+            const SizedBox(height: 4),
+            const Text('Manage your Boat Owner portal preferences.',
+                style: TextStyle(color: ownerMuted)),
+            const SizedBox(height: 20),
+            OwnerCard(
+              child: Column(
+                children: [
+                  _toggle(
+                    'App Notifications',
+                    'Receive mobile app notifications',
+                    _notifications,
+                    (value) => setState(() => _notifications = value),
+                  ),
+                  const Divider(height: 30),
+                  _toggle(
+                    'Auto Updates',
+                    'Automatically update when available',
+                    _autoUpdates,
+                    (value) => setState(() => _autoUpdates = value),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            OwnerCard(
+              child: Column(
+                children: [
+                  _action('Password', 'Update your password',
+                      Icons.lock_outline_rounded, _changePassword),
+                  const Divider(height: 30),
+                  _action('Need Help?', 'Open the help section',
+                      Icons.help_outline_rounded, () {}),
+                  const Divider(height: 30),
+                  _action('Log Out', 'Log Out From WWMS', Icons.logout_rounded,
+                      _logout,
+                      destructive: true),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
 
-  Widget get divider => const Divider(color: Colors.black12, height: 32);
-  Widget toggle(String title, String subtitle, bool value,
-          ValueChanged<bool> changed) =>
-      Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(title),
-          Text(subtitle,
-              style: TextStyle(fontSize: 12, color: Colors.grey.shade500))
-        ]),
-        CupertinoSwitch(value: value, onChanged: changed)
-      ]);
-  Widget action(String title, String subtitle, VoidCallback tap,
-          {bool red = false}) =>
+  Widget _toggle(String title, String subtitle, bool value,
+          ValueChanged<bool> onChanged) =>
+      Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title,
+                    style: const TextStyle(fontWeight: FontWeight.w600)),
+                Text(subtitle,
+                    style: const TextStyle(color: ownerMuted, fontSize: 12)),
+              ],
+            ),
+          ),
+          CupertinoSwitch(value: value, onChanged: onChanged),
+        ],
+      );
+
+  Widget _action(String title, String subtitle, IconData icon, VoidCallback tap,
+          {bool destructive = false}) =>
       InkWell(
-          onTap: tap,
-          child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 6),
-              child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(title,
-                              style: TextStyle(
-                                  fontSize: 16,
-                                  color: red ? Colors.red : Colors.black87)),
-                          Text(subtitle,
-                              style: TextStyle(
-                                  fontSize: 12, color: Colors.grey.shade500))
-                        ]),
-                    const Icon(Icons.chevron_right)
-                  ])));
-  void message(String text) =>
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
-  void changePassword() {
-    final current = TextEditingController(), a = TextEditingController(), b = TextEditingController();
-    showDialog(
-        context: context,
-        builder: (d) => AlertDialog(
-                title: const Text('Change Password'),
-                content: Column(mainAxisSize: MainAxisSize.min, children: [
-                  TextField(
-                      controller: current,
-                      obscureText: true,
-                      decoration: const InputDecoration(labelText: 'Current password')),
-                  TextField(
-                      controller: a,
-                      obscureText: true,
-                      decoration:
-                          const InputDecoration(labelText: 'New password')),
-                  TextField(
-                      controller: b,
-                      obscureText: true,
-                      decoration:
-                          const InputDecoration(labelText: 'Confirm password'))
-                ]),
-                actions: [
-                  TextButton(
-                      onPressed: () => Navigator.pop(d),
-                      child: const Text('Cancel')),
-                  TextButton(
-                      onPressed: () async {
-                        if (a.text != b.text || a.text.length < 12 || current.text.isEmpty) {
-                          message(
-                              'Enter your current password; new passwords must match and contain at least 12 characters.');
-                          return;
-                        }
-                        try {
-                          await ApiService.instance.changePassword(current.text, a.text);
-                          if (d.mounted) Navigator.pop(d);
-                          if (mounted) message('Password updated successfully.');
-                        } catch (e) {
-                          if (mounted) message(e.toString().replaceFirst('Exception: ', ''));
-                        }
-                      },
-                      child: const Text('Update'))
-                ]));
+        onTap: tap,
+        child: Row(
+          children: [
+            Icon(icon, color: destructive ? Colors.red : ownerNavy),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title,
+                      style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: destructive ? Colors.red : ownerInk)),
+                  Text(subtitle,
+                      style: const TextStyle(color: ownerMuted, fontSize: 12)),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right_rounded),
+          ],
+        ),
+      );
+
+  Future<void> _changePassword() async {
+    final current = TextEditingController();
+    final password = TextEditingController();
+    final confirm = TextEditingController();
+    String? error;
+    bool saving = false;
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          Future<void> submit() async {
+            if (current.text.isEmpty) {
+              setDialogState(() => error = 'Current password is required.');
+              return;
+            }
+            if (password.text.length < 12) {
+              setDialogState(() =>
+                  error = 'New password must contain at least 12 characters.');
+              return;
+            }
+            if (password.text != confirm.text) {
+              setDialogState(() => error = 'New passwords do not match.');
+              return;
+            }
+            setDialogState(() {
+              saving = true;
+              error = null;
+            });
+            try {
+              await ApiService.instance
+                  .changePassword(current.text, password.text);
+              if (dialogContext.mounted) Navigator.pop(dialogContext);
+              if (mounted) _message('Password updated successfully.');
+            } catch (exception) {
+              if (dialogContext.mounted) {
+                setDialogState(() {
+                  saving = false;
+                  error = ownerError(exception);
+                });
+              }
+            }
+          }
+
+          return AlertDialog(
+            title: const Text('Change Password'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: current,
+                  obscureText: true,
+                  decoration:
+                      const InputDecoration(labelText: 'Current password'),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: password,
+                  obscureText: true,
+                  decoration: const InputDecoration(labelText: 'New password'),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: confirm,
+                  obscureText: true,
+                  decoration:
+                      const InputDecoration(labelText: 'Confirm password'),
+                ),
+                if (error != null) ...[
+                  const SizedBox(height: 10),
+                  Text(error!, style: const TextStyle(color: Colors.red)),
+                ],
+              ],
+            ),
+            actions: [
+              TextButton(
+                  onPressed: saving ? null : () => Navigator.pop(context),
+                  child: const Text('Cancel')),
+              FilledButton(
+                  onPressed: saving ? null : submit,
+                  child: Text(saving ? 'Updating…' : 'Update')),
+            ],
+          );
+        },
+      ),
+    );
+    current.dispose();
+    password.dispose();
+    confirm.dispose();
   }
 
-  void language() {
-    showModalBottomSheet(
-        context: context,
-        builder: (d) => Column(
-            mainAxisSize: MainAxisSize.min,
-            children: ['English', 'සිංහල', 'தமிழ்']
-                .map((l) => ListTile(
-                    title: Text(l),
-                    onTap: () {
-                      setState(() => store.settings.language = l);
-                      Navigator.pop(d);
-                    }))
-                .toList()));
-  }
+  void _message(String value) => ScaffoldMessenger.of(context)
+      .showSnackBar(SnackBar(content: Text(value)));
 
-  Future<void> logout() async {
+  Future<void> _logout() async {
     await ApiService.instance.logout();
-    if (mounted)
+    if (mounted) {
       Navigator.pushNamedAndRemoveUntil(context, '/login', (_) => false);
+    }
   }
-
 }

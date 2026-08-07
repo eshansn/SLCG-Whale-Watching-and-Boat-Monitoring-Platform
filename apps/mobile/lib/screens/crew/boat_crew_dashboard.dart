@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../services/api_service.dart';
+import '../../widgets/app_typography.dart';
+import '../../widgets/mobile_search_field.dart';
 
 const _navy = Color(0xFF162D54);
 const _ink = Color(0xFF14223D);
@@ -13,31 +15,34 @@ class CrewShell extends StatelessWidget {
   final String? title;
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-        backgroundColor: _canvas,
-        appBar: AppBar(
-          leading: IconButton(
-            tooltip: 'Notifications',
-            icon: const Icon(Icons.notifications_none_rounded),
-            onPressed: () =>
-                Navigator.pushNamed(context, '/crew_notifications'),
+  Widget build(BuildContext context) => Theme(
+        data: withWebsitePoppins(Theme.of(context)),
+        child: Scaffold(
+          backgroundColor: _canvas,
+          appBar: AppBar(
+            leading: IconButton(
+              tooltip: 'Notifications',
+              icon: const Icon(Icons.notifications_none_rounded),
+              onPressed: () =>
+                  Navigator.pushNamed(context, '/crew_notifications'),
+            ),
+            title: title == null
+                ? null
+                : Text(title!,
+                    style: const TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.w700)),
+            actions: [
+              Builder(
+                  builder: (context) => IconButton(
+                        tooltip: 'Menu',
+                        icon: const Icon(Icons.menu_rounded, size: 28),
+                        onPressed: () => Scaffold.of(context).openEndDrawer(),
+                      ))
+            ],
           ),
-          title: title == null
-              ? null
-              : Text(title!,
-                  style: const TextStyle(
-                      fontSize: 16, fontWeight: FontWeight.w700)),
-          actions: [
-            Builder(
-                builder: (context) => IconButton(
-                      tooltip: 'Menu',
-                      icon: const Icon(Icons.menu_rounded, size: 28),
-                      onPressed: () => Scaffold.of(context).openEndDrawer(),
-                    ))
-          ],
+          endDrawer: const CrewDrawer(),
+          body: SafeArea(child: child),
         ),
-        endDrawer: const CrewDrawer(),
-        body: SafeArea(child: child),
       );
 }
 
@@ -371,9 +376,8 @@ class _CrewTripsState extends State<BoatCrewTripsScreen> {
                 Expanded(
                     child: TextField(
                         onChanged: (v) => setState(() => query = v),
-                        decoration: const InputDecoration(
-                            prefixIcon: Icon(Icons.search),
-                            hintText: 'Search'))),
+                        style: mobileSearchTextStyle,
+                        decoration: mobileSearchDecoration('Search'))),
                 const SizedBox(width: 10),
                 PopupMenuButton<String>(
                     icon: const Icon(Icons.sort_rounded),
@@ -470,6 +474,7 @@ class _CrewDetailsState extends State<BoatCrewTripDetailsScreen> {
   List<Map<String, dynamic>> passengers = [];
   bool loading = true;
   bool sosBusy = false;
+  bool startBusy = false;
   String? error;
 
   @override
@@ -517,6 +522,7 @@ class _CrewDetailsState extends State<BoatCrewTripDetailsScreen> {
       return CrewShell(title: 'Trip Info', child: _ErrorCard(error!, _load));
     final summary =
         (attendance?['summary'] as Map?)?.cast<String, dynamic>() ?? {};
+    final isOngoing = trip!['status'] == 'Ongoing';
     return CrewShell(
       title: 'Trip Info',
       child: RefreshIndicator(
@@ -551,6 +557,29 @@ class _CrewDetailsState extends State<BoatCrewTripDetailsScreen> {
                       ],
                     ))),
             const SizedBox(height: 16),
+            if (trip!['status'] == 'Scheduled' ||
+                trip!['status'] == 'Boarding' ||
+                isOngoing) ...[
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: startBusy ? null : _startTrip,
+                  icon: startBusy
+                      ? const SizedBox(
+                          width: 17,
+                          height: 17,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Icon(isOngoing
+                          ? Icons.stop_rounded
+                          : Icons.play_arrow_rounded),
+                  label: Text(startBusy
+                      ? (isOngoing ? 'Ending...' : 'Starting...')
+                      : (isOngoing ? 'End Trip' : 'Start Trip')),
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
             Card(
                 child: Padding(
                     padding: const EdgeInsets.all(18),
@@ -621,6 +650,30 @@ class _CrewDetailsState extends State<BoatCrewTripDetailsScreen> {
         Text(label,
             style: const TextStyle(fontSize: 10, color: Colors.blueGrey)),
       ]));
+
+  Future<void> _startTrip() async {
+    if (id == null || startBusy) return;
+    final isOngoing = trip?['status'] == 'Ongoing';
+    setState(() => startBusy = true);
+    try {
+      await ApiService.instance
+          .updateStatus(id!, isOngoing ? 'Completed' : 'Ongoing');
+      await _load();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(isOngoing
+                ? 'Trip ended successfully.'
+                : 'Trip started successfully.')));
+      }
+    } catch (exception) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(_error(exception))));
+      }
+    } finally {
+      if (mounted) setState(() => startBusy = false);
+    }
+  }
 
   Future<void> _sendSos() async {
     setState(() => sosBusy = true);

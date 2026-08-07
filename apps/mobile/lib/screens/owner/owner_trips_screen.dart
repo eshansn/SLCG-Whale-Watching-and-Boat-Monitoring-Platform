@@ -1,158 +1,212 @@
 import 'package:flutter/material.dart';
-import '../../owner/owner_store.dart';
+
+import '../../services/api_service.dart';
+import '../../widgets/mobile_search_field.dart';
 import '../../widgets/owner_layout.dart';
+import 'owner_portal_common.dart';
+
+enum OwnerTripSort { name, time, status }
 
 class OwnerTripsScreen extends StatefulWidget {
   const OwnerTripsScreen({super.key});
+
   @override
-  State<OwnerTripsScreen> createState() => _State();
+  State<OwnerTripsScreen> createState() => _OwnerTripsScreenState();
 }
 
-class _State extends State<OwnerTripsScreen> {
-  final store = OwnerStore.instance, search = TextEditingController();
-  OwnerTripStatus? filter;
+class _OwnerTripsScreenState extends State<OwnerTripsScreen> {
+  final _api = ApiService.instance;
+  final _search = TextEditingController();
+  List<Map<String, dynamic>> _trips = [];
+  OwnerTripSort _sort = OwnerTripSort.time;
+  bool _loading = true;
+  String? _error;
+
   @override
   void initState() {
     super.initState();
-    store.addListener(refresh);
-    store.refresh();
+    _api.addListener(_changed);
+    _load();
   }
 
   @override
   void dispose() {
-    store.removeListener(refresh);
-    search.dispose();
+    _api.removeListener(_changed);
+    _search.dispose();
     super.dispose();
   }
 
-  void refresh() => setState(() {});
-  @override
-  Widget build(BuildContext context) {
-    final q = search.text.toLowerCase();
-    final trips = store.trips.where((t) {
-      final b = store.boat(t.boatId);
-      return (b?.name.toLowerCase().contains(q) ?? false) &&
-          (filter == null || t.status == filter);
-    }).toList()
-      ..sort((a, b) => b.departure.compareTo(a.departure));
-    return OwnerLayout(
-        child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child:
-                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(32),
-                  decoration: BoxDecoration(
-                      color: const Color(0xFF152238),
-                      borderRadius: BorderRadius.circular(16)),
-                  child: Column(children: [
-                    const Text('Start New Trips!',
-                        style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white)),
-                    const SizedBox(height: 8),
-                    const Text(
-                        'Set up the schedule and preferences\nfor an upcoming tour.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: Colors.white70)),
-                    const SizedBox(height: 24),
-                    SizedBox(
-                        width: double.infinity,
-                        height: 44,
-                        child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.white,
-                                foregroundColor: const Color(0xFF152238)),
-                            onPressed: () =>
-                                Navigator.pushNamed(context, '/owner_new_trip'),
-                            child: const Text('Schedule Trip')))
-                  ])),
-              const SizedBox(height: 32),
-              const Text('My Trips',
-                  style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black)),
-              Row(children: [
-                Expanded(
-                    child: TextField(
-                        controller: search,
-                        onChanged: (_) => setState(() {}),
-                        decoration: const InputDecoration(
-                            prefixIcon: Icon(Icons.search),
-                            hintText: 'Search'))),
-                PopupMenuButton<OwnerTripStatus?>(
-                    icon: const Icon(Icons.filter_list),
-                    onSelected: (v) => setState(() => filter = v),
-                    itemBuilder: (_) => [
-                          const PopupMenuItem(
-                              value: null, child: Text('All trips')),
-                          ...OwnerTripStatus.values.map((s) =>
-                              PopupMenuItem(value: s, child: Text(s.name)))
-                        ])
-              ]),
-              const SizedBox(height: 16),
-              ...trips.map((t) => card(t))
-            ])));
+  void _changed() => _load(silent: true);
+
+  Future<void> _load({bool silent = false}) async {
+    if (!silent && mounted) setState(() => _loading = true);
+    try {
+      final trips = await _api.trips();
+      if (!mounted) return;
+      setState(() {
+        _trips = trips;
+        _error = null;
+        _loading = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _error = ownerError(error);
+        _loading = false;
+      });
+    }
   }
 
-  Widget card(OwnerTrip t) {
-    final b = store.boat(t.boatId)!;
-    return Padding(
-        padding: const EdgeInsets.only(bottom: 16),
-        child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.grey.shade200)),
-            child: Column(children: [
-              Row(children: [
+  @override
+  Widget build(BuildContext context) {
+    final query = _search.text.trim().toLowerCase();
+    final trips =
+        _trips.where((trip) => ownerTripMatches(trip, query)).toList();
+    trips.sort((a, b) => compareOwnerTrips(a, b, _sort.name));
+
+    return OwnerLayout(
+      active: 'trips',
+      title: 'My Trips',
+      child: RefreshIndicator(
+        onRefresh: _load,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 18, 20, 40),
+          children: [
+            OwnerEmptyPanel(
+              title: 'Start New Trips!',
+              message:
+                  'Set up the schedule and preferences for an upcoming tour.',
+              actionLabel: 'Schedule Trip',
+              onAction: () async {
+                final changed =
+                    await Navigator.pushNamed(context, '/owner_new_trip');
+                if (changed == true) _load();
+              },
+            ),
+            const SizedBox(height: 28),
+            const Text('My Trips',
+                style: TextStyle(fontSize: 23, fontWeight: FontWeight.w700)),
+            const SizedBox(height: 4),
+            const Text('Review your scheduled vessel departures.',
+                style: TextStyle(color: ownerMuted)),
+            const SizedBox(height: 16),
+            Row(
+              children: [
                 Expanded(
-                    child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                      const Text('Boat',
-                          style: TextStyle(fontWeight: FontWeight.bold)),
-                      Text(b.name),
-                      const SizedBox(height: 10),
-                      const Text('Schedule',
-                          style: TextStyle(fontWeight: FontWeight.bold)),
-                      Text(t.departure.toLocal().toString()),
-                      Text(
-                          '${t.passengers.length}/${t.passengerCapacity} passengers'),
-                      Text(
-                          t.approved
-                              ? 'APPROVED'
-                              : t.shoreApproval == 'Rejected' ||
-                                      t.wildlifeApproval == 'Rejected'
-                                  ? 'REJECTED'
-                                  : 'PENDING APPROVAL',
-                          style: TextStyle(
-                              color: t.approved ? Colors.green : Colors.orange,
-                              fontSize: 11))
-                    ])),
-                Expanded(
-                    child: Container(
-                        height: 110,
-                        color: Colors.blueGrey.shade100,
-                        child: const Icon(Icons.directions_boat,
-                            size: 60, color: Colors.white)))
-              ]),
-              const SizedBox(height: 16),
-              SizedBox(
-                  width: double.infinity,
-                  height: 44,
-                  child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF152238),
-                          foregroundColor: Colors.white),
-                      onPressed: () => Navigator.pushNamed(
-                          context, '/owner_trip_info',
-                          arguments: t.id),
-                      child: const Text('Info')))
-            ])));
+                  child: TextField(
+                    controller: _search,
+                    onChanged: (_) => setState(() {}),
+                    style: mobileSearchTextStyle,
+                    decoration: mobileSearchDecoration('Search'),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                DropdownButtonHideUnderline(
+                  child: DropdownButton<OwnerTripSort>(
+                    value: _sort,
+                    borderRadius: BorderRadius.circular(10),
+                    onChanged: (value) =>
+                        setState(() => _sort = value ?? _sort),
+                    items: const [
+                      DropdownMenuItem(
+                          value: OwnerTripSort.name, child: Text('Name')),
+                      DropdownMenuItem(
+                          value: OwnerTripSort.time, child: Text('Time')),
+                      DropdownMenuItem(
+                          value: OwnerTripSort.status, child: Text('Status')),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 18),
+            if (_loading)
+              const Center(
+                  child: Padding(
+                      padding: EdgeInsets.all(40),
+                      child: CircularProgressIndicator()))
+            else if (_error != null)
+              OwnerErrorPanel(message: _error!, retry: _load)
+            else if (trips.isEmpty)
+              OwnerEmptyPanel(
+                title: query.isEmpty ? 'No trips scheduled' : 'No trips found',
+                message: query.isEmpty
+                    ? 'Schedule a trip to see it here.'
+                    : 'Try a different vessel, registration, or date.',
+                icon: Icons.calendar_month_outlined,
+              )
+            else
+              ...trips.map(_tripCard),
+          ],
+        ),
+      ),
+    );
   }
+
+  Widget _tripCard(Map<String, dynamic> trip) {
+    final approval = '${trip['shoreApproval']}';
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: OwnerCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const CircleAvatar(
+                  backgroundColor: Color(0xFFDCE8F5),
+                  foregroundColor: ownerNavy,
+                  child: Icon(Icons.sailing_rounded),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('${trip['vesselName']}',
+                          style: const TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.w700)),
+                      Text('${trip['registrationNumber']}',
+                          style: const TextStyle(color: ownerMuted)),
+                    ],
+                  ),
+                ),
+                OwnerStatusBadge(approval),
+              ],
+            ),
+            const SizedBox(height: 16),
+            _line('Scheduled', formatOwnerDate(trip['scheduledDepartureUtc'])),
+            _line('Trip status', '${trip['status']}'),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed: () => Navigator.pushNamed(
+                    context, '/owner_trip_info',
+                    arguments: '${trip['id']}'),
+                child: const Text('Info'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _line(String label, String value) => Padding(
+        padding: const EdgeInsets.only(bottom: 6),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(
+              width: 90,
+              child: Text(label,
+                  style: const TextStyle(
+                      color: ownerMuted, fontWeight: FontWeight.w600)),
+            ),
+            Expanded(child: Text(value)),
+          ],
+        ),
+      );
 }
