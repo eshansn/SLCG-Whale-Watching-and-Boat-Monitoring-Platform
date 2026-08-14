@@ -4,10 +4,12 @@ import { useAuth } from "../../../auth/useAuth";
 import {
   connectOperations,
   operationsApi,
+  type Boat,
   type SosAction,
   type SosAlert,
-  type TripCrew,
+  type Trip,
   type TripPassenger,
+  type VesselMapRecord,
 } from "../../../operations/operationsApi";
 import TripStatusMap from "./TripStatusMap";
 import TransferHistoryPanel from "./TransferHistoryPanel";
@@ -38,10 +40,19 @@ function useTripEmergency(tripId: string) {
   return emergency;
 }
 
-function useTripPeople(tripId: string) {
+interface TripData {
+  requestedTripId: string;
+  trip?: Trip;
+  boat?: Boat;
+  vessel?: VesselMapRecord;
+  passengers: TripPassenger[];
+}
+
+function useTripData(tripId: string) {
   const { session } = useAuth();
-  const [passengers, setPassengers] = useState<TripPassenger[]>([]);
-  const [crew, setCrew] = useState<TripCrew[]>([]);
+  const [data, setData] = useState<TripData>({ requestedTripId: "", passengers: [] });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     if (!session) return;
@@ -49,18 +60,41 @@ function useTripPeople(tripId: string) {
     const load = () => void Promise.all([
       operationsApi.tripPassengers(session.accessToken, tripId),
       operationsApi.trips(session.accessToken),
-    ]).then(([people, trips]) => {
+      operationsApi.boats(session.accessToken),
+      operationsApi.vesselMap(session.accessToken),
+    ]).then(([passengers, trips, boats, vessels]) => {
       if (!active) return;
-      setPassengers(people);
-      setCrew(trips.find((trip) => trip.id === tripId)?.crew ?? []);
-    }).catch(() => undefined);
+      const trip = trips.find((item) => item.id === tripId);
+      setData({
+        requestedTripId: tripId,
+        trip,
+        boat: boats.find((item) => item.id === trip?.boatId),
+        vessel: vessels.find((item) => item.id === trip?.boatId),
+        passengers,
+      });
+      setError("");
+    }).catch((reason) => {
+      if (!active) return;
+      setData({ requestedTripId: tripId, passengers: [] });
+      setError(reason instanceof Error ? reason.message : "Unable to load trip information.");
+    }).finally(() => {
+      if (active) setLoading(false);
+    });
     load();
     const interval = window.setInterval(load, 10000);
     const disconnect = connectOperations(session.accessToken, load);
     return () => { active = false; window.clearInterval(interval); disconnect(); };
   }, [session, tripId]);
 
-  return { passengers, crew };
+  const isCurrentTrip = data.requestedTripId === tripId;
+  return {
+    trip: isCurrentTrip ? data.trip : undefined,
+    boat: isCurrentTrip ? data.boat : undefined,
+    vessel: isCurrentTrip ? data.vessel : undefined,
+    passengers: isCurrentTrip ? data.passengers : [],
+    loading: loading || !isCurrentTrip,
+    error: isCurrentTrip ? error : "",
+  };
 }
 
 function useTripActions(tripId: string) {
@@ -88,15 +122,16 @@ function useTripActions(tripId: string) {
 
 export default function TripOverview({ tripId }: { tripId: string }) {
   const { session } = useAuth();
-  const ongoing = tripId === "1" || tripId === "101";
   const emergency = useTripEmergency(tripId);
-  const { passengers, crew } = useTripPeople(tripId);
+  const { trip, boat, vessel, passengers, loading, error } = useTripData(tripId);
   const { actions, reload: reloadActions } = useTripActions(tripId);
   const [query, setQuery] = useState("");
   const [actionDetails, setActionDetails] = useState("");
   const [savingAction, setSavingAction] = useState(false);
   const [actionError, setActionError] = useState("");
   const canAddAction = session?.roles.includes("OPS") ?? false;
+  const crew = trip?.crew ?? [];
+  const ongoing = trip?.status === "Ongoing";
   const visible = useMemo(
     () => passengers.filter((passenger) => `${passenger.name} ${passenger.identificationNumber}`.toLowerCase().includes(query.toLowerCase())),
     [passengers, query],
@@ -117,10 +152,20 @@ export default function TripOverview({ tripId }: { tripId: string }) {
     }
   };
 
+  if (loading) return <main className="mx-auto max-w-[1440px] px-5 py-12 text-center text-sm text-slate-500">Loading trip information…</main>;
+  if (error && !trip) return <main className="mx-auto max-w-[1440px] px-5 py-12 text-center text-sm text-red-600">{error}</main>;
+  if (!trip) return <main className="mx-auto max-w-[1440px] px-5 py-12 text-center text-sm text-slate-500">Trip not found.</main>;
+
+  const approvals = [
+    ["Certifications", boat?.approval ?? vessel?.certificationApproval ?? "Pending"],
+    ["Inspection", trip.shoreApproval],
+    ["Wildlife", trip.wildlifeShoreApproval],
+  ];
+
   return (
     <main className="mx-auto max-w-[1440px] px-5 py-5">
       <div className="grid items-start gap-3 xl:grid-cols-[315px_minmax(0,1fr)_300px]">
-        <VesselCard ongoing={ongoing} />
+        <VesselCard trip={trip} boat={boat} vessel={vessel} passengers={passengers} />
         <div className="min-w-0 space-y-3">
           <Card>
             <div className="flex items-center justify-between gap-3">
@@ -140,7 +185,7 @@ export default function TripOverview({ tripId }: { tripId: string }) {
         <div className="space-y-3">
           <Card>
             <h2 className="mb-3 font-bold">Approvals</h2>
-            {[["Certifications", "Approved"], ["Inspection", "Approved"], ["Wildlife", "Approved"]].map(([label, value]) => <div key={label} className="mt-2 flex justify-between text-[10px]"><b>{label}</b><span className="text-emerald-500">{value}</span></div>)}
+            {approvals.map(([label, value]) => <div key={label} className="mt-2 flex justify-between text-[10px]"><b>{label}</b><span className={approvalTone(value)}>{value}</span></div>)}
           </Card>
           <Card>
             <h2 className="mb-3 font-bold">Emergencies</h2>
@@ -158,7 +203,7 @@ export default function TripOverview({ tripId }: { tripId: string }) {
               <button type="button" onClick={() => void submitAction()} disabled={!emergency || !actionDetails.trim() || savingAction} className="mt-2 w-full rounded bg-red-500 py-2 text-[10px] font-bold text-white disabled:cursor-not-allowed disabled:opacity-40">{savingAction ? "Saving…" : "Submit"}</button>
             </>}
           </Card>
-          <div className="h-[300px] rounded-xl bg-white p-2 shadow-sm"><TripStatusMap ongoing={ongoing} /></div>
+          <div className="h-[300px] rounded-xl bg-white p-2 shadow-sm"><TripStatusMap ongoing={ongoing} vesselName={trip.vesselName} latitude={vessel?.latitude} longitude={vessel?.longitude} /></div>
         </div>
       </div>
       <TransferHistoryPanel tripId={tripId} />
@@ -166,16 +211,27 @@ export default function TripOverview({ tripId }: { tripId: string }) {
   );
 }
 
-function VesselCard({ ongoing }: { ongoing: boolean }) {
+function VesselCard({ trip, boat, vessel, passengers }: { trip: Trip; boat?: Boat; vessel?: VesselMapRecord; passengers: TripPassenger[] }) {
+  const lifeSavers = trip.crew.filter((member) => member.position.toLowerCase().includes("life saver")).length;
+  const divers = trip.crew.filter((member) => member.position.toLowerCase().includes("diver")).length;
+  const children = passengers.filter((passenger) => passenger.ageCategory === "child" || passenger.ageCategory === "small").length;
+  const specialNeeds = passengers.filter((passenger) => passenger.ageCategory === "specialneeds").length;
+  const coordinates = vessel?.latitude != null && vessel.longitude != null
+    ? `${vessel.latitude.toFixed(6)}, ${vessel.longitude.toFixed(6)}`
+    : "Location unavailable";
+  const certification = boat?.approval ?? vessel?.certificationApproval ?? "Pending";
   const groups = [
-    ["Vessel Information", [["Length", "12.8 M"], ["Beam (Width)", "3.9 M"], ["Cruising Speed", "20 Knots"], ["Maximum Speed", "28 Knots"], ["Maximum Capacity", "35 Passengers"], ["Life Jackets", "37"]]],
-    ["Crew Information", [["Life Savers", "03"], ["Divers", "02"]]],
-    ["Passenger Information", [["Passengers Onboard", "24"], ["Children Onboard", "03"], ["Special Needs", "00"]]],
+    ["Vessel Information", [["Length", `${boat?.lengthMeters ?? vessel?.lengthMeters ?? 0} M`], ["Beam (Width)", `${boat?.widthMeters ?? vessel?.beamMeters ?? 0} M`], ["Cruising Speed", vessel?.cruisingSpeedKnots == null ? "No GPS reading" : `${vessel.cruisingSpeedKnots} Knots`], ["Maximum Speed", `${boat?.maximumSpeedKnots ?? vessel?.maximumSpeedKnots ?? 0} Knots`], ["Maximum Capacity", `${boat?.maximumCapacity ?? vessel?.maximumCapacity ?? 0} Passengers`], ["Life Jackets", String(boat?.lifeJacketCount ?? vessel?.lifeJacketCount ?? 0)]]],
+    ["Crew Information", [["Life Savers", formatCount(lifeSavers)], ["Divers", formatCount(divers)]]],
+    ["Passenger Information", [["Passengers Onboard", formatCount(trip.passengerCount)], ["Children Onboard", formatCount(children)], ["Special Needs", formatCount(specialNeeds)]]],
   ];
-  return <aside className="overflow-hidden rounded-xl bg-white shadow-md"><img src="/gallery-2.jpg" className="h-40 w-full object-cover" alt="Whale watching boat" /><div className="p-4"><h1 className="text-xl font-bold">FV Mirissa King ⓘ</h1><div className="flex gap-3 text-[10px]"><span>SL-WB-2047</span><span className="text-emerald-500">Certified</span></div><dl className="mt-4 space-y-1 text-[11px]"><Info label="Coordinates" value="5.949186, 80.438509" /><Info label="Departure" value="06:32:11 Hrs" /><Info label="Arrival" value={ongoing ? "TBA" : "11:48:02 Hrs"} /></dl>{groups.map(([title, items]) => <section key={title as string} className="mt-4 rounded-lg bg-[#f7f8fa] p-3"><h2 className="mb-2 text-xs font-bold">{title as string}</h2><dl className="space-y-1 text-[10px]">{(items as string[][]).map(([label, value]) => <Info key={label} label={label} value={value} />)}</dl></section>)}</div></aside>;
+  return <aside className="overflow-hidden rounded-xl bg-white shadow-md"><img src={boat?.imageUrl ?? vessel?.imageUrl ?? "/gallery-2.jpg"} className="h-40 w-full object-cover" alt={`${trip.vesselName} boat`} /><div className="p-4"><h1 className="text-xl font-bold">{trip.vesselName} ⓘ</h1><div className="flex gap-3 text-[10px]"><span>{trip.registrationNumber}</span><span className={approvalTone(certification)}>{certification}</span></div><dl className="mt-4 space-y-1 text-[11px]"><Info label="Coordinates" value={coordinates} /><Info label="Departure" value={formatTripTime(trip.actualDepartureUtc ?? trip.scheduledDepartureUtc)} /><Info label="Arrival" value={trip.actualArrivalUtc ? formatTripTime(trip.actualArrivalUtc) : "TBA"} /></dl>{groups.map(([title, items]) => <section key={title as string} className="mt-4 rounded-lg bg-[#f7f8fa] p-3"><h2 className="mb-2 text-xs font-bold">{title as string}</h2><dl className="space-y-1 text-[10px]">{(items as string[][]).map(([label, value]) => <Info key={label} label={label} value={value} />)}</dl></section>)}</div></aside>;
 }
 
 function Card({ children }: { children: React.ReactNode }) { return <section className="rounded-xl bg-white p-5 shadow-sm">{children}</section>; }
 function Table({ heads, rows }: { heads: string[]; rows: string[][] }) { return <div className="mt-5 overflow-x-auto"><table className="w-full min-w-[480px] table-fixed text-left text-[10px]"><thead><tr className="border-b">{heads.map((head) => <th key={head} className="px-5 py-4 font-medium">{head}</th>)}</tr></thead><tbody>{rows.map((row, rowIndex) => <tr key={rowIndex} className="border-b border-slate-100">{row.map((value, cellIndex) => <td key={cellIndex} className="px-5 py-5">{value}</td>)}</tr>)}</tbody></table></div>; }
 function formatValue(value: string) { return value ? value.charAt(0).toUpperCase() + value.slice(1) : "–"; }
 function formatActionTime(value: string, timeStyle: "short" | "medium") { return new Intl.DateTimeFormat("en-LK", { dateStyle: "medium", timeStyle }).format(new Date(value)); }
+function formatTripTime(value: string) { return new Intl.DateTimeFormat("en-LK", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false }).format(new Date(value)); }
+function formatCount(value: number) { return value.toString().padStart(2, "0"); }
+function approvalTone(value: string) { return value === "Approved" ? "text-emerald-500" : value === "Rejected" ? "text-red-500" : "text-amber-500"; }
