@@ -100,31 +100,68 @@ function useTripData(tripId: string) {
 function useTripActions(tripId: string) {
   const { session } = useAuth();
   const [actions, setActions] = useState<SosAction[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [retryVersion, setRetryVersion] = useState(0);
   const reload = useCallback(async () => {
     if (!session) return;
-    setActions(await operationsApi.sosActions(session.accessToken, tripId));
+    try {
+      setActions(await operationsApi.sosActions(session.accessToken, tripId));
+      setError("");
+    } catch (reloadError) {
+      const message = reloadError instanceof Error
+        ? reloadError.message
+        : "Unable to load response actions.";
+      setError(message);
+      throw reloadError instanceof Error ? reloadError : new Error(message);
+    } finally {
+      setLoading(false);
+    }
   }, [session, tripId]);
 
   useEffect(() => {
     if (!session) return;
     let active = true;
-    const load = () => void operationsApi.sosActions(session.accessToken, tripId)
-      .then((items) => { if (active) setActions(items); })
-      .catch(() => undefined);
+    let requestVersion = 0;
+    const load = () => {
+      const currentRequest = ++requestVersion;
+      void operationsApi.sosActions(session.accessToken, tripId)
+      .then((items) => {
+        if (!active || currentRequest !== requestVersion) return;
+        setActions(items);
+        setError("");
+      })
+      .catch((loadError) => {
+        if (!active || currentRequest !== requestVersion) return;
+        setError(loadError instanceof Error ? loadError.message : "Unable to load response actions.");
+      })
+      .finally(() => { if (active && currentRequest === requestVersion) setLoading(false); });
+    };
     load();
     const interval = window.setInterval(load, 10000);
     const disconnect = connectOperations(session.accessToken, load);
     return () => { active = false; window.clearInterval(interval); disconnect(); };
-  }, [session, tripId]);
+  }, [session, tripId, retryVersion]);
 
-  return { actions, reload };
+  const retry = () => {
+    setLoading(true);
+    setRetryVersion((version) => version + 1);
+  };
+
+  return { actions, loading, error, retry, reload };
 }
 
 export default function TripOverview({ tripId }: { tripId: string }) {
   const { session } = useAuth();
   const emergency = useTripEmergency(tripId);
   const { trip, boat, vessel, passengers, loading, error } = useTripData(tripId);
-  const { actions, reload: reloadActions } = useTripActions(tripId);
+  const {
+    actions,
+    loading: actionsLoading,
+    error: actionsLoadError,
+    retry: retryActions,
+    reload: reloadActions,
+  } = useTripActions(tripId);
   const [query, setQuery] = useState("");
   const [actionDetails, setActionDetails] = useState("");
   const [savingAction, setSavingAction] = useState(false);
@@ -192,11 +229,12 @@ export default function TripOverview({ tripId }: { tripId: string }) {
             <div className="flex justify-between gap-3 text-[10px]"><b>Nature of Emergency</b><span className={emergency ? "text-right text-red-500" : "text-emerald-500"}>{emergency?.natureOfEmergency ?? "None"}</span></div>
             <div className="mt-2 flex justify-between text-[10px]"><b>Reported Time</b><span>{emergency ? formatActionTime(emergency.raisedAtUtc, "medium") : "–"}</span></div>
             <h3 className="mt-4 font-bold">Actions Taken</h3>
+            {actionsLoadError && <div role="alert" className="mt-2 flex items-center justify-between gap-2 rounded-lg bg-red-50 p-2.5 text-[10px] text-red-700"><span>{actionsLoadError}</span><button type="button" disabled={actionsLoading} onClick={retryActions} className="shrink-0 font-semibold underline disabled:opacity-50">{actionsLoading ? "Retrying…" : "Retry"}</button></div>}
             {actions.length ? (
               <ol className="mt-2 max-h-44 space-y-2 overflow-y-auto">
                 {actions.map((action) => <li key={action.id} className="rounded-lg bg-slate-50 p-2.5 text-[10px]"><p className="whitespace-pre-wrap leading-4 text-slate-700">{action.details}</p><p className="mt-1 text-[9px] text-slate-400">{action.takenByName} · {formatActionTime(action.takenAtUtc, "short")}</p></li>)}
               </ol>
-            ) : <p className="mt-2 rounded-lg bg-slate-50 p-3 text-[10px] text-slate-400">No response actions have been recorded.</p>}
+            ) : actionsLoading ? <p className="mt-2 rounded-lg bg-slate-50 p-3 text-[10px] text-slate-400">Loading response actions…</p> : !actionsLoadError && <p className="mt-2 rounded-lg bg-slate-50 p-3 text-[10px] text-slate-400">No response actions have been recorded.</p>}
             {canAddAction && <>
               <textarea value={actionDetails} onChange={(event) => setActionDetails(event.target.value)} maxLength={1000} disabled={!emergency || savingAction} placeholder={emergency ? "Record the response action taken" : "An active SOS is required"} className="mt-3 h-16 w-full resize-none border-y border-dashed p-2 text-[10px] disabled:bg-slate-50" />
               {actionError && <p role="alert" className="mt-2 text-[10px] text-red-600">{actionError}</p>}
