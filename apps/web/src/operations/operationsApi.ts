@@ -43,6 +43,7 @@ async function request<T>(path:string, token:string, init?:RequestInit):Promise<
 export const operationsApi = {
   boats:(token:string)=>request<Boat[]>('/api/operations/boats',token),
   createBoat:(token:string,boat:CreateBoat)=>request<{id:string}>('/api/operations/boats',token,{method:'POST',body:JSON.stringify(boat)}),
+  cancelBoatRegistration:(token:string,id:string)=>request<void>(`/api/operations/boats/${id}/registration`,token,{method:'DELETE'}),
   uploadBoatDocument:async(token:string,boatId:string,name:string,file:File,expirationDate?:string)=>{
     const form=new FormData();form.append('name',name);form.append('file',file);if(expirationDate)form.append('expirationDate',expirationDate);
     const response=await fetch(`${API_BASE_URL}/api/operations/boats/${boatId}/documents`,{method:'POST',headers:{Authorization:`Bearer ${token}`},body:form});

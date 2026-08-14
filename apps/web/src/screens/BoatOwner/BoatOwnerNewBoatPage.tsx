@@ -264,6 +264,7 @@ function BoatOwnerNewBoatPage() {
     }
 
     if (!session) return;
+    let createdBoatId: string | undefined;
     try {
       setStatusMessage("Submitting your boat approval request...");
       const created = await operationsApi.createBoat(session.accessToken, {
@@ -274,13 +275,24 @@ function BoatOwnerNewBoatPage() {
         maximumSpeedKnots: Number(boatForm.maximumSpeedKnots),
         lifeJacketCount: Number(boatForm.lifeJacketCount),
       });
-      await Promise.all(certifications.filter((certificate) => certificate.file).map((certificate) =>
-        operationsApi.uploadBoatDocument(session.accessToken, created.id, certificate.name,
-          certificate.file!, certificate.expirationDate || undefined)));
+      createdBoatId = created.id;
+      for (const certificate of certifications.filter((item) => item.file)) {
+        await operationsApi.uploadBoatDocument(session.accessToken, created.id, certificate.name,
+          certificate.file!, certificate.expirationDate || undefined);
+      }
       setStatusMessage("Your boat approval request has been submitted successfully.");
       navigate(`/owner/boats/${created.id}`);
     } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : "Unable to submit the boat.");
+      const message = error instanceof Error ? error.message : "Unable to submit the boat.";
+      if (createdBoatId) {
+        try {
+          await operationsApi.cancelBoatRegistration(session.accessToken, createdBoatId);
+        } catch {
+          setStatusMessage(`${message} The incomplete registration could not be removed automatically.`);
+          return;
+        }
+      }
+      setStatusMessage(message);
     }
   };
 

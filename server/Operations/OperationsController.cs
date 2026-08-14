@@ -295,6 +295,26 @@ public sealed class OperationsController(WhaleWatchingDbContext db, IHubContext<
         return Created($"api/operations/boats/{boat.Id}", new { boat.Id });
     }
 
+    [HttpDelete("boats/{id:guid}/registration")]
+    [Authorize(Policy = PortalPolicies.BoatOwner)]
+    public async Task<IActionResult> CancelBoatRegistration(Guid id, CancellationToken ct)
+    {
+        var boat = await db.Boats.Include(x => x.Documents)
+            .SingleOrDefaultAsync(x => x.Id == id && x.OwnerId == UserId, ct);
+        if (boat is null) return NoContent();
+
+        if (boat.Approval != ApprovalStatus.Pending || boat.WildlifeApproval != ApprovalStatus.Pending ||
+            await db.Trips.AnyAsync(x => x.BoatId == id, ct) ||
+            await db.CrewAssignments.AnyAsync(x => x.BoatId == id, ct))
+            return Conflict(new { message = "Only an unused pending boat registration can be cancelled." });
+
+        db.BoatDocuments.RemoveRange(boat.Documents);
+        db.Boats.Remove(boat);
+        await db.SaveChangesAsync(ct);
+        await hub.Clients.All.SendAsync("operationsChanged", new { entity = "boat", id, deleted = true }, ct);
+        return NoContent();
+    }
+
     [HttpPatch("boats/{id:guid}/approval")]
     [Authorize(Roles = $"{PortalRoles.Admin},{PortalRoles.Wildlife}")]
     public async Task<ActionResult> UpdateBoatApproval(Guid id, ApprovalRequest request, CancellationToken ct)
