@@ -7,13 +7,10 @@ import {
 import { ArrowRight, Camera, UserPlus, X } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { useNavigate } from "react-router-dom";
-import {
-  addPassenger,
-  getPassengers,
-} from "./store/passengerStorage";
+import { setActivePassengerTripInvitation } from "./store/passengerStorage";
 import type { PassengerData } from "./store/passenger";
 import PassengerSOSButton from "./components/PassengerSOSButton";
-import { getActivePassengerTrip, getPassengerPersonalQr, registerTravelCompanion, type PassengerPersonalQr, type PassengerTripPreview } from "./passengerTripApi";
+import { getActivePassengerTrip, getPassengerParty, getPassengerPersonalQr, registerTravelCompanion, type PassengerPersonalQr, type PassengerTripPreview } from "./passengerTripApi";
 import { submitComplaint } from "./complaintsApi";
 
 const whaleBackground = "/Hero.png";
@@ -81,9 +78,7 @@ function PassengerOnboardingPage() {
   const [trip,setTrip]=useState<PassengerTripPreview|null>(null);
   const [personalQr,setPersonalQr]=useState<PassengerPersonalQr|null>(null);
 
-  const [passengers, setPassengers] = useState<PassengerData[]>(
-    () => getPassengers(),
-  );
+  const [passengers, setPassengers] = useState<PassengerData[]>([]);
 
   const [acknowledged, setAcknowledged] = useState(false);
 
@@ -104,15 +99,15 @@ function PassengerOnboardingPage() {
   const [familyError, setFamilyError] = useState("");
   const [savingFamily, setSavingFamily] = useState(false);
 
-  useEffect(() => {
-    if (passengers.length === 0) {
-      navigate("/passenger/register", { replace: true });
-    }
-  }, [navigate, passengers.length]);
+  useEffect(()=>{
+    let active=true;
+    void getActivePassengerTrip().then(preview=>{if(active){setTrip(preview);setActivePassengerTripInvitation(preview.invitationCode)}}).catch(()=>{if(active)navigate("/passenger",{replace:true})});
+    return()=>{active=false};
+  },[navigate]);
 
   useEffect(()=>{
     let active=true;
-    void getActivePassengerTrip().then(preview=>{if(active){setTrip(preview);sessionStorage.setItem("wwms.passenger.tripInvitation",preview.invitationCode)}}).catch(()=>{if(active)navigate("/passenger",{replace:true})});
+    void getPassengerParty().then(party=>{if(!active)return;if(party.length)setPassengers(party);else navigate("/passenger/register",{replace:true})}).catch(()=>{if(active)navigate("/passenger",{replace:true})});
     return()=>{active=false};
   },[navigate]);
 
@@ -147,6 +142,10 @@ function PassengerOnboardingPage() {
 
   const primaryPassenger = passengers[0];
   const familyAndFriends = passengers.slice(1);
+
+  if (!primaryPassenger) {
+    return <main className="grid min-h-screen place-items-center bg-black text-white">Loading passenger details...</main>;
+  }
 
   const openFamilyModal = (): void => {
     setFamilyForm(EMPTY_FAMILY_FORM);
@@ -218,10 +217,8 @@ function PassengerOnboardingPage() {
     try {
       setSavingFamily(true);
       setFamilyError("");
-      await registerTravelCompanion(companion);
-      const updatedPassengers = addPassenger(companion);
-
-      setPassengers(updatedPassengers);
+      const registered = await registerTravelCompanion(companion);
+      setPassengers((current) => [...current, { ...companion, id: registered.id }]);
       setFamilyForm(EMPTY_FAMILY_FORM);
       setShowFamilyModal(false);
     } catch (companionError) {

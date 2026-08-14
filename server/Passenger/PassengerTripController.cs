@@ -48,6 +48,30 @@ public sealed class PassengerTripController(WhaleWatchingDbContext db) : Control
             session.Passenger.PersonalQrToken, $"wwms:passenger:{session.Passenger.PersonalQrToken}"));
     }
 
+    [HttpGet("~/api/passenger/session/party")]
+    public async Task<ActionResult<IReadOnlyList<PassengerPartyMemberDto>>> Party(CancellationToken ct)
+    {
+        var rawToken = Request.Headers["X-Passenger-Session"].ToString();
+        if (string.IsNullOrWhiteSpace(rawToken)) return Unauthorized();
+        var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(rawToken)));
+        var session = await db.PassengerSessions.AsNoTracking().Where(x =>
+                x.TokenHash == hash && x.ExpiresAtUtc > DateTimeOffset.UtcNow)
+            .Select(x => new { x.PassengerId, x.TripId })
+            .SingleOrDefaultAsync(ct);
+        if (session is null) return Unauthorized();
+
+        return Ok(await db.TripPassengers.AsNoTracking()
+            .Where(x => x.TripId == session.TripId &&
+                (x.PassengerId == session.PassengerId || x.PrimaryPassengerId == session.PassengerId))
+            .OrderBy(x => x.PassengerId == session.PassengerId ? 0 : 1)
+            .ThenBy(x => x.RegisteredAtUtc)
+            .Select(x => new PassengerPartyMemberDto(x.PassengerId, x.Passenger.Name,
+                x.Passenger.IdentificationNumber, x.Passenger.PhoneNumber, x.Passenger.PassengerType,
+                x.Passenger.Gender, x.Passenger.AgeCategory, x.Passenger.SpecialNeedType,
+                x.Passenger.SelfCareConfirmed))
+            .ToListAsync(ct));
+    }
+
     [HttpGet("{invitationCode}")]
     public async Task<ActionResult<PassengerTripPreviewDto>> Preview(string invitationCode, CancellationToken ct)
     {
@@ -236,6 +260,9 @@ public sealed record RegisteredPassengerDto(Guid Id, Guid TripId, string Name, s
 public sealed record RegisteredCompanionDto(Guid Id, Guid TripId, Guid PrimaryPassengerId, string Name,
     string IdentificationNumber, string PhoneNumber, string PassengerType, string Gender, string AgeCategory);
 public sealed record PassengerPersonalQrDto(Guid PassengerId, string PassengerName, string QrToken, string QrValue);
+public sealed record PassengerPartyMemberDto(Guid Id, string Name, string IdentificationNumber,
+    string PhoneNumber, string PassengerType, string Gender, string AgeCategory,
+    string? SpecialNeedType, bool SelfCareConfirmed);
 public sealed class VerifyReturningPassengerRequest
 {
     [Required, MaxLength(32)] public required string Identifier { get; init; }

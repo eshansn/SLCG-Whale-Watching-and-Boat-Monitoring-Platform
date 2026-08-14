@@ -1,6 +1,10 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { addPassenger } from "./store/passengerStorage";
+import {
+  activatePassengerTrip,
+  getActivePassengerTripInvitation,
+  storePassengerSession,
+} from "./store/passengerStorage";
 import { registerTripPassenger } from "./passengerTripApi";
 
 const whaleBackground = "/Hero.png";
@@ -18,7 +22,7 @@ interface RegistrationFormData {
 function PassengerRegistrationPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const invitationCode = searchParams.get('trip') ?? sessionStorage.getItem('wwms.passenger.tripInvitation') ?? '';
+  const invitationCode = searchParams.get('trip') ?? getActivePassengerTripInvitation();
 
   const [formData, setFormData] = useState<RegistrationFormData>({
     name: "",
@@ -65,11 +69,10 @@ function PassengerRegistrationPage() {
 
   try {
     setSubmitting(true); setErrorMessage("");
+    activatePassengerTrip(invitationCode);
     const details={name:formData.name.trim(),identificationNumber:formData.identificationNumber.trim(),phoneNumber:formData.phoneNumber.trim(),passengerType:formData.passengerType,gender:formData.gender,ageCategory:formData.ageCategory};
     const registered=await registerTripPassenger(invitationCode,details);
-    sessionStorage.setItem('wwms.passenger.id',registered.id);
-    sessionStorage.setItem('wwms.passenger.sessionToken',registered.sessionToken);
-    addPassenger(details);
+    storePassengerSession(invitationCode, registered.sessionToken);
     navigate("/passenger/onboarding");
   } catch(error) { setErrorMessage(error instanceof Error?error.message:"Passenger registration failed."); }
   finally { setSubmitting(false); }

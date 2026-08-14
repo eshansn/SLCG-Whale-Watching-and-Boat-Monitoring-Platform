@@ -2,8 +2,7 @@ import { useEffect, useState } from 'react';
 import { Anchor, CalendarDays, Clock3, IdCard, LogIn, Ship, UserPlus } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getPassengerTrip, type PassengerTripPreview } from './passengerTripApi';
-
-const ACTIVE_TRIP_INVITATION = 'wwms.passenger.tripInvitation';
+import { activatePassengerTrip } from './store/passengerStorage';
 
 export default function PassengerTripLandingPage() {
   const { invitationCode = '' } = useParams<{ invitationCode: string }>();
@@ -13,7 +12,8 @@ export default function PassengerTripLandingPage() {
 
   useEffect(() => {
     getPassengerTrip(invitationCode).then((preview) => {
-      setTrip(preview); sessionStorage.setItem(ACTIVE_TRIP_INVITATION, invitationCode);
+      activatePassengerTrip(invitationCode);
+      setTrip(preview);
     }).catch((reason) => setError(reason instanceof Error ? reason.message : 'Unable to load trip.'));
   }, [invitationCode]);
 

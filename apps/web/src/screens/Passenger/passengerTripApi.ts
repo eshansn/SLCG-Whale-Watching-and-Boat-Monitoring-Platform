@@ -1,3 +1,5 @@
+import { getPassengerSessionToken } from './store/passengerStorage';
+
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '');
 
 export interface PassengerTripPreview {
@@ -20,7 +22,7 @@ export async function getPassengerTrip(invitationCode: string): Promise<Passenge
 }
 
 export async function getActivePassengerTrip():Promise<PassengerTripPreview>{
-  const token=sessionStorage.getItem('wwms.passenger.sessionToken');
+  const token=getPassengerSessionToken();
   if(!token)throw new Error('Your passenger session is missing.');
   const response=await fetch(`${API_BASE_URL}/api/passenger/session/trip`,{headers:{'X-Passenger-Session':token}});
   if(!response.ok)throw new Error('Unable to load your active trip.');
@@ -31,6 +33,7 @@ export interface RegisterPassengerDetails { name:string; identificationNumber:st
 export interface RegisteredPassenger extends RegisterPassengerDetails { id:string; tripId:string; sessionToken:string; sessionExpiresAtUtc:string }
 export interface RegisteredCompanion extends RegisterPassengerDetails { id:string; tripId:string; primaryPassengerId:string }
 export interface PassengerPersonalQr { passengerId:string; passengerName:string; qrToken:string; qrValue:string }
+export interface PassengerPartyMember extends RegisterPassengerDetails { id:string }
 
 export async function registerTripPassenger(invitationCode:string, details:RegisterPassengerDetails):Promise<RegisteredPassenger> {
   const response=await fetch(`${API_BASE_URL}/api/passenger/trips/${encodeURIComponent(invitationCode)}/passengers`,{
@@ -41,7 +44,7 @@ export async function registerTripPassenger(invitationCode:string, details:Regis
 }
 
 export async function registerTravelCompanion(details:RegisterPassengerDetails):Promise<RegisteredCompanion>{
-  const token=sessionStorage.getItem('wwms.passenger.sessionToken');
+  const token=getPassengerSessionToken();
   if(!token)throw new Error('Your passenger session is missing. Please scan the trip QR code again.');
   const response=await fetch(`${API_BASE_URL}/api/passenger/session/companions`,{method:'POST',headers:{'Content-Type':'application/json','X-Passenger-Session':token},body:JSON.stringify(details)});
   if(!response.ok){const problem=await response.json().catch(()=>null) as {message?:string;detail?:string;title?:string;errors?:Record<string,string[]>}|null;const validation=problem?.errors?Object.values(problem.errors).flat()[0]:undefined;throw new Error(problem?.message??validation??problem?.detail??problem?.title??'Unable to add this travel companion.');}
@@ -49,11 +52,19 @@ export async function registerTravelCompanion(details:RegisterPassengerDetails):
 }
 
 export async function getPassengerPersonalQr():Promise<PassengerPersonalQr>{
-  const token=sessionStorage.getItem('wwms.passenger.sessionToken');
+  const token=getPassengerSessionToken();
   if(!token)throw new Error('Your passenger session is missing.');
   const response=await fetch(`${API_BASE_URL}/api/passenger/session/qr`,{headers:{'X-Passenger-Session':token}});
   if(!response.ok)throw new Error('Unable to load your personal boarding QR code.');
   return response.json() as Promise<PassengerPersonalQr>;
+}
+
+export async function getPassengerParty():Promise<PassengerPartyMember[]>{
+  const token=getPassengerSessionToken();
+  if(!token)throw new Error('Your passenger session is missing.');
+  const response=await fetch(`${API_BASE_URL}/api/passenger/session/party`,{headers:{'X-Passenger-Session':token}});
+  if(!response.ok)throw new Error('Unable to load your passenger group.');
+  return response.json() as Promise<PassengerPartyMember[]>;
 }
 
 export async function verifyReturningPassenger(invitationCode:string,identifier:string):Promise<RegisteredPassenger>{
@@ -63,7 +74,7 @@ export async function verifyReturningPassenger(invitationCode:string,identifier:
 }
 
 export async function raisePassengerSos():Promise<void>{
-  const token=sessionStorage.getItem('wwms.passenger.sessionToken');
+  const token=getPassengerSessionToken();
   if(!token)throw new Error('Your passenger session is missing. Please scan the trip QR code again.');
   const response=await fetch(`${API_BASE_URL}/api/passenger/sos`,{method:'POST',headers:{'X-Passenger-Session':token}});
   if(!response.ok){const problem=await response.json().catch(()=>null) as {message?:string;detail?:string;title?:string}|null;throw new Error(problem?.message??problem?.detail??problem?.title??'Unable to send the SOS alert.');}

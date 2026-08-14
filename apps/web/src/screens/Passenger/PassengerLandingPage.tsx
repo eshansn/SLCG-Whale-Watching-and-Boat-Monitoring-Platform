@@ -1,5 +1,6 @@
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { beginPassengerRegistration } from "./store/passengerStorage";
+import { beginPassengerRegistration, purgeLegacyPassengerData } from "./store/passengerStorage";
 
 const whaleBackground = "/Hero.png";
 const slcgLogo = "/SLCGicon.png";
@@ -7,7 +8,12 @@ const slcgLogo = "/SLCGicon.png";
 function PassengerLandingPage() {
   const navigate = useNavigate();
 
+  useEffect(() => {
+    purgeLegacyPassengerData();
+  }, []);
+
   const handleContinue = (): void => {
+  beginPassengerRegistration();
   navigate("/passenger/verification");
   };
 

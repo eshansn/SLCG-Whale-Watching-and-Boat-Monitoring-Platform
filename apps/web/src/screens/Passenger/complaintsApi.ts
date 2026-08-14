@@ -1,3 +1,5 @@
+import { getPassengerSessionToken } from './store/passengerStorage';
+
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '');
 
 export interface Complaint {
@@ -12,7 +14,7 @@ async function errorMessage(response: Response, fallback: string): Promise<strin
 }
 
 export async function submitComplaint(type: string, message: string, evidence: File | null): Promise<void> {
-  const token = sessionStorage.getItem('wwms.passenger.sessionToken');
+  const token = getPassengerSessionToken();
   if (!token) throw new Error('Your passenger session is missing. Please scan the trip QR code again.');
   const body = new FormData(); body.append('type', type); body.append('message', message);
   if (evidence) body.append('evidence', evidence);

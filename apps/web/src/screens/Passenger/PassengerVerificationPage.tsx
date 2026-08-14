@@ -1,6 +1,10 @@
 import { type FormEvent, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { addPassenger } from "./store/passengerStorage";
+import {
+  activatePassengerTrip,
+  getActivePassengerTripInvitation,
+  storePassengerSession,
+} from "./store/passengerStorage";
 import { verifyReturningPassenger } from "./passengerTripApi";
 
 const whaleBackground = "/Hero.png";
@@ -9,7 +13,7 @@ const slcgLogo = "/SLCGicon.png";
 function PassengerVerificationPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const invitationCode = searchParams.get('trip') ?? sessionStorage.getItem('wwms.passenger.tripInvitation') ?? '';
+  const invitationCode = searchParams.get('trip') ?? getActivePassengerTripInvitation();
 
   const [nicNumber, setNicNumber] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
@@ -47,10 +51,9 @@ function PassengerVerificationPage() {
     if (!invitationCode) { setErrorMessage("Please scan a valid trip QR code first."); return; }
     try {
       setSubmitting(true); setErrorMessage("");
+      activatePassengerTrip(invitationCode);
       const passenger=await verifyReturningPassenger(invitationCode,cleanNic||cleanPhone);
-      sessionStorage.setItem('wwms.passenger.id',passenger.id);
-      sessionStorage.setItem('wwms.passenger.sessionToken',passenger.sessionToken);
-      addPassenger({name:passenger.name,identificationNumber:passenger.identificationNumber,phoneNumber:passenger.phoneNumber,passengerType:passenger.passengerType,gender:passenger.gender,ageCategory:passenger.ageCategory});
+      storePassengerSession(invitationCode, passenger.sessionToken);
       navigate("/passenger/onboarding");
     } catch(error) { setErrorMessage(error instanceof Error?error.message:"Passenger verification failed."); }
     finally { setSubmitting(false); }
