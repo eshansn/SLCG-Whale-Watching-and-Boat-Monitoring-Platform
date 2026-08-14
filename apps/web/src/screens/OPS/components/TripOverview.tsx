@@ -23,21 +23,58 @@ const Info = ({ label, value }: { label: string; value: string }) => (
 
 function useTripEmergency(tripId: string) {
   const { session } = useAuth();
-  const [emergency, setEmergency] = useState<SosAlert | null>(null);
+  const [data, setData] = useState<{
+    requestedTripId: string;
+    emergency: SosAlert | null;
+    error: string;
+  }>({ requestedTripId: "", emergency: null, error: "" });
+  const [loading, setLoading] = useState(true);
+  const [retryVersion, setRetryVersion] = useState(0);
 
   useEffect(() => {
     if (!session) return;
     let active = true;
-    const load = () => void operationsApi.sosAlerts(session.accessToken)
-      .then((items) => { if (active) setEmergency(items.find((item) => item.tripId === tripId) ?? null); })
-      .catch(() => undefined);
+    let requestVersion = 0;
+    const load = () => {
+      const currentRequest = ++requestVersion;
+      void operationsApi.sosAlerts(session.accessToken)
+        .then((items) => {
+          if (!active || currentRequest !== requestVersion) return;
+          setData({
+            requestedTripId: tripId,
+            emergency: items.find((item) => item.tripId === tripId) ?? null,
+            error: "",
+          });
+        })
+        .catch((loadError) => {
+          if (!active || currentRequest !== requestVersion) return;
+          const message = loadError instanceof Error
+            ? loadError.message
+            : "Unable to load emergency information.";
+          setData((current) => current.requestedTripId === tripId
+            ? { ...current, error: message }
+            : { requestedTripId: tripId, emergency: null, error: message });
+        })
+        .finally(() => { if (active && currentRequest === requestVersion) setLoading(false); });
+    };
     load();
     const interval = window.setInterval(load, 5000);
     const disconnect = connectOperations(session.accessToken, load);
     return () => { active = false; window.clearInterval(interval); disconnect(); };
-  }, [session, tripId]);
+  }, [session, tripId, retryVersion]);
 
-  return emergency;
+  const retry = () => {
+    setLoading(true);
+    setRetryVersion((version) => version + 1);
+  };
+
+  const isCurrentTrip = data.requestedTripId === tripId;
+  return {
+    emergency: isCurrentTrip ? data.emergency : null,
+    loading: loading || !isCurrentTrip,
+    error: isCurrentTrip ? data.error : "",
+    retry,
+  };
 }
 
 interface TripData {
@@ -153,7 +190,12 @@ function useTripActions(tripId: string) {
 
 export default function TripOverview({ tripId }: { tripId: string }) {
   const { session } = useAuth();
-  const emergency = useTripEmergency(tripId);
+  const {
+    emergency,
+    loading: emergencyLoading,
+    error: emergencyLoadError,
+    retry: retryEmergency,
+  } = useTripEmergency(tripId);
   const { trip, boat, vessel, passengers, loading, error } = useTripData(tripId);
   const {
     actions,
@@ -226,8 +268,9 @@ export default function TripOverview({ tripId }: { tripId: string }) {
           </Card>
           <Card>
             <h2 className="mb-3 font-bold">Emergencies</h2>
-            <div className="flex justify-between gap-3 text-[10px]"><b>Nature of Emergency</b><span className={emergency ? "text-right text-red-500" : "text-emerald-500"}>{emergency?.natureOfEmergency ?? "None"}</span></div>
+            <div className="flex justify-between gap-3 text-[10px]"><b>Nature of Emergency</b><span className={emergency ? "text-right text-red-500" : emergencyLoadError ? "text-red-500" : emergencyLoading ? "text-slate-400" : "text-emerald-500"}>{emergency?.natureOfEmergency ?? (emergencyLoading ? "Loading…" : emergencyLoadError ? "Unavailable" : "None")}</span></div>
             <div className="mt-2 flex justify-between text-[10px]"><b>Reported Time</b><span>{emergency ? formatActionTime(emergency.raisedAtUtc, "medium") : "–"}</span></div>
+            {emergencyLoadError && <div role="alert" className="mt-2 flex items-center justify-between gap-2 rounded-lg bg-red-50 p-2.5 text-[10px] text-red-700"><span>{emergencyLoadError}</span><button type="button" disabled={emergencyLoading} onClick={retryEmergency} className="shrink-0 font-semibold underline disabled:opacity-50">{emergencyLoading ? "Retrying…" : "Retry"}</button></div>}
             <h3 className="mt-4 font-bold">Actions Taken</h3>
             {actionsLoadError && <div role="alert" className="mt-2 flex items-center justify-between gap-2 rounded-lg bg-red-50 p-2.5 text-[10px] text-red-700"><span>{actionsLoadError}</span><button type="button" disabled={actionsLoading} onClick={retryActions} className="shrink-0 font-semibold underline disabled:opacity-50">{actionsLoading ? "Retrying…" : "Retry"}</button></div>}
             {actions.length ? (
