@@ -101,6 +101,7 @@ function BoatOwnerTripInfoPage() {
   const [transferStatus,setTransferStatus]=useState("");
   const [startingTrip,setStartingTrip]=useState(false);
   const [startError,setStartError]=useState("");
+  const [copyStatus, setCopyStatus] = useState("");
 
   useEffect(() => {
     if (!token || !trip?.id) return;
@@ -197,7 +198,29 @@ function BoatOwnerTripInfoPage() {
   };
 
   const copyInvitation = async (): Promise<void> => {
-    if (invitationUrl) await navigator.clipboard.writeText(invitationUrl);
+    if (!invitationUrl) return;
+
+    try {
+      if (window.isSecureContext && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(invitationUrl);
+        setCopyStatus("Link copied.");
+        return;
+      }
+    } catch {
+      // Fall through to the legacy method for HTTP/LAN access.
+    }
+
+    const textArea = document.createElement("textarea");
+    textArea.value = invitationUrl;
+    textArea.setAttribute("readonly", "");
+    textArea.style.position = "fixed";
+    textArea.style.opacity = "0";
+    document.body.appendChild(textArea);
+    textArea.select();
+    textArea.setSelectionRange(0, invitationUrl.length);
+    const copied = document.execCommand("copy");
+    textArea.remove();
+    setCopyStatus(copied ? "Link copied." : "Unable to copy the link on this browser.");
   };
 
   const downloadQr = (): void => {
@@ -341,9 +364,12 @@ function BoatOwnerTripInfoPage() {
           <div className="justify-self-end text-center">
             {invitationUrl ? <QRCodeSVG id="trip-invitation-qr" value={invitationUrl} size={280} level="H" marginSize={2}
               title={`Passenger invitation for ${trip.vesselName}`} className="aspect-square h-auto w-full max-w-[280px]" /> : <p className="text-sm text-slate-500">QR invitation unavailable for this older trip.</p>}
-            {invitationUrl && <div className="mt-3 flex justify-center gap-2">
-              <button type="button" onClick={() => void copyInvitation()} className="flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold hover:bg-slate-50"><Copy size={15}/>Copy link</button>
+            {invitationUrl && <div className="mt-3 flex flex-col items-center gap-2">
+              <div className="flex justify-center gap-2">
+                <button type="button" onClick={() => void copyInvitation()} className="flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold hover:bg-slate-50"><Copy size={15}/>{copyStatus === "Link copied." ? "Copied" : "Copy link"}</button>
               <button type="button" onClick={downloadQr} className="flex items-center gap-2 rounded-lg bg-[#162d54] px-3 py-2 text-xs font-semibold text-white"><Download size={15}/>Download QR</button>
+              </div>
+              {copyStatus && <p role="status" className={copyStatus === "Link copied." ? "text-xs font-medium text-emerald-700" : "text-xs font-medium text-red-600"}>{copyStatus}</p>}
             </div>}
           </div>
         </section>

@@ -275,6 +275,7 @@ class _ShoreWildlifeTripScreenState extends State<ShoreWildlifeTripScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       WildlifePageHeading(
+                        icon: Icons.sailing_outlined,
                         title: attendance['boatName']?.toString() ?? 'Trip',
                         subtitle:
                             '${attendance['registrationNumber'] ?? ''} · ${formatShoreDate(attendance['scheduledDepartureUtc'])}',
@@ -330,8 +331,7 @@ class _ShoreWildlifeTripScreenState extends State<ShoreWildlifeTripScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Trip Information',
-                style: TextStyle(fontWeight: FontWeight.w600)),
+            _sectionHeader(Icons.info_outline_rounded, 'Trip Information'),
             const SizedBox(height: 16),
             LayoutBuilder(builder: (context, constraints) {
               final items = [
@@ -440,8 +440,19 @@ class _ShoreWildlifeTripScreenState extends State<ShoreWildlifeTripScreen> {
             width: double.infinity,
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              color: shoreInk,
-              borderRadius: BorderRadius.circular(12),
+              gradient: const LinearGradient(
+                colors: [wildlifeForest, Color(0xFF1B6B56)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x26123C32),
+                  blurRadius: 14,
+                  offset: Offset(0, 7),
+                ),
+              ],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -466,8 +477,7 @@ class _ShoreWildlifeTripScreenState extends State<ShoreWildlifeTripScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Monitoring Information',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600)),
+            _sectionHeader(Icons.fact_check_outlined, 'Monitoring Information'),
             const SizedBox(height: 18),
             _field(_ticket, 'Ticket Number', maxLength: 80),
             _field(_tid, 'TID Number', maxLength: 80),
@@ -514,9 +524,9 @@ class _ShoreWildlifeTripScreenState extends State<ShoreWildlifeTripScreen> {
                 child: FilledButton(
                   onPressed: _busy || !_signatureFieldsComplete ? null : _sign,
                   style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFF059669),
+                    backgroundColor: wildlifeGreen,
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8)),
+                        borderRadius: BorderRadius.circular(10)),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
                   child: Text(
@@ -532,9 +542,9 @@ class _ShoreWildlifeTripScreenState extends State<ShoreWildlifeTripScreen> {
                           ? null
                           : _requestSignatures,
                   style: FilledButton.styleFrom(
-                    backgroundColor: shoreInk,
+                    backgroundColor: wildlifeForest,
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8)),
+                        borderRadius: BorderRadius.circular(10)),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
                   child: Text(_busy
@@ -577,9 +587,9 @@ class _ShoreWildlifeTripScreenState extends State<ShoreWildlifeTripScreen> {
                         ? null
                         : () => _approve('Approved'),
                     style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFF059669),
+                      backgroundColor: wildlifeGreen,
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8)),
+                          borderRadius: BorderRadius.circular(10)),
                       padding: const EdgeInsets.symmetric(vertical: 13),
                     ),
                     child: const Text('Approve Trip',
@@ -602,8 +612,9 @@ class _ShoreWildlifeTripScreenState extends State<ShoreWildlifeTripScreen> {
         width: double.infinity,
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          border: Border.all(color: const Color(0xFFE2E8F0)),
-          borderRadius: BorderRadius.circular(12),
+          color: wildlifeCanvas,
+          border: Border.all(color: const Color(0xFFDDE9E4)),
+          borderRadius: BorderRadius.circular(14),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -670,13 +681,37 @@ class _ShoreWildlifeTripScreenState extends State<ShoreWildlifeTripScreen> {
           decoration: InputDecoration(
             labelText: label,
             counterText: '',
-            filled: _recordComplete && !alwaysEnabled,
+            filled: true,
             fillColor: _recordComplete && !alwaysEnabled
                 ? const Color(0xFFF1F5F9)
-                : Colors.white,
-            border: const OutlineInputBorder(),
+                : const Color(0xFFFBFDFC),
+            border: const OutlineInputBorder(
+              borderRadius: BorderRadius.all(Radius.circular(10)),
+              borderSide: BorderSide(color: Color(0xFFDDE9E4)),
+            ),
           ),
         ),
+      );
+
+  Widget _sectionHeader(IconData icon, String title) => Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: wildlifeMint,
+              borderRadius: BorderRadius.circular(11),
+            ),
+            child: Icon(icon, color: wildlifeGreen, size: 20),
+          ),
+          const SizedBox(width: 11),
+          Expanded(
+            child: Text(
+              title,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+            ),
+          ),
+        ],
       );
 }
 
@@ -738,12 +773,12 @@ class WildlifeSignaturePad extends StatelessWidget {
               child: Container(
                 height: 132,
                 decoration: BoxDecoration(
-                  color: Colors.white,
-                  border: Border.all(color: const Color(0xFFCBD5E1)),
-                  borderRadius: BorderRadius.circular(8),
+                  color: const Color(0xFFFBFDFC),
+                  border: Border.all(color: const Color(0xFFC8DDD5)),
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(12),
                   child: LayoutBuilder(
                     builder: (context, constraints) => GestureDetector(
                       behavior: HitTestBehavior.opaque,

@@ -25,6 +25,7 @@ public sealed class WhaleWatchingDbContext(DbContextOptions<WhaleWatchingDbConte
     public DbSet<ComplaintImage> ComplaintImages => Set<ComplaintImage>();
     public DbSet<Trip> Trips => Set<Trip>();
     public DbSet<SosEvent> SosEvents => Set<SosEvent>();
+    public DbSet<SosAction> SosActions => Set<SosAction>();
     public DbSet<TripTransfer> TripTransfers => Set<TripTransfer>();
     public DbSet<TripTransferItem> TripTransferItems => Set<TripTransferItem>();
 
@@ -47,8 +48,9 @@ public sealed class WhaleWatchingDbContext(DbContextOptions<WhaleWatchingDbConte
         boat.Property(x => x.WidthMeters).HasPrecision(8, 2);
         boat.Property(x => x.MaximumSpeedKnots).HasPrecision(6, 2);
         boat.Property(x => x.GpsDeviceId).HasMaxLength(128);
-        boat.HasIndex(x => x.RegistrationNumber).IsUnique();
-        boat.HasIndex(x => x.GpsDeviceId).IsUnique().HasFilter("[GpsDeviceId] IS NOT NULL");
+        boat.HasQueryFilter(x => !x.IsDeleted);
+        boat.HasIndex(x => x.RegistrationNumber).IsUnique().HasFilter("[IsDeleted] = 0");
+        boat.HasIndex(x => x.GpsDeviceId).IsUnique().HasFilter("[GpsDeviceId] IS NOT NULL AND [IsDeleted] = 0");
         boat.HasOne(x => x.Owner).WithMany(x => x.OwnedBoats).HasForeignKey(x => x.OwnerId).OnDelete(DeleteBehavior.Restrict);
 
         var assignment = modelBuilder.Entity<CrewAssignment>();
@@ -142,6 +144,13 @@ public sealed class WhaleWatchingDbContext(DbContextOptions<WhaleWatchingDbConte
         modelBuilder.Entity<Trip>().HasOne(x => x.PassengerVerificationFinalizedByUser).WithMany()
             .HasForeignKey(x => x.PassengerVerificationFinalizedByUserId).OnDelete(DeleteBehavior.Restrict);
         modelBuilder.Entity<SosEvent>().Property(x => x.Message).HasMaxLength(1000).IsRequired();
+        var sosAction = modelBuilder.Entity<SosAction>();
+        sosAction.Property(x => x.Details).HasMaxLength(1000).IsRequired();
+        sosAction.HasIndex(x => new { x.SosEventId, x.TakenAtUtc });
+        sosAction.HasOne(x => x.SosEvent).WithMany(x => x.Actions)
+            .HasForeignKey(x => x.SosEventId).OnDelete(DeleteBehavior.Cascade);
+        sosAction.HasOne(x => x.TakenByUser).WithMany()
+            .HasForeignKey(x => x.TakenByUserId).OnDelete(DeleteBehavior.Restrict);
 
         var transfer = modelBuilder.Entity<TripTransfer>();
         transfer.Property(x => x.Reason).HasMaxLength(100).IsRequired();

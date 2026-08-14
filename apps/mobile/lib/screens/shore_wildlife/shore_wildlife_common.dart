@@ -2,32 +2,61 @@ import 'package:flutter/material.dart';
 
 import '../../widgets/shore_layout.dart';
 
+const wildlifeForest = Color(0xFF123C32);
+const wildlifeGreen = Color(0xFF16866A);
+const wildlifeMint = Color(0xFFE8F6F1);
+const wildlifeCanvas = Color(0xFFF4F8F6);
+
 class WildlifePageHeading extends StatelessWidget {
   const WildlifePageHeading({
     super.key,
     required this.title,
     required this.subtitle,
+    this.icon = Icons.eco_outlined,
   });
 
   final String title;
   final String subtitle;
+  final IconData icon;
 
   @override
-  Widget build(BuildContext context) => Column(
+  Widget build(BuildContext context) => Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: MediaQuery.sizeOf(context).width < 360 ? 26 : 30,
-              fontWeight: FontWeight.w600,
-              color: shoreInk,
+          Container(
+            width: 46,
+            height: 46,
+            decoration: BoxDecoration(
+              color: wildlifeMint,
+              borderRadius: BorderRadius.circular(14),
             ),
+            child: Icon(icon, color: wildlifeGreen, size: 24),
           ),
-          const SizedBox(height: 4),
-          Text(
-            subtitle,
-            style: const TextStyle(fontSize: 14, color: Color(0xFF64748B)),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: MediaQuery.sizeOf(context).width < 360 ? 23 : 27,
+                    height: 1.1,
+                    fontWeight: FontWeight.w700,
+                    color: shoreInk,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  subtitle,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    height: 1.45,
+                    color: Color(0xFF64748B),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       );
@@ -45,12 +74,13 @@ class WildlifeCard extends StatelessWidget {
         padding: padding ?? const EdgeInsets.all(20),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: const Color(0xFFE3ECE8)),
           boxShadow: const [
             BoxShadow(
-              color: Color(0x0D0F172A),
-              blurRadius: 18,
-              offset: Offset(0, 5),
+              color: Color(0x120F2F28),
+              blurRadius: 20,
+              offset: Offset(0, 7),
             ),
           ],
         ),
@@ -65,9 +95,19 @@ class WildlifeStatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (background, foreground) = switch (value) {
-      'Approved' => (const Color(0xFFECFDF5), const Color(0xFF047857)),
-      'Rejected' => (const Color(0xFFFEF2F2), const Color(0xFFB91C1C)),
+    final (background, foreground) = switch (value.toLowerCase()) {
+      'approved' || 'completed' => (
+          const Color(0xFFECFDF5),
+          const Color(0xFF047857)
+        ),
+      'rejected' || 'cancelled' => (
+          const Color(0xFFFEF2F2),
+          const Color(0xFFB91C1C)
+        ),
+      'ongoing' || 'boarding' => (
+          const Color(0xFFEFF6FF),
+          const Color(0xFF1D4ED8)
+        ),
       _ => (const Color(0xFFFFFBEB), const Color(0xFFB45309)),
     };
     return Container(
@@ -76,13 +116,20 @@ class WildlifeStatusBadge extends StatelessWidget {
         color: background,
         borderRadius: BorderRadius.circular(999),
       ),
-      child: Text(
-        value,
-        style: TextStyle(
-          color: foreground,
-          fontSize: 12,
-          fontWeight: FontWeight.w500,
-        ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          CircleAvatar(radius: 3, backgroundColor: foreground),
+          const SizedBox(width: 6),
+          Text(
+            value,
+            style: TextStyle(
+              color: foreground,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -105,10 +152,20 @@ class WildlifeErrorPanel extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.error_outline,
-                  color: Color(0xFFDC2626), size: 40),
-              const SizedBox(height: 10),
-              Text(message, textAlign: TextAlign.center),
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEF2F2),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Icon(Icons.cloud_off_outlined,
+                    color: Color(0xFFDC2626), size: 27),
+              ),
+              const SizedBox(height: 14),
+              Text(message,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Color(0xFF475569))),
               const SizedBox(height: 14),
               OutlinedButton.icon(
                 onPressed: () => retry(),
@@ -129,11 +186,26 @@ class WildlifeEmptyPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) => WildlifeCard(
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 28),
-          child: Text(
-            message,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 14, color: shoreMuted),
+          padding: const EdgeInsets.symmetric(vertical: 26),
+          child: Column(
+            children: [
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: wildlifeMint,
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                child: const Icon(Icons.eco_outlined,
+                    color: wildlifeGreen, size: 29),
+              ),
+              const SizedBox(height: 14),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 14, color: Color(0xFF64748B)),
+              ),
+            ],
           ),
         ),
       );

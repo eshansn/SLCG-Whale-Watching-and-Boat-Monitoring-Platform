@@ -151,6 +151,8 @@ class WwmsApp extends StatelessWidget {
             roles: ['ShoreWildlife'], child: ShoreWildlifeTripScreen()),
         '/shore_wildlife_records': (context) => const AuthGate(
             roles: ['ShoreWildlife'], child: ShoreWildlifeRecordsScreen()),
+        '/shore_wildlife_settings': (context) => const AuthGate(
+            roles: ['ShoreWildlife'], child: ShoreWildlifeSettingsScreen()),
         '/trip-register': (context) => const TripRegistrationScreen(),
       },
     );

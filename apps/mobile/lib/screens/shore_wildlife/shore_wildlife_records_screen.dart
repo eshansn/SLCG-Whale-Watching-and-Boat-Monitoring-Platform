@@ -113,6 +113,7 @@ class _ShoreWildlifeRecordsScreenState
                           title: 'Monitoring Records',
                           subtitle:
                               'View and download finalized attendance snapshots',
+                          icon: Icons.assignment_outlined,
                         ),
                         const SizedBox(height: 24),
                         if (_loading)
@@ -156,6 +157,17 @@ class _ShoreWildlifeRecordsScreenState
               child: Padding(
                 padding: const EdgeInsets.all(18),
                 child: Row(children: [
+                  Container(
+                    width: 46,
+                    height: 46,
+                    decoration: BoxDecoration(
+                      color: wildlifeMint,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: const Icon(Icons.description_outlined,
+                        color: wildlifeGreen),
+                  ),
+                  const SizedBox(width: 13),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -173,14 +185,31 @@ class _ShoreWildlifeRecordsScreenState
                     ),
                   ),
                   const SizedBox(width: 12),
-                  Text(open ? 'Hide' : 'View',
-                      style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                          color: shoreIndigo)),
-                  const SizedBox(width: 4),
-                  Icon(open ? Icons.arrow_drop_up : Icons.arrow_drop_down,
-                      color: shoreIndigo),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      WildlifeStatusBadge(
+                          record['status']?.toString() ?? 'Completed'),
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(open ? 'Hide' : 'View',
+                              style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: wildlifeGreen)),
+                          const SizedBox(width: 2),
+                          Icon(
+                              open
+                                  ? Icons.keyboard_arrow_up_rounded
+                                  : Icons.keyboard_arrow_down_rounded,
+                              size: 18,
+                              color: wildlifeGreen),
+                        ],
+                      ),
+                    ],
+                  ),
                 ]),
               ),
             ),
@@ -274,9 +303,9 @@ class _ShoreWildlifeRecordsScreenState
                       return FilledButton.icon(
                         onPressed: () => _download(record, buttonContext),
                         style: FilledButton.styleFrom(
-                          backgroundColor: shoreInk,
+                          backgroundColor: wildlifeForest,
                           shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8)),
+                              borderRadius: BorderRadius.circular(10)),
                           padding: const EdgeInsets.symmetric(
                               horizontal: 18, vertical: 13),
                         ),
@@ -295,16 +324,27 @@ class _ShoreWildlifeRecordsScreenState
     );
   }
 
-  Widget _info(String label, String value) => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label.toUpperCase(),
-              style: const TextStyle(fontSize: 11, color: shoreMuted)),
-          const SizedBox(height: 4),
-          Text(value,
-              style: const TextStyle(fontWeight: FontWeight.w600),
-              overflow: TextOverflow.visible),
-        ],
+  Widget _info(String label, String value) => Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: wildlifeCanvas,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label.toUpperCase(),
+                style: const TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    color: shoreMuted)),
+            const SizedBox(height: 5),
+            Text(value,
+                style: const TextStyle(fontWeight: FontWeight.w600),
+                overflow: TextOverflow.visible),
+          ],
+        ),
       );
 
   Widget _signature(String label, String? source) {
@@ -313,8 +353,9 @@ class _ShoreWildlifeRecordsScreenState
       width: double.infinity,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-        borderRadius: BorderRadius.circular(8),
+        color: const Color(0xFFFBFDFC),
+        border: Border.all(color: const Color(0xFFDDE9E4)),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

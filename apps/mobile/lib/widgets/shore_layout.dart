@@ -43,16 +43,28 @@ class ShoreLayout extends StatelessWidget {
               ),
         ),
         child: Scaffold(
-          backgroundColor: shoreBackground,
+          backgroundColor:
+              _isWildlife ? const Color(0xFFF4F8F6) : shoreBackground,
           drawer:
               MediaQuery.sizeOf(context).width < 1100 ? _drawer(context) : null,
-          body: SafeArea(
-            top: true,
-            bottom: true,
-            child: Column(children: [
-              Builder(builder: (navContext) => _navbar(navContext)),
-              Expanded(child: child),
-            ]),
+          body: Container(
+            decoration: _isWildlife
+                ? const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [Color(0xFFF8FBFA), Color(0xFFF1F7F4)],
+                    ),
+                  )
+                : null,
+            child: SafeArea(
+              top: true,
+              bottom: true,
+              child: Column(children: [
+                Builder(builder: (navContext) => _navbar(navContext)),
+                Expanded(child: child),
+              ]),
+            ),
           ),
         ),
       );
@@ -60,14 +72,18 @@ class ShoreLayout extends StatelessWidget {
   Widget _navbar(BuildContext context) {
     final wide = MediaQuery.sizeOf(context).width >= 1100;
     return Container(
-      height: 64,
+      height: _isWildlife ? 72 : 64,
       padding: EdgeInsets.symmetric(horizontal: wide ? 32 : 16),
-      decoration: const BoxDecoration(
-          color: Colors.white,
-          border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
-          boxShadow: [
+      decoration: BoxDecoration(
+          color: _isWildlife ? const Color(0xFAFFFFFF) : Colors.white,
+          border: Border(
+              bottom: BorderSide(
+                  color: _isWildlife
+                      ? const Color(0xFFDDE9E4)
+                      : const Color(0xFFE2E8F0))),
+          boxShadow: const [
             BoxShadow(
-                color: Color(0x0D0F172A), blurRadius: 8, offset: Offset(0, 2))
+                color: Color(0x0D0F172A), blurRadius: 10, offset: Offset(0, 2))
           ]),
       child: Row(children: [
         InkWell(
@@ -82,6 +98,9 @@ class ShoreLayout extends StatelessWidget {
             const SizedBox(width: 14),
             _navLink(context, 'Records', '/shore_wildlife_records', 'records',
                 Icons.assignment_outlined),
+            const SizedBox(width: 14),
+            _navLink(context, 'Settings', '/shore_wildlife_settings',
+                'settings', Icons.settings_outlined),
           ] else ...[
             _iconLink(context, Icons.notifications_none, '/shore_notifications',
                 'notifications'),
@@ -132,7 +151,7 @@ class ShoreLayout extends StatelessWidget {
 
   Widget _brand() => _isWildlife
       ? Image.asset('assets/images/wildlife_authority.png',
-          height: 40,
+          height: 46,
           errorBuilder: (_, __, ___) =>
               const Icon(Icons.eco_outlined, color: shoreInk, size: 34))
       : Image.asset('assets/images/slcg_logo.png',
@@ -166,22 +185,53 @@ class ShoreLayout extends StatelessWidget {
               size: 21));
 
   Drawer _drawer(BuildContext context) => Drawer(
-          child: SafeArea(
-              child: ListView(padding: const EdgeInsets.all(16), children: [
-        Align(alignment: Alignment.centerLeft, child: _brand()),
+      width: _isWildlife ? 310 : null,
+      backgroundColor: _isWildlife ? const Color(0xFFF8FBFA) : null,
+      surfaceTintColor: _isWildlife ? Colors.transparent : null,
+      child: SafeArea(
+          child: ListView(padding: const EdgeInsets.all(16), children: [
+        Container(
+          padding: EdgeInsets.all(_isWildlife ? 12 : 0),
+          decoration: _isWildlife
+              ? BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFFE3ECE8)),
+                )
+              : null,
+          child: Align(alignment: Alignment.centerLeft, child: _brand()),
+        ),
         const Divider(height: 36),
         if (_isWildlife) ...[
           ListTile(
               leading: const Icon(Icons.directions_boat_outlined),
               title: const Text('Trips'),
               selected: active == 'trips',
+              selectedColor: const Color(0xFF16866A),
+              selectedTileColor: const Color(0xFFE8F6F1),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
               onTap: () => Navigator.pushNamed(context, _tripsRoute)),
           ListTile(
               leading: const Icon(Icons.assignment_outlined),
               title: const Text('Records'),
               selected: active == 'records',
+              selectedColor: const Color(0xFF16866A),
+              selectedTileColor: const Color(0xFFE8F6F1),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
               onTap: () =>
                   Navigator.pushNamed(context, '/shore_wildlife_records')),
+          ListTile(
+              leading: const Icon(Icons.settings_outlined),
+              title: const Text('Settings'),
+              selected: active == 'settings',
+              selectedColor: const Color(0xFF16866A),
+              selectedTileColor: const Color(0xFFE8F6F1),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
+              onTap: () =>
+                  Navigator.pushNamed(context, '/shore_wildlife_settings')),
         ] else ...[
           ListTile(
               leading: const Icon(Icons.home_outlined),

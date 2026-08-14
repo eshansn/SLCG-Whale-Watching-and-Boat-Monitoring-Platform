@@ -11,7 +11,9 @@ export interface Trip { id:string; boatId:string; vesselName:string; registratio
 export interface DirectoryOwner { id:string; displayName:string; email:string; phoneNumber?:string; nicNumber?:string; bio?:string }
 export interface DirectoryCrew { id:string; displayName:string; email:string; phoneNumber?:string; position:string; boatId?:string; ownerId:string; nicNumber?:string; certified:boolean }
 export interface OperationsDirectory { owners:DirectoryOwner[]; crew:DirectoryCrew[] }
+export interface AdminCrew { id:string; displayName:string; email:string; phoneNumber?:string; position:string; nicNumber?:string; certified:boolean; ownerId?:string; boatId?:string }
 export interface SosAlert { id:string; tripId:string; vesselName:string; registrationNumber:string; location:string; passengersOnboard:number; natureOfEmergency:string; raisedAtUtc:string }
+export interface SosAction { id:string; sosEventId:string; takenByName:string; details:string; takenAtUtc:string }
 export interface TransferBoat { id:string; name:string; registrationNumber:string; status:string; ownerId:string; ownerName:string }
 export interface TransferTrip { id:string; boatName:string; registrationNumber:string; ownerName:string; scheduledDepartureUtc:string; passengerCount:number; maximumCapacity:number; crewCount:number; status:string }
 export interface TransferPassenger { id:string; name:string; identificationNumber:string; phoneNumber:string }
@@ -53,6 +55,7 @@ export const operationsApi = {
   tripPassengers:(token:string,tripId:string)=>request<TripPassenger[]>(`/api/operations/trips/${tripId}/passengers?updated=${Date.now()}`,token,{cache:'no-store'}),
   createTrip:(token:string,boatId:string,scheduledDepartureUtc:string,crewUserIds:string[])=>request<CreateTripResult>('/api/operations/trips',token,{method:'POST',body:JSON.stringify({boatId,scheduledDepartureUtc,route:'To be confirmed',passengerCount:0,crewUserIds})}),
   directory:(token:string)=>request<OperationsDirectory>('/api/operations/directory',token),
+  adminCrew:(token:string)=>request<AdminCrew[]>('/api/admin/crew',token),
   ownerCrew:(token:string)=>request<OwnerCrew[]>('/api/operations/owner/crew',token),
   searchOwnerCrew:(token:string,query:string)=>request<CrewSuggestion[]>(`/api/operations/owner/crew/search?query=${encodeURIComponent(query)}`,token),
   addOwnerCrew:(token:string,email:string)=>request<OwnerCrew>('/api/operations/owner/crew',token,{method:'POST',body:JSON.stringify({email})}),
@@ -60,9 +63,12 @@ export const operationsApi = {
   vesselMap:(token:string)=>request<VesselMapRecord[]>('/api/operations/vessel-map',token),
   sosAlerts:(token:string)=>request<SosAlert[]>('/api/operations/sos',token),
   raiseCrewSos:(token:string,tripId:string)=>request<{id:string;raisedAtUtc:string}>(`/api/operations/trips/${tripId}/sos`,token,{method:'POST'}),
+  sosActions:(token:string,tripId:string)=>request<SosAction[]>(`/api/operations/trips/${tripId}/sos-actions?updated=${Date.now()}`,token,{cache:'no-store'}),
+  addSosAction:(token:string,tripId:string,details:string)=>request<SosAction>(`/api/operations/trips/${tripId}/sos-actions`,token,{method:'POST',body:JSON.stringify({details})}),
   approve:(token:string,id:string,approval:'Approved'|'Rejected',notes?:string)=>request<void>(`/api/operations/trips/${id}/shore-approval`,token,{method:'PATCH',body:JSON.stringify({approval,notes})}),
   status:(token:string,id:string,status:string)=>request<void>(`/api/operations/trips/${id}/status`,token,{method:'PATCH',body:JSON.stringify({status})}),
   approveBoat:(token:string,id:string,approval:'Approved'|'Rejected',notes?:string)=>request<void>(`/api/operations/boats/${id}/approval`,token,{method:'PATCH',body:JSON.stringify({approval,notes})}),
+  deleteBoat:(token:string,id:string)=>request<void>(`/api/operations/boats/${id}`,token,{method:'DELETE'}),
   approveCrew:(token:string,id:string,approval:'Approved'|'Rejected',notes?:string)=>request<void>(`/api/operations/crew/${id}/approval`,token,{method:'PATCH',body:JSON.stringify({approval,notes})}),
   transferOptions:(token:string,sourceTripId:string)=>request<TransferOptions>(`/api/operations/transfers/source/${sourceTripId}`,token),
   searchTransferBoats:(token:string,sourceTripId:string,query:string)=>request<TransferBoat[]>(`/api/operations/transfers/destination-boats?sourceTripId=${encodeURIComponent(sourceTripId)}&query=${encodeURIComponent(query)}`,token),

@@ -20,6 +20,7 @@ public sealed class Boat
     public string? GpsDeviceId { get; set; }
     public ApprovalStatus Approval { get; set; }
     public ApprovalStatus WildlifeApproval { get; set; }
+    public bool IsDeleted { get; set; }
     public string? ImageUrl { get; set; }
     public ICollection<Trip> Trips { get; set; } = [];
     public ICollection<CrewAssignment> CrewAssignments { get; set; } = [];
@@ -104,4 +105,16 @@ public sealed class SosEvent
     public string Message { get; set; } = string.Empty;
     public DateTimeOffset RaisedAtUtc { get; set; }
     public DateTimeOffset? ResolvedAtUtc { get; set; }
+    public ICollection<SosAction> Actions { get; set; } = [];
+}
+
+public sealed class SosAction
+{
+    public Guid Id { get; set; }
+    public Guid SosEventId { get; set; }
+    public SosEvent SosEvent { get; set; } = null!;
+    public Guid TakenByUserId { get; set; }
+    public ApplicationUser TakenByUser { get; set; } = null!;
+    public string Details { get; set; } = string.Empty;
+    public DateTimeOffset TakenAtUtc { get; set; }
 }

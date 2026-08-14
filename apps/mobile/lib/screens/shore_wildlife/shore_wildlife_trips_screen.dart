@@ -93,6 +93,7 @@ class _ShoreWildlifeTripsScreenState extends State<ShoreWildlifeTripsScreen> {
                           title: 'Trips',
                           subtitle:
                               'Monitor attendance and complete Wildlife Shore approval',
+                          icon: Icons.sailing_outlined,
                         ),
                         const SizedBox(height: 24),
                         WildlifeCard(
@@ -100,7 +101,7 @@ class _ShoreWildlifeTripsScreenState extends State<ShoreWildlifeTripsScreen> {
                           child: Column(
                             children: [
                               Padding(
-                                padding: const EdgeInsets.all(18),
+                                padding: const EdgeInsets.all(20),
                                 child: _filters(),
                               ),
                               const Divider(
@@ -124,7 +125,7 @@ class _ShoreWildlifeTripsScreenState extends State<ShoreWildlifeTripsScreen> {
                                 )
                               else
                                 Padding(
-                                  padding: const EdgeInsets.all(14),
+                                  padding: const EdgeInsets.all(16),
                                   child: Column(
                                     children:
                                         _visibleTrips.map(_tripCard).toList(),
@@ -153,11 +154,16 @@ class _ShoreWildlifeTripsScreenState extends State<ShoreWildlifeTripsScreen> {
         final sort = DropdownButtonFormField<String>(
           initialValue: _sort,
           isExpanded: true,
+          borderRadius: BorderRadius.circular(14),
           decoration: const InputDecoration(
             isDense: true,
             filled: true,
-            fillColor: Colors.white,
-            border: OutlineInputBorder(),
+            fillColor: wildlifeCanvas,
+            contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.all(Radius.circular(12)),
+              borderSide: BorderSide(color: Color(0xFFDDE9E4)),
+            ),
           ),
           items: const [
             DropdownMenuItem(value: 'newest', child: Text('Newest first')),
@@ -185,11 +191,11 @@ class _ShoreWildlifeTripsScreenState extends State<ShoreWildlifeTripsScreen> {
         margin: const EdgeInsets.only(bottom: 12),
         decoration: BoxDecoration(
           color: Colors.white,
-          border: Border.all(color: const Color(0xFFE2E8F0)),
-          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: const Color(0xFFDDE9E4)),
+          borderRadius: BorderRadius.circular(16),
         ),
         child: InkWell(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(16),
           onTap: () => Navigator.pushNamed(
             context,
             '/shore_wildlife_trip',
@@ -200,9 +206,19 @@ class _ShoreWildlifeTripsScreenState extends State<ShoreWildlifeTripsScreen> {
             child:
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const CircleAvatar(
-                  backgroundColor: Color(0xFFEEF2FF),
-                  child: Icon(Icons.directions_boat, color: shoreIndigo),
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFE8F6F1), Color(0xFFD9EEE7)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: const Icon(Icons.directions_boat_outlined,
+                      color: wildlifeGreen),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -230,8 +246,9 @@ class _ShoreWildlifeTripsScreenState extends State<ShoreWildlifeTripsScreen> {
                     arguments: Map<String, dynamic>.from(trip),
                   ),
                   style: IconButton.styleFrom(
-                    foregroundColor: shoreIndigo,
-                    side: const BorderSide(color: Color(0xFFC7D2FE)),
+                    foregroundColor: wildlifeGreen,
+                    backgroundColor: wildlifeMint,
+                    side: const BorderSide(color: Color(0xFFCBE5DB)),
                   ),
                   icon: const Icon(Icons.visibility_outlined, size: 18),
                 ),
@@ -254,9 +271,12 @@ class _ShoreWildlifeTripsScreenState extends State<ShoreWildlifeTripsScreen> {
         padding: const EdgeInsets.only(top: 5),
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           SizedBox(
-            width: 78,
+            width: 86,
             child: Text(label,
-                style: const TextStyle(fontSize: 12, color: shoreMuted)),
+                style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: shoreMuted)),
           ),
           Expanded(
             child: Text(value?.toString() ?? '—',

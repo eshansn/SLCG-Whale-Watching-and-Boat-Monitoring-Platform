@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { AnimatePresence, motion } from 'framer-motion';
+import { jsPDF } from 'jspdf';
 import { useAuth } from '../../auth/useAuth';
 import { wildlifeApi, watchAttendance, type Attendance, type MonitoringRecord, type WildlifeTrip } from './shoreWildlifeApi';
-import { Eye } from 'lucide-react';
+import { ChevronDown, ChevronUp, Eye } from 'lucide-react';
 
 const formatDate=(v:string)=>new Intl.DateTimeFormat('en-LK',{dateStyle:'medium',timeStyle:'short'}).format(new Date(v));
 const Shell=({title,sub,children}:{title:string;sub:string;children:React.ReactNode})=><main className="mx-auto max-w-7xl px-4 py-8 sm:px-6"><h1 className="text-3xl font-semibold text-[#14223d]">{title}</h1><p className="mt-1 text-sm text-slate-500">{sub}</p><div className="mt-7">{children}</div></main>;
@@ -33,5 +35,260 @@ export function WildlifeTripDetails(){
 function SignaturePad({label,onChange}:{label:string;onChange:(v:string)=>void}){const ref=useRef<HTMLCanvasElement>(null);const[drawing,setDrawing]=useState(false);const[hasInk,setHasInk]=useState(false);const pos=(e:PointerEvent<HTMLCanvasElement>)=>{const c=ref.current!,r=c.getBoundingClientRect();return{x:(e.clientX-r.left)*c.width/r.width,y:(e.clientY-r.top)*c.height/r.height}};const start=(e:PointerEvent<HTMLCanvasElement>)=>{const c=ref.current!,p=pos(e),x=c.getContext('2d')!;x.beginPath();x.moveTo(p.x,p.y);setDrawing(true);e.currentTarget.setPointerCapture(e.pointerId)};const move=(e:PointerEvent<HTMLCanvasElement>)=>{if(!drawing)return;const c=ref.current!,p=pos(e),x=c.getContext('2d')!;x.lineWidth=3;x.lineCap='round';x.strokeStyle='#14223d';x.lineTo(p.x,p.y);x.stroke();setHasInk(true);onChange(c.toDataURL('image/png'))};const clear=()=>{ref.current?.getContext('2d')?.clearRect(0,0,700,180);setHasInk(false);onChange('')};return <div><div className="mb-2 flex justify-between"><label className="text-sm font-medium">{label}</label><button onClick={clear} className="text-xs text-indigo-700">Clear</button></div><canvas ref={ref} width="700" height="180" onPointerDown={start} onPointerMove={move} onPointerUp={()=>setDrawing(false)} onPointerCancel={()=>setDrawing(false)} className={`h-32 w-full touch-none rounded-lg border bg-white ${hasInk?'border-emerald-400':'border-slate-300'}`}/></div>}
 function SignatureSection({record,token,done}:{record:MonitoringRecord;token:string;done:(r:MonitoringRecord)=>void}){const[harbour,setHarbour]=useState('');const[sigs,setSigs]=useState({monitoringOfficerSignature:'',supervisorSignature:'',harbourOfficerSignature:''});const[error,setError]=useState('');const[busy,setBusy]=useState(false);const submit=async()=>{setBusy(true);setError('');try{done(await wildlifeApi.sign(token,record.id,{harbourOfficerName:harbour,...sigs}))}catch(e){setError(e instanceof Error?e.message:'Signing failed')}finally{setBusy(false)}};return <div className="mt-7 space-y-5 border-t pt-6"><h3 className="font-semibold">Required Signatures</h3><SignaturePad label={`Monitoring Officer — ${record.monitoringOfficer}`} onChange={v=>setSigs(x=>({...x,monitoringOfficerSignature:v}))}/><SignaturePad label={`Supervisor — ${record.supervisor}`} onChange={v=>setSigs(x=>({...x,supervisorSignature:v}))}/><input value={harbour} onChange={e=>setHarbour(e.target.value)} placeholder="Harbour Officer name" maxLength={160} className="w-full rounded-lg border px-3 py-2.5"/><SignaturePad label="Harbour Officer" onChange={v=>setSigs(x=>({...x,harbourOfficerSignature:v}))}/>{error&&<p className="text-sm text-red-600">{error}</p>}<button disabled={busy||!harbour.trim()||Object.values(sigs).some(v=>!v)} onClick={submit} className="w-full rounded-lg bg-emerald-600 py-3 font-semibold text-white disabled:opacity-40">{busy?'Saving signatures…':'Confirm All Signatures'}</button></div>}
 
-export function WildlifeRecords(){const{session}=useAuth();const[rows,setRows]=useState<MonitoringRecord[]>([]);const[open,setOpen]=useState<string>();useEffect(()=>{if(session)wildlifeApi.records(session.accessToken).then(setRows)},[session]);const download=(r:MonitoringRecord)=>{const safe={...r,monitoringOfficerSignature:'[signature stored]',supervisorSignature:'[signature stored]',harbourOfficerSignature:'[signature stored]'};const blob=new Blob([JSON.stringify(safe,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`wildlife-monitoring-${r.ticketNumber}.json`;a.click();URL.revokeObjectURL(url)};return <Shell title="Monitoring Records" sub="View and download finalized attendance snapshots"><div className="space-y-3">{rows.map(r=><section key={r.id} className="rounded-xl bg-white shadow-sm"><button onClick={()=>setOpen(open===r.id?undefined:r.id)} className="grid w-full grid-cols-[1fr_auto] items-center gap-4 p-5 text-left"><div><b>{r.ticketNumber}</b><p className="text-xs text-slate-500">Trip {r.tripId.slice(0,8)} · {r.totalPresent} present · {formatDate(r.createdAtUtc)}</p></div><span className="text-indigo-700">{open===r.id?'Hide':'View'} ▾</span></button>{open===r.id&&<div className="border-t p-5"><dl className="grid gap-4 text-sm sm:grid-cols-3"><Info l="TID" v={r.tidNumber}/><Info l="Monitoring Officer" v={r.monitoringOfficer}/><Info l="Supervisor" v={r.supervisor}/><Info l="Harbour Officer" v={r.harbourOfficerName??'—'}/><Info l="Local snapshot" v={String(r.local.total)}/><Info l="Foreign snapshot" v={String(r.foreign.total)}/></dl><div className="mt-5 grid gap-3 sm:grid-cols-3">{[[r.monitoringOfficerSignature,'Monitoring Officer'],[r.supervisorSignature,'Supervisor'],[r.harbourOfficerSignature,'Harbour Officer']].map(([src,label])=><div key={label} className="rounded-lg border p-3"><p className="text-xs font-medium">{label}</p>{src?<img src={src} alt={`${label} signature`} className="mt-2 h-20 w-full object-contain"/>:<p className="mt-2 text-xs text-slate-400">Not signed</p>}</div>)}</div><button onClick={()=>download(r)} className="mt-5 rounded-lg bg-[#14223d] px-5 py-2.5 text-sm font-semibold text-white">Download Record</button></div>}</section>)}</div></Shell>}
+async function loadImageAsDataUrl(url: string) {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`Unable to load image: ${response.status}`);
+  const blob = await response.blob();
+  return await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(blob);
+  });
+}
+
+async function downloadWildlifeRecordPdf(record: MonitoringRecord) {
+  const ownerPassword = Array.from(crypto.getRandomValues(new Uint32Array(4)))
+    .map((value) => value.toString(16))
+    .join('');
+  const pdf = new jsPDF({
+    unit: 'mm',
+    format: 'a4',
+    compress: true,
+    encryption: {
+      userPassword: '',
+      ownerPassword,
+      userPermissions: ['print'],
+    },
+  });
+
+  pdf.setProperties({
+    title: `Wildlife Monitoring Record ${record.ticketNumber}`,
+    subject: 'WWMS Wildlife Shore monitoring record',
+    author: 'Whale Watching and Boat Monitoring System',
+    creator: 'WWMS Wildlife Shore Portal',
+  });
+  pdf.setFillColor(18, 60, 50);
+  pdf.rect(0, 0, 210, 34, 'F');
+  try {
+    const wildlifeLogo = await loadImageAsDataUrl('/WildlifeAuthority.png');
+    pdf.addImage(wildlifeLogo, 'PNG', 121, 5.5, 73, 21.7, undefined, 'FAST');
+  } catch {
+    // Keep PDF generation available if the branding asset cannot be loaded.
+  }
+  pdf.setTextColor(255, 255, 255);
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(18);
+  pdf.text('Wildlife Monitoring Record', 16, 15);
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(9);
+  pdf.text(`Ticket ${record.ticketNumber}`, 16, 23);
+  pdf.text(`Generated ${new Date().toLocaleString('en-LK')}`, 16, 28);
+
+  const value = (input: unknown) => {
+    const text = input?.toString().trim();
+    return text ? text : '-';
+  };
+  const field = (
+    label: string,
+    fieldValue: unknown,
+    x: number,
+    y: number,
+    width = 82,
+  ) => {
+    pdf.setTextColor(100, 116, 139);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(7.5);
+    pdf.text(label.toUpperCase(), x, y);
+    pdf.setTextColor(20, 34, 61);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(10);
+    pdf.text(pdf.splitTextToSize(value(fieldValue), width), x, y + 5);
+  };
+
+  field('Trip reference', record.tripId, 16, 45);
+  field('Status', record.status, 112, 45);
+  field('TID Number', record.tidNumber, 16, 62);
+  field('Created', formatDate(record.createdAtUtc), 112, 62);
+  field('Monitoring Officer', record.monitoringOfficer, 16, 79);
+  field('Supervisor', record.supervisor, 112, 79);
+  field('Harbour Officer', record.harbourOfficerName, 16, 96);
+  field(
+    'Completed',
+    record.completedAtUtc ? formatDate(record.completedAtUtc) : '-',
+    112,
+    96,
+  );
+
+  pdf.setFillColor(232, 246, 241);
+  pdf.roundedRect(16, 113, 178, 27, 3, 3, 'F');
+  pdf.setTextColor(18, 60, 50);
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(10);
+  pdf.text('ATTENDANCE SNAPSHOT', 22, 121);
+  pdf.setFontSize(9);
+  pdf.text(`Local: ${record.local.total}`, 22, 130);
+  pdf.text(`Foreign: ${record.foreign.total}`, 79, 130);
+  pdf.setFontSize(14);
+  pdf.text(`Total Present: ${record.totalPresent}`, 136, 130);
+
+  const signatures: Array<[string, string | undefined]> = [
+    ['Monitoring Officer', record.monitoringOfficerSignature],
+    ['Supervisor', record.supervisorSignature],
+    ['Harbour Officer', record.harbourOfficerSignature],
+  ];
+  pdf.setTextColor(20, 34, 61);
+  pdf.setFontSize(10);
+  pdf.text('SIGNATURES', 16, 153);
+  signatures.forEach(([label, source], index) => {
+    const x = 16 + index * 61;
+    pdf.setDrawColor(203, 224, 216);
+    pdf.roundedRect(x, 158, 56, 35, 2, 2, 'S');
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(7.5);
+    pdf.text(label, x + 3, 164);
+    if (source) {
+      try {
+        const format = source.startsWith('data:image/jpeg') ? 'JPEG' : 'PNG';
+        pdf.addImage(source, format, x + 3, 167, 50, 22, undefined, 'FAST');
+      } catch {
+        pdf.setFont('helvetica', 'normal');
+        pdf.text('Signature unavailable', x + 3, 178);
+      }
+    } else {
+      pdf.setFont('helvetica', 'normal');
+      pdf.text('Not signed', x + 3, 178);
+    }
+  });
+
+  pdf.setFillColor(244, 248, 246);
+  pdf.roundedRect(16, 207, 178, 26, 3, 3, 'F');
+  pdf.setTextColor(71, 85, 105);
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(8.5);
+  pdf.text(
+    pdf.splitTextToSize(
+      'This is a flattened, read-only export of the finalized WWMS Wildlife Shore monitoring record. The PDF contains no editable form fields.',
+      166,
+    ),
+    22,
+    217,
+  );
+  pdf.setFontSize(7.5);
+  pdf.text(`Record ID: ${record.id}`, 16, 282);
+  pdf.text('WWMS Wildlife Shore Portal', 194, 282, { align: 'right' });
+
+  const safeTicket = record.ticketNumber.replace(/[<>:"/\\|?*]/g, '-');
+  pdf.save(`wildlife-monitoring-${safeTicket}.pdf`);
+}
+
+export function WildlifeRecords() {
+  const { session } = useAuth();
+  const [rows, setRows] = useState<MonitoringRecord[]>([]);
+  const [open, setOpen] = useState<string>();
+
+  useEffect(() => {
+    if (session) wildlifeApi.records(session.accessToken).then(setRows);
+  }, [session]);
+
+  return (
+    <Shell
+      title="Monitoring Records"
+      sub="View and download finalized attendance snapshots"
+    >
+      <div className="space-y-3">
+        {rows.map((record) => {
+          const expanded = open === record.id;
+          return (
+            <section key={record.id} className="rounded-xl bg-white shadow-sm">
+              <button
+                type="button"
+                aria-expanded={expanded}
+                onClick={() => setOpen(expanded ? undefined : record.id)}
+                className="grid w-full grid-cols-[1fr_auto] items-center gap-4 p-5 text-left"
+              >
+                <div>
+                  <b>{record.ticketNumber}</b>
+                  <p className="text-xs text-slate-500">
+                    Trip {record.tripId.slice(0, 8)} · {record.totalPresent}{' '}
+                    present · {formatDate(record.createdAtUtc)}
+                  </p>
+                </div>
+                <span className="flex items-center gap-1.5 text-indigo-700">
+                  {expanded ? 'Hide' : 'View'}
+                  {expanded ? (
+                    <ChevronUp size={18} aria-hidden="true" />
+                  ) : (
+                    <ChevronDown size={18} aria-hidden="true" />
+                  )}
+                </span>
+              </button>
+              <AnimatePresence initial={false}>
+                {expanded && (
+                  <motion.div
+                    key="record-details"
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{
+                      height: { duration: 0.32, ease: [0.22, 1, 0.36, 1] },
+                      opacity: { duration: 0.2 },
+                    }}
+                    className="overflow-hidden"
+                  >
+                    <div className="border-t p-5">
+                  <dl className="grid gap-4 text-sm sm:grid-cols-3">
+                    <Info l="TID" v={record.tidNumber} />
+                    <Info l="Monitoring Officer" v={record.monitoringOfficer} />
+                    <Info l="Supervisor" v={record.supervisor} />
+                    <Info
+                      l="Harbour Officer"
+                      v={record.harbourOfficerName ?? '—'}
+                    />
+                    <Info l="Local snapshot" v={String(record.local.total)} />
+                    <Info
+                      l="Foreign snapshot"
+                      v={String(record.foreign.total)}
+                    />
+                  </dl>
+                  <div className="mt-5 grid gap-3 sm:grid-cols-3">
+                    {[
+                      [record.monitoringOfficerSignature, 'Monitoring Officer'],
+                      [record.supervisorSignature, 'Supervisor'],
+                      [record.harbourOfficerSignature, 'Harbour Officer'],
+                    ].map(([source, label]) => (
+                      <div key={label} className="rounded-lg border p-3">
+                        <p className="text-xs font-medium">{label}</p>
+                        {source ? (
+                          <img
+                            src={source}
+                            alt={`${label} signature`}
+                            className="mt-2 h-20 w-full object-contain"
+                          />
+                        ) : (
+                          <p className="mt-2 text-xs text-slate-400">
+                            Not signed
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => void downloadWildlifeRecordPdf(record)}
+                    className="mt-5 rounded-lg bg-[#14223d] px-5 py-2.5 text-sm font-semibold text-white"
+                  >
+                    Download Record
+                  </button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </section>
+          );
+        })}
+      </div>
+    </Shell>
+  );
+}
 function Info({l,v}:{l:string;v:string}){return <div><dt className="text-xs uppercase text-slate-400">{l}</dt><dd className="mt-1 break-words font-semibold">{v}</dd></div>}

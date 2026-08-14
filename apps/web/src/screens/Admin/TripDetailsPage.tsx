@@ -1,3 +1,3 @@
 import { useParams } from "react-router-dom";
 import TripOverview from "../OPS/components/TripOverview";
-export default function AdminTripDetailsPage(){const{tripId="1"}=useParams();return <div className="admin-trip-readonly min-h-[calc(100vh-64px)] bg-[#eeeeee] font-[Poppins] text-[#14223d]"><TripOverview tripId={tripId}/><section className="sr-only" aria-label="Emergency response log"><h2>Previous responses</h2><p>09:04 AM, OPS Room: Vessel contacted and captain confirmed a passenger health issue.</p><p>09:08 AM, Coast Guard Medical Unit: First-aid guidance relayed to the vessel.</p><p>09:15 AM, OPS Room: Passenger stable; vessel remains under monitoring.</p></section></div>}
+export default function AdminTripDetailsPage(){const{tripId="1"}=useParams();return <div className="admin-trip-readonly min-h-[calc(100vh-64px)] bg-[#eeeeee] font-[Poppins] text-[#14223d]"><TripOverview tripId={tripId}/></div>}

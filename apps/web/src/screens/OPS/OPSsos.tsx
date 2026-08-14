@@ -3,6 +3,7 @@ import { Icon } from "../../components/ui/icon";
 import Navbar from "./components/Navbar";
 import { useAuth } from "../../auth/useAuth";
 import { connectOperations, operationsApi } from "../../operations/operationsApi";
+import { useNavigate } from "react-router-dom";
 
 type SortOption =
   | "vessel-asc"
@@ -14,6 +15,7 @@ type SortOption =
 
 interface EmergencyAlert {
   id: string;
+  tripId: string;
   vesselName: string;
   registrationNumber: string;
   location: string;
@@ -58,6 +60,7 @@ declare global {
 const ITEMS_PER_PAGE = 4;
 
 export default function OPSSOS() {
+  const navigate = useNavigate();
   const {session}=useAuth();
   const [alerts,setAlerts] = useState<EmergencyAlert[]>([]);
   const [searchValue, setSearchValue] = useState("");
@@ -106,14 +109,8 @@ export default function OPSSOS() {
   }, [alerts, searchValue, sortOption]);
 
   const totalPages = Math.max(1, Math.ceil(filteredAndSortedAlerts.length / ITEMS_PER_PAGE));
-
-  useEffect(() => {
-    if (currentPage > totalPages) {
-      setCurrentPage(totalPages);
-    }
-  }, [currentPage, totalPages]);
-
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const displayedPage = Math.min(currentPage, totalPages);
+  const startIndex = (displayedPage - 1) * ITEMS_PER_PAGE;
   const visibleAlerts = filteredAndSortedAlerts.slice(startIndex, startIndex + ITEMS_PER_PAGE);
 
   const handleSearchChange = (event: ChangeEvent<HTMLInputElement>): void => {
@@ -159,13 +156,13 @@ export default function OPSSOS() {
     if (totalPages <= 5) {
       return Array.from({ length: totalPages }, (_, index) => index + 1);
     }
-    if (currentPage <= 3) {
+    if (displayedPage <= 3) {
       return [1, 2, 3, 4, "...", totalPages];
     }
-    if (currentPage >= totalPages - 2) {
+    if (displayedPage >= totalPages - 2) {
       return [1, "...", totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
     }
-    return [1, "...", currentPage - 1, currentPage, currentPage + 1, "...", totalPages];
+    return [1, "...", displayedPage - 1, displayedPage, displayedPage + 1, "...", totalPages];
   };
 
   return (
@@ -245,6 +242,8 @@ export default function OPSSOS() {
                       <div className="flex items-center justify-center">
                         <button
                           type="button"
+                          onClick={() => navigate(`/ops/trip-info/${alert.tripId}`)}
+                          aria-label={`Open SOS trip information for ${alert.vesselName}`}
                           className="inline-flex items-center gap-2 rounded-full bg-[#FF0000] px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#e60000]"
                         >
                           <span>SOS</span>
@@ -272,8 +271,8 @@ export default function OPSSOS() {
             <div className="flex items-center justify-end gap-3">
               <button
                 type="button"
-                disabled={currentPage === 1}
-                onClick={() => setCurrentPage((page) => Math.max(page - 1, 1))}
+                disabled={displayedPage === 1}
+                onClick={() => setCurrentPage(Math.max(displayedPage - 1, 1))}
                 className="flex h-9 w-9 items-center justify-center rounded-md bg-[#F4F5F7] disabled:opacity-40"
               >
                 ‹
@@ -290,7 +289,7 @@ export default function OPSSOS() {
                     type="button"
                     onClick={() => setCurrentPage(item as number)}
                     className={`flex h-9 w-9 items-center justify-center rounded-md text-sm ${
-                      currentPage === item
+                      displayedPage === item
                         ? "bg-[#14223d] font-semibold text-white"
                         : "bg-[#F4F5F7] text-slate-600"
                     }`}
@@ -302,8 +301,8 @@ export default function OPSSOS() {
 
               <button
                 type="button"
-                disabled={currentPage === totalPages}
-                onClick={() => setCurrentPage((page) => Math.min(page + 1, totalPages))}
+                disabled={displayedPage === totalPages}
+                onClick={() => setCurrentPage(Math.min(displayedPage + 1, totalPages))}
                 className="flex h-9 w-9 items-center justify-center rounded-md bg-[#F4F5F7] disabled:opacity-40"
               >
                 ›

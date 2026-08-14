@@ -365,3 +365,122 @@ section {
 .wildlife-portal main > div:first-child > div:last-child:has(> button) {
   display: none;
 }
+
+/* Wildlife Shore uses the same forest palette as its mobile counterpart. */
+@keyframes shore-wildlife-gradient-drift {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+.shore-wildlife-portal {
+  background:
+    radial-gradient(circle at 8% 0%, rgb(22 134 106 / 0.08), transparent 30rem),
+    linear-gradient(180deg, #f8fbfa 0%, #f1f7f4 100%);
+}
+
+.shore-wildlife-portal > header {
+  border-color: #dbe9e3;
+  background: rgb(255 255 255 / 0.9);
+  box-shadow: 0 8px 28px rgb(18 60 50 / 0.07);
+}
+
+.shore-wildlife-portal > header::after {
+  position: absolute;
+  right: 0;
+  bottom: -1px;
+  left: 0;
+  height: 2px;
+  content: "";
+  background: linear-gradient(90deg, #123c32, #27a682, #86cdb8, #123c32);
+  background-size: 240% 100%;
+  animation: shore-wildlife-gradient-drift 14s ease-in-out infinite;
+  opacity: 0.42;
+}
+
+.shore-wildlife-portal main > h1 {
+  color: #123c32;
+}
+
+.shore-wildlife-portal main > div,
+.shore-wildlife-portal main section.rounded-xl {
+  border-color: #e0ebe6;
+}
+
+.shore-wildlife-portal main section.rounded-xl {
+  border-width: 1px;
+  box-shadow: 0 12px 34px rgb(18 60 50 / 0.08);
+}
+
+.shore-wildlife-portal thead {
+  background: #f0f7f4;
+}
+
+.shore-wildlife-portal tbody tr:hover {
+  background: #f4faf7;
+}
+
+.shore-wildlife-portal input:focus,
+.shore-wildlife-portal select:focus {
+  border-color: #3da98b;
+  box-shadow: 0 0 0 3px rgb(22 134 106 / 0.12);
+}
+
+.shore-wildlife-portal select {
+  appearance: none;
+  padding-right: 2.75rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23475a54' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.9rem center;
+  background-size: 1rem;
+}
+
+.shore-wildlife-portal [class~="text-indigo-700"] {
+  color: #16866a;
+}
+
+.shore-wildlife-portal [class~="border-indigo-200"] {
+  border-color: #b9ddcf;
+}
+
+.shore-wildlife-portal [class~="hover:bg-indigo-50"]:hover {
+  background-color: #e8f6f1;
+}
+
+.shore-wildlife-portal [class~="bg-emerald-50"] {
+  background-color: #e8f6f1;
+}
+
+.shore-wildlife-portal [class~="text-emerald-700"] {
+  color: #08745c;
+}
+
+.shore-wildlife-portal [class~="bg-amber-50"] {
+  background-color: #fff8e8;
+}
+
+.shore-wildlife-portal [class~="bg-[#14223d]"],
+.shore-wildlife-portal [class~="bg-emerald-600"] {
+  background-color: transparent;
+  background-image: linear-gradient(120deg, #123c32, #16866a, #1e705b, #123c32);
+  background-size: 240% 240%;
+  animation: shore-wildlife-gradient-drift 13s ease-in-out infinite;
+  box-shadow: 0 9px 22px rgb(18 60 50 / 0.16);
+}
+
+.shore-wildlife-portal [class~="bg-[#14223d]"]:hover,
+.shore-wildlife-portal [class~="bg-emerald-600"]:hover {
+  filter: brightness(1.06);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shore-wildlife-portal > header::after,
+  .shore-wildlife-portal [class~="bg-[#14223d]"],
+  .shore-wildlife-portal [class~="bg-emerald-600"] {
+    animation: none;
+  }
+}

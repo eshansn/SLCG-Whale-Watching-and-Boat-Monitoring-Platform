@@ -8,8 +8,10 @@ import {
   NavLink,
   useNavigate,
 } from "react-router-dom";
+import { Download } from "lucide-react";
 import { Icon } from "../../components/ui/icon";
 import { useOperations } from "../../operations/useOperations";
+import TripReportModal from "./components/TripReportModal";
 
 type ApprovalStatus =
   | "Approved"
@@ -141,7 +143,7 @@ const ITEMS_PER_PAGE = 4;
 const Trips = () => {
   void initialTrips;
   const navigate = useNavigate();
-  const { trips: databaseTrips } = useOperations();
+  const { trips: databaseTrips, boats: databaseBoats, loading: operationsLoading } = useOperations();
 
   const [trips, setTrips] =
     useState<ScheduledTrip[]>([]);
@@ -169,6 +171,9 @@ const Trips = () => {
     useState(1);
 
   const [isListening, setIsListening] =
+    useState(false);
+
+  const [reportOpen, setReportOpen] =
     useState(false);
 
   const filteredAndSortedTrips = useMemo(() => {
@@ -549,6 +554,15 @@ const Trips = () => {
             </h1>
 
             <div className="flex w-full flex-col gap-4 sm:flex-row lg:w-auto">
+              <button
+                type="button"
+                onClick={() => setReportOpen(true)}
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-md bg-[#14223D] px-4 text-xs font-semibold text-white transition-colors hover:bg-[#22375F]"
+              >
+                <Download size={17} />
+                Trip report
+              </button>
+
               {/* Search */}
               <div className="relative w-full sm:w-[320px]">
                 <div className="pointer-events-none absolute inset-y-0 left-3 flex items-center">
@@ -944,6 +958,14 @@ const Trips = () => {
           </div>
         </section>
       </main>
+      {reportOpen && (
+        <TripReportModal
+          boats={databaseBoats}
+          trips={databaseTrips}
+          loading={operationsLoading}
+          onClose={() => setReportOpen(false)}
+        />
+      )}
     </div>
   );
 };

@@ -18,6 +18,8 @@ namespace WhaleWatching.Api.Operations;
 [Authorize]
 public sealed class OperationsController(WhaleWatchingDbContext db, IHubContext<OperationsHub> hub) : ControllerBase
 {
+    private const int MaxInlineImageUrlLength = 1_000_000;
+
     [HttpGet("directory")]
     [Authorize(Roles = $"{PortalRoles.Admin},{PortalRoles.Wildlife},{PortalRoles.Ops},{PortalRoles.ShoreCrew}")]
     public async Task<ActionResult<OperationsDirectoryDto>> Directory(CancellationToken ct)
@@ -106,12 +108,29 @@ public sealed class OperationsController(WhaleWatchingDbContext db, IHubContext<
     public async Task<ActionResult<IReadOnlyList<BoatDto>>> Boats(CancellationToken ct)
     {
         var query = ScopeBoats(db.Boats.AsNoTracking()).OrderBy(x => x.Name);
-        return Ok(await query.Select(x => new BoatDto(x.Id, x.OwnerId, x.Owner.DisplayName, x.Name,
-            x.RegistrationNumber, x.RegistrationDate, x.HullNumber, x.LengthMeters, x.WidthMeters,
-            x.MaximumSpeedKnots, x.MaximumCapacity, x.LifeJacketCount,
-            x.GpsDeviceId, x.Approval.ToString(), x.WildlifeApproval.ToString(), x.ImageUrl,
-            x.Documents.OrderBy(document => document.Name).Select(document => new BoatDocumentDto(document.Id,
-                document.Name, document.FileName, document.ContentType, document.UploadedAtUtc)).ToList())).ToListAsync(ct));
+        var boats = await query.Select(x => new
+        {
+            x.Id, x.OwnerId, OwnerName = x.Owner.DisplayName, x.Name, x.RegistrationNumber,
+            x.RegistrationDate, x.HullNumber, x.LengthMeters, x.WidthMeters, x.MaximumSpeedKnots,
+            x.MaximumCapacity, x.LifeJacketCount, x.GpsDeviceId, x.Approval, x.WildlifeApproval,
+            ImageUrl = x.ImageUrl != null && x.ImageUrl.Length <= MaxInlineImageUrlLength ? x.ImageUrl : null
+        }).ToListAsync(ct);
+        var boatIds = boats.Select(boat => boat.Id).ToArray();
+        var documents = await db.BoatDocuments.AsNoTracking().Where(document => boatIds.Contains(document.BoatId))
+            .OrderBy(document => document.Name)
+            .Select(document => new
+            {
+                document.BoatId,
+                Document = new BoatDocumentDto(document.Id, document.Name, document.FileName,
+                    document.ContentType, document.UploadedAtUtc)
+            }).ToListAsync(ct);
+        var documentsByBoat = documents.ToLookup(document => document.BoatId, document => document.Document);
+
+        return Ok(boats.Select(boat => new BoatDto(boat.Id, boat.OwnerId, boat.OwnerName, boat.Name,
+            boat.RegistrationNumber, boat.RegistrationDate, boat.HullNumber, boat.LengthMeters, boat.WidthMeters,
+            boat.MaximumSpeedKnots, boat.MaximumCapacity, boat.LifeJacketCount, boat.GpsDeviceId,
+            boat.Approval.ToString(), boat.WildlifeApproval.ToString(), boat.ImageUrl,
+            documentsByBoat[boat.Id].ToArray())).ToList());
     }
 
     [HttpGet("vessel-map")]
@@ -209,6 +228,42 @@ public sealed class OperationsController(WhaleWatchingDbContext db, IHubContext<
         return Created($"/api/operations/sos/{sos.Id}", new { id = sos.Id, raisedAtUtc = sos.RaisedAtUtc });
     }
 
+    [HttpGet("trips/{id:guid}/sos-actions")]
+    [Authorize(Roles = $"{PortalRoles.Admin},{PortalRoles.Wildlife},{PortalRoles.ShoreWildlife},{PortalRoles.Ops},{PortalRoles.ShoreCrew},{PortalRoles.BoatOwner},{PortalRoles.BoatCrew}")]
+    public async Task<ActionResult<IReadOnlyList<SosActionDto>>> SosActions(Guid id, CancellationToken ct)
+    {
+        var allowedBoatIds = ScopeBoats(db.Boats.AsNoTracking()).Select(x => x.Id);
+        if (!await db.Trips.AsNoTracking().AnyAsync(x => x.Id == id && allowedBoatIds.Contains(x.BoatId), ct))
+            return NotFound();
+
+        return Ok(await db.SosActions.AsNoTracking().Where(x => x.SosEvent.TripId == id)
+            .OrderByDescending(x => x.TakenAtUtc)
+            .Select(x => new SosActionDto(x.Id, x.SosEventId, x.TakenByUser.DisplayName,
+                x.Details, x.TakenAtUtc)).ToListAsync(ct));
+    }
+
+    [HttpPost("trips/{id:guid}/sos-actions")]
+    [Authorize(Roles = PortalRoles.Ops)]
+    public async Task<ActionResult<SosActionDto>> AddSosAction(Guid id, SosActionRequest request, CancellationToken ct)
+    {
+        var details = request.Details?.Trim() ?? string.Empty;
+        if (details.Length is < 1 or > 1000)
+            return ValidationProblem("Action details must contain between 1 and 1000 characters.");
+
+        var sos = await db.SosEvents.Where(x => x.TripId == id && x.ResolvedAtUtc == null)
+            .OrderByDescending(x => x.RaisedAtUtc).FirstOrDefaultAsync(ct);
+        if (sos is null) return Conflict(new { message = "This trip has no active SOS alert." });
+
+        var action = new SosAction { Id = Guid.NewGuid(), SosEventId = sos.Id,
+            TakenByUserId = UserId, Details = details, TakenAtUtc = DateTimeOffset.UtcNow };
+        var takenBy = await db.Users.Where(x => x.Id == UserId).Select(x => x.DisplayName).SingleAsync(ct);
+        db.SosActions.Add(action);
+        await db.SaveChangesAsync(ct);
+        await hub.Clients.All.SendAsync("operationsChanged", new { entity = "sosAction", id = action.Id, tripId = id }, ct);
+        return Created($"/api/operations/trips/{id}/sos-actions/{action.Id}",
+            new SosActionDto(action.Id, action.SosEventId, takenBy, action.Details, action.TakenAtUtc));
+    }
+
     [HttpGet("trips/{id:guid}/passengers")]
     [Authorize(Roles = $"{PortalRoles.Admin},{PortalRoles.Wildlife},{PortalRoles.Ops},{PortalRoles.BoatOwner},{PortalRoles.ShoreCrew},{PortalRoles.BoatCrew}")]
     public async Task<ActionResult<IReadOnlyList<TripPassengerDto>>> TripPassengers(Guid id, CancellationToken ct)
@@ -254,6 +309,24 @@ public sealed class OperationsController(WhaleWatchingDbContext db, IHubContext<
         return NoContent();
     }
 
+    [HttpDelete("boats/{id:guid}")]
+    [Authorize(Roles = PortalRoles.Admin)]
+    public async Task<IActionResult> DeleteBoat(Guid id, CancellationToken ct)
+    {
+        var boat = await db.Boats.Include(x => x.CrewAssignments)
+            .SingleOrDefaultAsync(x => x.Id == id, ct);
+        if (boat is null) return NotFound();
+
+        if (await db.Trips.AnyAsync(x => x.BoatId == id && x.Status == TripStatus.Ongoing, ct))
+            return Conflict(new { message = "An ongoing trip must be completed or cancelled before deleting this boat." });
+
+        boat.IsDeleted = true;
+        foreach (var assignment in boat.CrewAssignments) assignment.IsActive = false;
+        await db.SaveChangesAsync(ct);
+        await hub.Clients.All.SendAsync("operationsChanged", new { entity = "boat", id, deleted = true }, ct);
+        return NoContent();
+    }
+
     [HttpPatch("crew/{id:guid}/approval")]
     [Authorize(Roles = $"{PortalRoles.Admin},{PortalRoles.Wildlife}")]
     public async Task<ActionResult> UpdateCrewApproval(Guid id, ApprovalRequest request, CancellationToken ct)
@@ -262,6 +335,9 @@ public sealed class OperationsController(WhaleWatchingDbContext db, IHubContext<
             !string.Equals(request.Approval, "Rejected", StringComparison.OrdinalIgnoreCase))
             return ValidationProblem("Approval must be Approved or Rejected.");
         var crew = await db.Users.FindAsync([id], ct); if (crew is null) return NotFound();
+        var isBoatCrew = await db.UserRoles.AnyAsync(userRole => userRole.UserId == id &&
+            db.Roles.Any(role => role.Id == userRole.RoleId && role.Name == PortalRoles.BoatCrew), ct);
+        if (!isBoatCrew) return NotFound();
         crew.IsCrewCertified = string.Equals(request.Approval, "Approved", StringComparison.OrdinalIgnoreCase);
         await db.SaveChangesAsync(ct);
         await hub.Clients.All.SendAsync("operationsChanged", new { entity = "crew", id }, ct);
@@ -408,6 +484,9 @@ public sealed record TripPassengerDto(Guid Id, string Name, string Identificatio
     string AgeCategory, string PassengerType, string Gender, DateTimeOffset RegisteredAtUtc);
 public sealed record SosAlertDto(Guid Id, Guid TripId, string VesselName, string RegistrationNumber,
     string Location, int PassengersOnboard, string NatureOfEmergency, DateTimeOffset RaisedAtUtc);
+public sealed record SosActionDto(Guid Id, Guid SosEventId, string TakenByName, string Details,
+    DateTimeOffset TakenAtUtc);
+public sealed record SosActionRequest(string? Details);
 public sealed record CreateBoatRequest(string Name, string RegistrationNumber, DateOnly RegistrationDate,
     string HullNumber, decimal LengthMeters, decimal WidthMeters, int MaximumCapacity, string? ImageUrl,
     decimal MaximumSpeedKnots = 0, int LifeJacketCount = 0, string? GpsDeviceId = null);

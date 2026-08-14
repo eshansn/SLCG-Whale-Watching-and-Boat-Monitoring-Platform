@@ -15,6 +15,7 @@ export default defineConfig({
     }),
   ],
   server: {
+    allowedHosts: ['nine-buttons-decide.loca.lt'],
     proxy: {
       '/api': {
         target: 'http://localhost:8080',
