@@ -363,9 +363,10 @@ function BoatOwnerSettingsPage() {
         {/* Help */}
         <button
           type="button"
-          onClick={() =>
-            navigate("/owner/support")
-          }
+          onClick={() => {
+            window.location.href =
+              "mailto:support@wwms.test?subject=WWMS%20Boat%20Owner%20Support";
+          }}
           className="
             flex min-h-[100px] w-full
             items-center justify-between
