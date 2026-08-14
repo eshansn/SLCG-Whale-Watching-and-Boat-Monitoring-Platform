@@ -1,6 +1,7 @@
 import { HubConnectionBuilder, LogLevel } from '@microsoft/signalr';
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '');
+const INITIAL_CONNECTION_RETRY_DELAYS_MS = [1000, 5000, 10000, 30000] as const;
 
 export interface BoatDocument { id:string; name:string; fileName:string; contentType:string; uploadedAtUtc:string; expirationDate?:string }
 export interface Boat { id:string; ownerId:string; ownerName:string; name:string; registrationNumber:string; registrationDate:string; hullNumber:string; lengthMeters:number; widthMeters:number; maximumSpeedKnots:number; maximumCapacity:number; lifeJacketCount:number; gpsDeviceId?:string; approval:string; wildlifeApproval:string; imageUrl?:string; documents:BoatDocument[] }
@@ -87,7 +88,56 @@ export const operationsApi = {
 };
 export function connectOperations(token:string,onChange:()=>void) {
   const connection = new HubConnectionBuilder().withUrl(`${API_BASE_URL}/hubs/operations`,{accessTokenFactory:()=>token}).withAutomaticReconnect().configureLogging(LogLevel.Warning).build();
-  connection.on('operationsChanged',onChange); connection.start().catch(console.error);
-  return ()=>{ void connection.stop(); };
+  let disposed = false;
+  let refreshAfterStart = false;
+  let retryAttempt = 0;
+  let retryTimer: number | undefined;
+
+  const notifyChange = () => {
+    if (disposed) return;
+    try {
+      onChange();
+    } catch (error) {
+      console.error('Unable to refresh operations after reconnecting.', error);
+    }
+  };
+  const scheduleRetry = (error?: unknown) => {
+    if (disposed || retryTimer !== undefined) return;
+    refreshAfterStart = true;
+    const delay = INITIAL_CONNECTION_RETRY_DELAYS_MS[Math.min(retryAttempt, INITIAL_CONNECTION_RETRY_DELAYS_MS.length - 1)];
+    retryAttempt += 1;
+    console.error(`Unable to connect to live operations. Retrying in ${delay / 1000} seconds.`, error);
+    retryTimer = window.setTimeout(() => {
+      retryTimer = undefined;
+      void start();
+    }, delay);
+  };
+  const start = async () => {
+    try {
+      await connection.start();
+    } catch (error) {
+      scheduleRetry(error);
+      return;
+    }
+
+    if (disposed) {
+      void connection.stop();
+      return;
+    }
+    retryAttempt = 0;
+    if (refreshAfterStart) notifyChange();
+    refreshAfterStart = false;
+  };
+
+  connection.on('operationsChanged', notifyChange);
+  connection.onreconnected(notifyChange);
+  connection.onclose(scheduleRetry);
+  void start();
+
+  return () => {
+    disposed = true;
+    if (retryTimer !== undefined) window.clearTimeout(retryTimer);
+    void connection.stop();
+  };
 }
 export const formatTripDate=(value:string)=>new Intl.DateTimeFormat('en-LK',{dateStyle:'medium',timeStyle:'short'}).format(new Date(value));
