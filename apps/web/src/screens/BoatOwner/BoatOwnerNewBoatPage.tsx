@@ -1,4 +1,5 @@
 import {
+  useEffect,
   useState,
   type ChangeEvent,
   type FormEvent,
@@ -14,27 +15,13 @@ import {
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../auth/useAuth";
 import { operationsApi } from "../../operations/operationsApi";
-
-interface BoatFormData {
-  name: string;
-  registrationNumber: string;
-  registrationDate: string;
-  maximumCapacity: string;
-  boatLength: string;
-  hullNumber: string;
-  boatWidth: string;
-  maximumSpeedKnots: string;
-  lifeJacketCount: string;
-}
-
-interface Certification {
-  id: string;
-  name: string;
-  fileName: string;
-  file?: File;
-  expirationDate?: string;
-  requiresExpirationDate?: boolean;
-}
+import {
+  clearBoatRegistrationDraft,
+  loadBoatRegistrationDraft,
+  saveBoatRegistrationDraft,
+  type BoatFormData,
+  type CertificationDraft as Certification,
+} from "./boatRegistrationDraftStorage";
 
 const initialCertifications: Certification[] = [
   {
@@ -107,6 +94,36 @@ function BoatOwnerNewBoatPage() {
   const [statusMessage, setStatusMessage] =
     useState("");
   const [today] = useState(() => new Date().toISOString().slice(0, 10));
+  const ownerId = session?.userId;
+
+  useEffect(() => {
+    if (!ownerId) return;
+    let active = true;
+
+    void loadBoatRegistrationDraft(ownerId).then((draft) => {
+      if (!active || !draft) return;
+      setBoatForm(draft.boatForm);
+      setBoatPhoto(draft.boatPhoto);
+      setCertifications(initialCertifications.map((certificate) => {
+        const saved = draft.certifications.find((item) => item.id === certificate.id);
+        return saved ? { ...certificate, ...saved } : certificate;
+      }));
+      if (draft.boatPhoto) {
+        const reader = new FileReader();
+        reader.onload = () => {
+          if (active) setBoatPhotoPreview(typeof reader.result === "string" ? reader.result : "");
+        };
+        reader.readAsDataURL(draft.boatPhoto);
+      } else {
+        setBoatPhotoPreview("");
+      }
+      setStatusMessage("Your saved boat draft has been restored.");
+    }).catch(() => {
+      if (active) setStatusMessage("The saved boat draft could not be restored.");
+    });
+
+    return () => { active = false; };
+  }, [ownerId]);
 
   const updateFormField = (
     field: keyof BoatFormData,
@@ -203,21 +220,14 @@ function BoatOwnerNewBoatPage() {
     setStatusMessage("");
   };
 
-  const handleSaveDraft = (): void => {
-    /*
-     * Save the form as a draft in your backend
-     * or local storage here.
-     */
-
-    console.log("Boat draft:", {
-      boatForm,
-      boatPhoto,
-      certifications,
-    });
-
-    setStatusMessage(
-      "The boat information has been saved as a draft.",
-    );
+  const handleSaveDraft = async (): Promise<void> => {
+    if (!ownerId) return;
+    try {
+      await saveBoatRegistrationDraft(ownerId, { boatForm, boatPhoto, certifications });
+      setStatusMessage("The boat information has been saved as a draft.");
+    } catch (error) {
+      setStatusMessage(error instanceof Error ? error.message : "Unable to save the boat draft.");
+    }
   };
 
   const handleRequestApproval = async (
@@ -280,6 +290,7 @@ function BoatOwnerNewBoatPage() {
         await operationsApi.uploadBoatDocument(session.accessToken, created.id, certificate.name,
           certificate.file!, certificate.expirationDate || undefined);
       }
+      await clearBoatRegistrationDraft(session.userId).catch(() => undefined);
       setStatusMessage("Your boat approval request has been submitted successfully.");
       navigate(`/owner/boats/${created.id}`);
     } catch (error) {
