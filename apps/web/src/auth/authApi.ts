@@ -11,8 +11,12 @@ interface JwtPayload {
 }
 
 export class AuthApiError extends Error {
-  constructor(message: string, public readonly status: number) {
+  readonly status: number;
+
+  constructor(message: string, status: number) {
     super(message);
+    this.name = 'AuthApiError';
+    this.status = status;
   }
 }
 
@@ -108,7 +112,7 @@ export async function changePassword(accessToken:string,currentPassword:string,n
   return post<{message:string}>('/api/auth/change-password',{currentPassword,newPassword},accessToken);
 }
 
-async function performRestore(): Promise<AuthSession | null> {
+export async function refreshSession(): Promise<AuthSession | null> {
   const refreshToken = getRefreshToken();
   if (!refreshToken) return null;
 
@@ -116,8 +120,20 @@ async function performRestore(): Promise<AuthSession | null> {
     const response = await post<AuthResponse>('/api/auth/refresh', { refreshToken });
     setRefreshToken(response.refreshToken);
     return toSession(response);
+  } catch (error) {
+    if (error instanceof AuthApiError && error.status === 401) {
+      clearRefreshToken();
+      return null;
+    }
+
+    throw error;
+  }
+}
+
+async function performRestore(): Promise<AuthSession | null> {
+  try {
+    return await refreshSession();
   } catch {
-    clearRefreshToken();
     return null;
   }
 }

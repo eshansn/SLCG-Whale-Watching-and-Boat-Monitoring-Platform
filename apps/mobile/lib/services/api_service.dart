@@ -215,13 +215,18 @@ class ApiService extends ChangeNotifier {
   Future<Map<String, dynamic>> createOwnerBoat(Map<String, dynamic> details) =>
       _sendMap('POST', '/api/operations/boats', details);
   Future<Map<String, dynamic>> uploadBoatDocument(String boatId, String name,
-      Uint8List bytes, String fileName, String contentType) async {
+      Uint8List bytes, String fileName, String contentType,
+      {DateTime? expirationDate}) async {
     final request = http.MultipartRequest(
         'POST', Uri.parse('$baseUrl/api/operations/boats/$boatId/documents'))
       ..headers['Authorization'] = 'Bearer ${session!.accessToken}'
       ..fields['name'] = name
       ..files.add(http.MultipartFile.fromBytes('file', bytes,
           filename: fileName, contentType: _mediaType(contentType)));
+    if (expirationDate != null) {
+      request.fields['expirationDate'] =
+          expirationDate.toIso8601String().substring(0, 10);
+    }
     final response = await http.Response.fromStream(
         await request.send().timeout(const Duration(seconds: 30)));
     return (_decode(response) as Map).cast<String, dynamic>();

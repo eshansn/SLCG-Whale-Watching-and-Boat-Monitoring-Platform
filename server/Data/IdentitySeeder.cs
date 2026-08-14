@@ -248,7 +248,8 @@ public sealed class IdentitySeeder(
         foreach (var (boat, index) in boats.Select((boat, index) => (boat, index)))
         {
             if (await db.Trips.CountAsync(x => x.BoatId == boat.Id) >= 2) continue;
-            db.Trips.AddRange(
+            var seededTrips = new[]
+            {
                 new Trip { Id = Guid.NewGuid(), BoatId = boat.Id, ScheduledDepartureUtc = now.AddHours(12 + index * 4),
                     Route = index < 2 ? "Mirissa – Dondra Head" : "Galle – Unawatuna Bay", PassengerCount = 24 + index * 4,
                     ChildrenCount = 3 + index, SpecialNeedsCount = index % 2,
@@ -257,7 +258,13 @@ public sealed class IdentitySeeder(
                     ActualDepartureUtc = now.AddDays(-2 - index), ActualArrivalUtc = now.AddDays(-2 - index).AddHours(4),
                     Route = index < 2 ? "Mirissa – Weligama Bay" : "Galle – Jungle Beach", PassengerCount = 18 + index * 3,
                     ChildrenCount = 2 + index, SpecialNeedsCount = index % 2,
-                    Status = TripStatus.Completed, ShoreApproval = ApprovalStatus.Approved, UpdatedAtUtc = now });
+                    Status = TripStatus.Completed, ShoreApproval = ApprovalStatus.Approved, UpdatedAtUtc = now }
+            };
+            db.Trips.AddRange(seededTrips);
+            var boatCrewIds = await db.CrewAssignments.AsNoTracking()
+                .Where(x => x.BoatId == boat.Id && x.IsActive).Select(x => x.CrewUserId).ToListAsync();
+            db.TripCrewAssignments.AddRange(seededTrips.SelectMany(trip => boatCrewIds.Select(crewUserId =>
+                new TripCrewAssignment { Id = Guid.NewGuid(), TripId = trip.Id, CrewUserId = crewUserId })));
         }
         await db.SaveChangesAsync();
 

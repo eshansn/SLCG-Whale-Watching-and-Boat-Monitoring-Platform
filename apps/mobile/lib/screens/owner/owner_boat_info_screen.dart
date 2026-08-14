@@ -20,6 +20,7 @@ class _OwnerBoatInfoScreenState extends State<OwnerBoatInfoScreen> {
     'Wildlife Certificate',
     'Coxswain Certificate',
     'Vessel Registration Certificate',
+    'Boat Insurance',
   ];
 
   final _api = ApiService.instance;
@@ -218,7 +219,11 @@ class _OwnerBoatInfoScreenState extends State<OwnerBoatInfoScreen> {
                   style: const TextStyle(fontWeight: FontWeight.w500)),
               subtitle: document == null
                   ? const Text('Not uploaded')
-                  : Text(document['fileName']?.toString() ?? ''),
+                  : Text([
+                      document['fileName']?.toString() ?? '',
+                      if (document['expirationDate'] != null)
+                        'Expires ${document['expirationDate']}'
+                    ].join('\n')),
               trailing: loading
                   ? const SizedBox(
                       width: 22,

@@ -38,6 +38,7 @@ public sealed class BoatDocument
     public string ContentType { get; set; } = string.Empty;
     public byte[]? Content { get; set; }
     public DateTimeOffset UploadedAtUtc { get; set; }
+    public DateOnly? ExpirationDate { get; set; }
 }
 
 public sealed class CrewAssignment

@@ -105,6 +105,7 @@ public sealed class OperationsController(WhaleWatchingDbContext db, IHubContext<
     }
 
     [HttpGet("boats")]
+    [Authorize(Roles = $"{PortalRoles.Admin},{PortalRoles.Wildlife},{PortalRoles.Ops},{PortalRoles.ShoreCrew},{PortalRoles.BoatOwner},{PortalRoles.BoatCrew}")]
     public async Task<ActionResult<IReadOnlyList<BoatDto>>> Boats(CancellationToken ct)
     {
         var query = ScopeBoats(db.Boats.AsNoTracking()).OrderBy(x => x.Name);
@@ -122,7 +123,7 @@ public sealed class OperationsController(WhaleWatchingDbContext db, IHubContext<
             {
                 document.BoatId,
                 Document = new BoatDocumentDto(document.Id, document.Name, document.FileName,
-                    document.ContentType, document.UploadedAtUtc)
+                    document.ContentType, document.UploadedAtUtc, document.ExpirationDate)
             }).ToListAsync(ct);
         var documentsByBoat = documents.ToLookup(document => document.BoatId, document => document.Document);
 
@@ -142,7 +143,7 @@ public sealed class OperationsController(WhaleWatchingDbContext db, IHubContext<
             .OrderBy(x => x.Name)
             .ToListAsync(ct);
         var boatIds = boats.Select(x => x.Id).ToArray();
-        var trips = await db.Trips.AsNoTracking().Where(x => boatIds.Contains(x.BoatId))
+        var trips = await ScopeTrips(db.Trips.AsNoTracking()).Where(x => boatIds.Contains(x.BoatId))
             .OrderByDescending(x => x.ActualDepartureUtc ?? x.ScheduledDepartureUtc).ToListAsync(ct);
         var deviceIds = boats.Where(x => x.GpsDeviceId != null).Select(x => x.GpsDeviceId!).ToArray();
         var telemetry = await db.GpsTelemetry.AsNoTracking().Where(x => deviceIds.Contains(x.DeviceId))
@@ -171,10 +172,10 @@ public sealed class OperationsController(WhaleWatchingDbContext db, IHubContext<
     }
 
     [HttpGet("trips")]
+    [Authorize(Roles = $"{PortalRoles.Admin},{PortalRoles.Wildlife},{PortalRoles.Ops},{PortalRoles.ShoreCrew},{PortalRoles.BoatOwner},{PortalRoles.BoatCrew}")]
     public async Task<ActionResult<IReadOnlyList<TripDto>>> Trips(CancellationToken ct)
     {
-        var allowedBoats = ScopeBoats(db.Boats).Select(x => x.Id);
-        return Ok(await db.Trips.AsNoTracking().Where(x => allowedBoats.Contains(x.BoatId))
+        return Ok(await ScopeTrips(db.Trips.AsNoTracking())
             .OrderByDescending(x => x.ScheduledDepartureUtc)
             .Select(x => new TripDto(x.Id, x.BoatId, x.Boat.Name, x.Boat.RegistrationNumber,
                 x.Boat.Owner.DisplayName, x.ScheduledDepartureUtc, x.ActualDepartureUtc,
@@ -191,8 +192,8 @@ public sealed class OperationsController(WhaleWatchingDbContext db, IHubContext<
     [Authorize(Roles = $"{PortalRoles.Admin},{PortalRoles.Wildlife},{PortalRoles.Ops},{PortalRoles.ShoreCrew},{PortalRoles.BoatOwner},{PortalRoles.BoatCrew}")]
     public async Task<ActionResult<IReadOnlyList<SosAlertDto>>> SosAlerts(CancellationToken ct)
     {
-        var allowedBoats = ScopeBoats(db.Boats.AsNoTracking()).Select(x => x.Id);
-        var alerts = await db.SosEvents.AsNoTracking().Where(x => x.ResolvedAtUtc == null && allowedBoats.Contains(x.Trip.BoatId))
+        var allowedTrips = ScopeTrips(db.Trips.AsNoTracking()).Select(x => x.Id);
+        var alerts = await db.SosEvents.AsNoTracking().Where(x => x.ResolvedAtUtc == null && allowedTrips.Contains(x.TripId))
             .OrderByDescending(x => x.RaisedAtUtc)
             .Select(x => new { x.Id, x.TripId, x.Trip.BoatId, VesselName = x.Trip.Boat.Name,
                 x.Trip.Boat.RegistrationNumber, PassengersOnboard = x.Trip.PassengerCount,
@@ -232,8 +233,7 @@ public sealed class OperationsController(WhaleWatchingDbContext db, IHubContext<
     [Authorize(Roles = $"{PortalRoles.Admin},{PortalRoles.Wildlife},{PortalRoles.ShoreWildlife},{PortalRoles.Ops},{PortalRoles.ShoreCrew},{PortalRoles.BoatOwner},{PortalRoles.BoatCrew}")]
     public async Task<ActionResult<IReadOnlyList<SosActionDto>>> SosActions(Guid id, CancellationToken ct)
     {
-        var allowedBoatIds = ScopeBoats(db.Boats.AsNoTracking()).Select(x => x.Id);
-        if (!await db.Trips.AsNoTracking().AnyAsync(x => x.Id == id && allowedBoatIds.Contains(x.BoatId), ct))
+        if (!await ScopeTrips(db.Trips.AsNoTracking()).AnyAsync(x => x.Id == id, ct))
             return NotFound();
 
         return Ok(await db.SosActions.AsNoTracking().Where(x => x.SosEvent.TripId == id)
@@ -268,8 +268,7 @@ public sealed class OperationsController(WhaleWatchingDbContext db, IHubContext<
     [Authorize(Roles = $"{PortalRoles.Admin},{PortalRoles.Wildlife},{PortalRoles.Ops},{PortalRoles.BoatOwner},{PortalRoles.ShoreCrew},{PortalRoles.BoatCrew}")]
     public async Task<ActionResult<IReadOnlyList<TripPassengerDto>>> TripPassengers(Guid id, CancellationToken ct)
     {
-        var allowedBoatIds = ScopeBoats(db.Boats.AsNoTracking()).Select(x => x.Id);
-        var tripExists = await db.Trips.AsNoTracking().AnyAsync(x => x.Id == id && allowedBoatIds.Contains(x.BoatId), ct);
+        var tripExists = await ScopeTrips(db.Trips.AsNoTracking()).AnyAsync(x => x.Id == id, ct);
         if (!tripExists) return NotFound();
 
         return Ok(await db.TripPassengers.AsNoTracking().Where(x => x.TripId == id)
@@ -348,10 +347,14 @@ public sealed class OperationsController(WhaleWatchingDbContext db, IHubContext<
     [Authorize(Policy = PortalPolicies.BoatOwner)]
     [RequestSizeLimit(10 * 1024 * 1024)]
     public async Task<ActionResult<BoatDocumentDto>> UploadBoatDocument(Guid boatId, [FromForm] string name,
-        [FromForm] IFormFile file, CancellationToken ct)
+        [FromForm] IFormFile file, [FromForm] DateOnly? expirationDate, CancellationToken ct)
     {
         if (!await db.Boats.AnyAsync(x => x.Id == boatId && x.OwnerId == UserId, ct)) return Forbid();
         if (string.IsNullOrWhiteSpace(name) || name.Length > 160) return ValidationProblem("Certificate name is required.");
+        if (string.Equals(name.Trim(), "Boat Insurance", StringComparison.OrdinalIgnoreCase) && expirationDate is null)
+            return ValidationProblem("The boat insurance expiration date is required.");
+        if (expirationDate < DateOnly.FromDateTime(DateTime.UtcNow))
+            return ValidationProblem("The document expiration date cannot be in the past.");
         if (file.Length is 0 or > 10 * 1024 * 1024) return ValidationProblem("Certificate must be between 1 byte and 10 MB.");
         var types = new[] { "application/pdf", "image/jpeg", "image/png" };
         if (!types.Contains(file.ContentType, StringComparer.OrdinalIgnoreCase))
@@ -359,10 +362,11 @@ public sealed class OperationsController(WhaleWatchingDbContext db, IHubContext<
         await using var stream = new MemoryStream(); await file.CopyToAsync(stream, ct);
         var document = new BoatDocument { Id = Guid.NewGuid(), BoatId = boatId, Name = name.Trim(),
             FileName = Path.GetFileName(file.FileName), ContentType = file.ContentType,
-            Content = stream.ToArray(), UploadedAtUtc = DateTimeOffset.UtcNow };
+            Content = stream.ToArray(), UploadedAtUtc = DateTimeOffset.UtcNow, ExpirationDate = expirationDate };
         db.BoatDocuments.Add(document); await db.SaveChangesAsync(ct);
         return Created($"api/operations/boats/{boatId}/documents/{document.Id}",
-            new BoatDocumentDto(document.Id, document.Name, document.FileName, document.ContentType, document.UploadedAtUtc));
+            new BoatDocumentDto(document.Id, document.Name, document.FileName, document.ContentType,
+                document.UploadedAtUtc, document.ExpirationDate));
     }
 
     [HttpGet("boats/{boatId:guid}/documents/{documentId:guid}")]
@@ -448,9 +452,13 @@ public sealed class OperationsController(WhaleWatchingDbContext db, IHubContext<
     public async Task<ActionResult> UpdateStatus(Guid id, StatusRequest request, CancellationToken ct)
     {
         if (!Enum.TryParse<TripStatus>(request.Status, true, out var status)) return ValidationProblem("Invalid status.");
-        var trip = await db.Trips.Include(x => x.Boat).ThenInclude(x => x.CrewAssignments).SingleOrDefaultAsync(x => x.Id == id, ct);
+        var trip = await db.Trips.Include(x => x.Boat).Include(x => x.CrewAssignments)
+            .SingleOrDefaultAsync(x => x.Id == id, ct);
         if (trip is null) return NotFound();
-        if (!User.IsInRole(PortalRoles.Ops) && trip.Boat.OwnerId != UserId && !trip.Boat.CrewAssignments.Any(x => x.CrewUserId == UserId && x.IsActive)) return Forbid();
+        var canUpdate = User.IsInRole(PortalRoles.Ops) ||
+            (User.IsInRole(PortalRoles.BoatOwner) && trip.Boat.OwnerId == UserId) ||
+            (User.IsInRole(PortalRoles.BoatCrew) && trip.CrewAssignments.Any(x => x.CrewUserId == UserId));
+        if (!canUpdate) return Forbid();
         trip.Status = status; trip.UpdatedAtUtc = DateTimeOffset.UtcNow;
         if (status == TripStatus.Ongoing) trip.ActualDepartureUtc ??= DateTimeOffset.UtcNow;
         if (status == TripStatus.Completed) trip.ActualArrivalUtc ??= DateTimeOffset.UtcNow;
@@ -462,7 +470,16 @@ public sealed class OperationsController(WhaleWatchingDbContext db, IHubContext<
     private IQueryable<Boat> ScopeBoats(IQueryable<Boat> query)
     {
         if (User.IsInRole(PortalRoles.BoatOwner)) return query.Where(x => x.OwnerId == UserId);
-        if (User.IsInRole(PortalRoles.BoatCrew)) return query.Where(x => x.CrewAssignments.Any(a => a.CrewUserId == UserId && a.IsActive));
+        if (User.IsInRole(PortalRoles.BoatCrew)) return query.Where(x =>
+            x.Trips.Any(trip => trip.CrewAssignments.Any(assignment => assignment.CrewUserId == UserId)));
+        return query;
+    }
+
+    private IQueryable<Trip> ScopeTrips(IQueryable<Trip> query)
+    {
+        if (User.IsInRole(PortalRoles.BoatOwner)) return query.Where(x => x.Boat.OwnerId == UserId);
+        if (User.IsInRole(PortalRoles.BoatCrew)) return query.Where(x =>
+            x.CrewAssignments.Any(assignment => assignment.CrewUserId == UserId));
         return query;
     }
 }
@@ -473,7 +490,7 @@ public sealed record BoatDto(Guid Id, Guid OwnerId, string OwnerName, string Nam
     string? GpsDeviceId, string Approval, string WildlifeApproval, string? ImageUrl,
     IReadOnlyList<BoatDocumentDto> Documents);
 public sealed record BoatDocumentDto(Guid Id, string Name, string FileName, string ContentType,
-    DateTimeOffset UploadedAtUtc);
+    DateTimeOffset UploadedAtUtc, DateOnly? ExpirationDate);
 public sealed record TripDto(Guid Id, Guid BoatId, string VesselName, string RegistrationNumber, string OwnerName,
     DateTimeOffset ScheduledDepartureUtc, DateTimeOffset? ActualDepartureUtc, DateTimeOffset? ActualArrivalUtc,
     string Route, int PassengerCount, string Status, string ShoreApproval, string WildlifeShoreApproval, string? ShoreNotes,

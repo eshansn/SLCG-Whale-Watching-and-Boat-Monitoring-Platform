@@ -348,6 +348,9 @@ namespace WhaleWatching.Api.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)");
 
+                    b.Property<DateOnly?>("ExpirationDate")
+                        .HasColumnType("date");
+
                     b.Property<string>("FileUrl")
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)");

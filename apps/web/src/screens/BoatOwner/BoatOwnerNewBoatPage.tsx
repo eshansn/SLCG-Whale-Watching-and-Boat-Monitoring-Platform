@@ -32,6 +32,8 @@ interface Certification {
   name: string;
   fileName: string;
   file?: File;
+  expirationDate?: string;
+  requiresExpirationDate?: boolean;
 }
 
 const initialCertifications: Certification[] = [
@@ -65,6 +67,13 @@ const initialCertifications: Certification[] = [
     name: "Vessel Registration Certificate",
     fileName: "",
   },
+  {
+    id: "boat-insurance",
+    name: "Boat Insurance",
+    fileName: "",
+    expirationDate: "",
+    requiresExpirationDate: true,
+  },
 ];
 
 function BoatOwnerNewBoatPage() {
@@ -97,6 +106,7 @@ function BoatOwnerNewBoatPage() {
 
   const [statusMessage, setStatusMessage] =
     useState("");
+  const [today] = useState(() => new Date().toISOString().slice(0, 10));
 
   const updateFormField = (
     field: keyof BoatFormData,
@@ -178,11 +188,18 @@ function BoatOwnerNewBoatPage() {
                   ...certification,
                   fileName: "",
                   file: undefined,
+                  expirationDate: certification.requiresExpirationDate ? "" : certification.expirationDate,
                 }
               : certification,
         ),
     );
 
+    setStatusMessage("");
+  };
+
+  const updateCertificateExpiration = (certificationId: string, expirationDate: string): void => {
+    setCertifications((currentCertifications) => currentCertifications.map((certification) =>
+      certification.id === certificationId ? { ...certification, expirationDate } : certification));
     setStatusMessage("");
   };
 
@@ -236,6 +253,16 @@ function BoatOwnerNewBoatPage() {
       return;
     }
 
+    const insurance = certifications.find((certificate) => certificate.id === "boat-insurance");
+    if (insurance?.file && !insurance.expirationDate) {
+      setStatusMessage("Please select the boat insurance expiration date.");
+      return;
+    }
+    if (insurance?.expirationDate && !insurance.file) {
+      setStatusMessage("Please attach the boat insurance document.");
+      return;
+    }
+
     if (!session) return;
     try {
       setStatusMessage("Submitting your boat approval request...");
@@ -248,7 +275,8 @@ function BoatOwnerNewBoatPage() {
         lifeJacketCount: Number(boatForm.lifeJacketCount),
       });
       await Promise.all(certifications.filter((certificate) => certificate.file).map((certificate) =>
-        operationsApi.uploadBoatDocument(session.accessToken, created.id, certificate.name, certificate.file!)));
+        operationsApi.uploadBoatDocument(session.accessToken, created.id, certificate.name,
+          certificate.file!, certificate.expirationDate || undefined)));
       setStatusMessage("Your boat approval request has been submitted successfully.");
       navigate(`/owner/boats/${created.id}`);
     } catch (error) {
@@ -683,6 +711,18 @@ function BoatOwnerNewBoatPage() {
                             certification.fileName
                           }
                         </p>
+                      )}
+                      {certification.requiresExpirationDate && (
+                        <label className="mt-2 block text-[11px] font-medium text-[#555]">
+                          Insurance expiration date
+                          <input
+                            type="date"
+                            value={certification.expirationDate ?? ""}
+                            min={today}
+                            onChange={(event) => updateCertificateExpiration(certification.id, event.target.value)}
+                            className="mt-1 block min-h-10 w-full rounded-lg border border-[#e8e2e2] px-3 text-[12px] text-[#555] outline-none focus:border-[#162d54] focus:ring-1 focus:ring-[#162d54]"
+                          />
+                        </label>
                       )}
                     </div>
 

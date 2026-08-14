@@ -25,9 +25,11 @@ class _SelectedOwnerFile {
 
 class _OwnerCertificate {
   final String name;
+  final bool requiresExpirationDate;
   _SelectedOwnerFile? file;
+  DateTime? expirationDate;
 
-  _OwnerCertificate(this.name);
+  _OwnerCertificate(this.name, {this.requiresExpirationDate = false});
 }
 
 class _OwnerNewBoatScreenState extends State<OwnerNewBoatScreen> {
@@ -47,6 +49,7 @@ class _OwnerNewBoatScreenState extends State<OwnerNewBoatScreen> {
     _OwnerCertificate('Wildlife Certificate'),
     _OwnerCertificate('Coxswain Certificate'),
     _OwnerCertificate('Vessel Registration Certificate'),
+    _OwnerCertificate('Boat Insurance', requiresExpirationDate: true),
   ];
 
   DateTime? _registrationDate;
@@ -120,6 +123,23 @@ class _OwnerNewBoatScreenState extends State<OwnerNewBoatScreen> {
     });
   }
 
+  Future<void> _pickInsuranceExpiration(_OwnerCertificate certificate) async {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final date = await showDatePicker(
+      context: context,
+      firstDate: today,
+      lastDate: DateTime(today.year + 20, 12, 31),
+      initialDate: certificate.expirationDate ?? today,
+    );
+    if (date != null && mounted) {
+      setState(() {
+        certificate.expirationDate = date;
+        _status = null;
+      });
+    }
+  }
+
   void _setStatus(String message) => setState(() => _status = message);
 
   Future<void> _pickDate() async {
@@ -153,6 +173,17 @@ class _OwnerNewBoatScreenState extends State<OwnerNewBoatScreen> {
     }
     if (_registrationDate == null) {
       _setStatus('Please select the registration date.');
+      return;
+    }
+    final insurance = _certificates
+        .where((certificate) => certificate.requiresExpirationDate)
+        .first;
+    if (insurance.file != null && insurance.expirationDate == null) {
+      _setStatus('Please select the boat insurance expiration date.');
+      return;
+    }
+    if (insurance.expirationDate != null && insurance.file == null) {
+      _setStatus('Please attach the boat insurance document.');
       return;
     }
     final capacity = int.tryParse(
@@ -210,6 +241,7 @@ class _OwnerNewBoatScreenState extends State<OwnerNewBoatScreen> {
           file.bytes,
           file.name,
           file.contentType,
+          expirationDate: certificate.expirationDate,
         );
       }
       if (!mounted) return;
@@ -304,29 +336,58 @@ class _OwnerNewBoatScreenState extends State<OwnerNewBoatScreen> {
               OwnerCard(
                 child: Column(
                   children: _certificates
-                      .map((certificate) => ListTile(
-                            contentPadding: EdgeInsets.zero,
-                            title: Text(certificate.name,
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.w500)),
-                            subtitle: certificate.file == null
-                                ? null
-                                : Text(certificate.file!.name,
-                                    overflow: TextOverflow.ellipsis),
-                            trailing: IconButton(
-                              tooltip: certificate.file == null
-                                  ? 'Upload certificate'
-                                  : 'Remove certificate',
-                              onPressed: _submitting
-                                  ? null
-                                  : certificate.file == null
-                                      ? () => _pickCertificate(certificate)
-                                      : () => setState(
-                                          () => certificate.file = null),
-                              icon: Icon(certificate.file == null
-                                  ? Icons.upload_outlined
-                                  : Icons.delete_outline_rounded),
-                            ),
+                      .map((certificate) => Column(
+                            children: [
+                              ListTile(
+                                contentPadding: EdgeInsets.zero,
+                                title: Text(certificate.name,
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.w500)),
+                                subtitle: certificate.file == null
+                                    ? null
+                                    : Text(certificate.file!.name,
+                                        overflow: TextOverflow.ellipsis),
+                                trailing: IconButton(
+                                  tooltip: certificate.file == null
+                                      ? 'Upload certificate'
+                                      : 'Remove certificate',
+                                  onPressed: _submitting
+                                      ? null
+                                      : certificate.file == null
+                                          ? () => _pickCertificate(certificate)
+                                          : () => setState(() {
+                                                certificate.file = null;
+                                                if (certificate
+                                                    .requiresExpirationDate) {
+                                                  certificate.expirationDate =
+                                                      null;
+                                                }
+                                              }),
+                                  icon: Icon(certificate.file == null
+                                      ? Icons.upload_outlined
+                                      : Icons.delete_outline_rounded),
+                                ),
+                              ),
+                              if (certificate.requiresExpirationDate)
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 12),
+                                  child: SizedBox(
+                                    width: double.infinity,
+                                    child: OutlinedButton.icon(
+                                      onPressed: _submitting
+                                          ? null
+                                          : () => _pickInsuranceExpiration(
+                                              certificate),
+                                      icon: const Icon(
+                                          Icons.calendar_today_outlined),
+                                      label: Text(certificate.expirationDate ==
+                                              null
+                                          ? 'Select insurance expiration date'
+                                          : 'Expires ${DateFormat('MMM d, y').format(certificate.expirationDate!)}'),
+                                    ),
+                                  ),
+                                ),
+                            ],
                           ))
                       .toList(),
                 ),

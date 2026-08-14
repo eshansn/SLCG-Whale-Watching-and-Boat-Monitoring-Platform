@@ -61,6 +61,10 @@ const certifications: Certification[] = [
     id: "vessel-registration",
     name: "Vessel Registration Certificate",
   },
+  {
+    id: "boat-insurance",
+    name: "Boat Insurance",
+  },
 ];
 
 const menuItems: MenuItem[] = [
@@ -322,7 +326,7 @@ function BoatOwnerBoatInfoPage() {
                     lg:text-[16px]
                   "
                 >
-                  <span className="min-w-0"><span className="block">{certification.name}</span>{document && <span className="mt-1 block truncate text-[11px] font-normal text-slate-500">{document.fileName}</span>}</span>
+                  <span className="min-w-0"><span className="block">{certification.name}</span>{document && <><span className="mt-1 block truncate text-[11px] font-normal text-slate-500">{document.fileName}</span>{document.expirationDate && <span className="mt-1 block text-[11px] font-medium text-amber-700">Expires {new Intl.DateTimeFormat('en-LK',{dateStyle:'medium',timeZone:'UTC'}).format(new Date(`${document.expirationDate}T00:00:00Z`))}</span>}</>}</span>
                 </button>
                 );
                 })()

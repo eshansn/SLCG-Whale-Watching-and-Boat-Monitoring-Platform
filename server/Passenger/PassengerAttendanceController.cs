@@ -21,6 +21,9 @@ public sealed class PassengerAttendanceController(WhaleWatchingDbContext db,
     [HttpGet]
     public async Task<ActionResult<TripAttendanceDto>> Manifest(Guid tripId, CancellationToken ct)
     {
+        if (User.IsInRole(PortalRoles.BoatCrew) && !await db.TripCrewAssignments.AsNoTracking()
+                .AnyAsync(x => x.TripId == tripId && x.CrewUserId == UserId, ct))
+            return NotFound();
         var result = await BuildManifest(tripId, ct);
         return result is null ? NotFound() : Ok(result);
     }

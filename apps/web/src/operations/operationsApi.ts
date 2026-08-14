@@ -2,7 +2,7 @@ import { HubConnectionBuilder, LogLevel } from '@microsoft/signalr';
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '');
 
-export interface BoatDocument { id:string; name:string; fileName:string; contentType:string; uploadedAtUtc:string }
+export interface BoatDocument { id:string; name:string; fileName:string; contentType:string; uploadedAtUtc:string; expirationDate?:string }
 export interface Boat { id:string; ownerId:string; ownerName:string; name:string; registrationNumber:string; registrationDate:string; hullNumber:string; lengthMeters:number; widthMeters:number; maximumSpeedKnots:number; maximumCapacity:number; lifeJacketCount:number; gpsDeviceId?:string; approval:string; wildlifeApproval:string; imageUrl?:string; documents:BoatDocument[] }
 export interface CreateBoat { name:string; registrationNumber:string; registrationDate:string; hullNumber:string; lengthMeters:number; widthMeters:number; maximumCapacity:number; imageUrl?:string; maximumSpeedKnots:number; lifeJacketCount:number; gpsDeviceId?:string }
 export interface TripCrew { crewUserId:string; name:string; email:string; position:string; nicNumber?:string; certified:boolean }
@@ -40,8 +40,8 @@ async function request<T>(path:string, token:string, init?:RequestInit):Promise<
 export const operationsApi = {
   boats:(token:string)=>request<Boat[]>('/api/operations/boats',token),
   createBoat:(token:string,boat:CreateBoat)=>request<{id:string}>('/api/operations/boats',token,{method:'POST',body:JSON.stringify(boat)}),
-  uploadBoatDocument:async(token:string,boatId:string,name:string,file:File)=>{
-    const form=new FormData();form.append('name',name);form.append('file',file);
+  uploadBoatDocument:async(token:string,boatId:string,name:string,file:File,expirationDate?:string)=>{
+    const form=new FormData();form.append('name',name);form.append('file',file);if(expirationDate)form.append('expirationDate',expirationDate);
     const response=await fetch(`${API_BASE_URL}/api/operations/boats/${boatId}/documents`,{method:'POST',headers:{Authorization:`Bearer ${token}`},body:form});
     if(!response.ok)throw new Error(`Certificate upload failed (${response.status}).`);
     return response.json() as Promise<BoatDocument>;
