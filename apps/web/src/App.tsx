@@ -187,6 +187,7 @@ export default function App() {
             <Route path="/admin/boat-crew-info/:crewId" element={<AdminRoute><CrewDetailsPage /></AdminRoute>} />
             <Route path="/admin/trips" element={<AdminRoute><Trips /></AdminRoute>} />
             <Route path="/admin/complaints" element={<AdminRoute><ComplaintsInquiriesPage /></AdminRoute>} />
+            <Route path="/admin/inquiries" element={<Navigate to="/admin/complaints" replace />} />
             <Route path="/admin/complaints-inquiries" element={<Navigate to="/admin/complaints" replace />} />
             <Route path="/admin/settings" element={<Navigate to="/admin" replace />} />
             <Route path="/admin/trip-info/:tripId" element={<AdminRoute><TripInfo /></AdminRoute>} />
