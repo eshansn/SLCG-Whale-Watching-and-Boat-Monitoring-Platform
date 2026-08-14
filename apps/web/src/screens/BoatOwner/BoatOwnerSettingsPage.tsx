@@ -168,20 +168,24 @@ function BoatOwnerSettingsPage() {
 
   const handleDeleteAccount = (): void => {
     const shouldDelete = window.confirm(
-      "Are you sure you want to delete your account? This action cannot be undone.",
+      "Continue to prepare an account deletion request? Your account will remain active until support processes it.",
     );
 
     if (!shouldDelete) {
       return;
     }
 
-    /*
-     * Send the account deletion request to
-     * your backend API here later.
-     */
+    const subject = encodeURIComponent(
+      "WWMS Boat Owner account deletion request",
+    );
+    const body = encodeURIComponent(
+      `Please delete my WWMS Boat Owner account.\n\nAccount email: ${session?.email ?? "Not available"}`,
+    );
+    window.location.href =
+      `mailto:support@wwms.test?subject=${subject}&body=${body}`;
 
     setStatusMessage(
-      "Your account deletion request has been recorded.",
+      "Your email app has been opened. Send the message to submit your account deletion request.",
     );
   };
 
