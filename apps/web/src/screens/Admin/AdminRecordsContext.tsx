@@ -6,6 +6,9 @@ import { connectOperations, operationsApi } from "../../operations/operationsApi
 
 interface RecordsState { boats: BoatRecord[]; crew: CrewRecord[]; owners: OwnerRecord[] }
 interface RecordsContextValue extends RecordsState {
+  loading: boolean;
+  error?: string;
+  reload: () => void;
   updateBoat: (id: string, values: Partial<BoatRecord>) => Promise<void>;
   updateCrew: (id: string, values: Partial<CrewRecord>) => Promise<void>;
   updateOwner: (id: string, values: Partial<OwnerRecord>) => Promise<void>;
@@ -22,33 +25,57 @@ const Context = createContext<RecordsContextValue | null>(null);
 export function AdminRecordsProvider({ children }: { children: ReactNode }) {
   const { session } = useAuth();
   const [state, setState] = useState<RecordsState>(initial);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string>();
+  const [reloadVersion, setReloadVersion] = useState(0);
 
   useEffect(() => {
     if (!session || !session.roles.some((role) => role === "Admin" || role === "Wildlife")) return;
     let active = true;
-    const load = () => void Promise.all([
+    let retryTimer: number | undefined;
+    let requestVersion = 0;
+    const load = () => {
+      const currentRequest = ++requestVersion;
+      setLoading(true);
+      setError(undefined);
+      void Promise.all([
       operationsApi.boats(session.accessToken),
       operationsApi.trips(session.accessToken),
       operationsApi.directory(session.accessToken),
       session.roles.includes("Admin") ? operationsApi.adminCrew(session.accessToken) : Promise.resolve(null),
     ]).then(([apiBoats, apiTrips, directory, adminCrew]) => {
-      if (!active) return;
+      if (!active || currentRequest !== requestVersion) return;
       const crewDirectory = adminCrew ?? directory.crew;
       const owners: OwnerRecord[] = directory.owners.map((owner) => ({ id: owner.id, apiId: owner.id, name: owner.displayName, nic: owner.nicNumber ?? "", email: owner.email, phone: owner.phoneNumber ?? "", address: owner.bio ?? "", boatIds: apiBoats.filter((boat) => boat.ownerId === owner.id).map((boat) => boat.id) }));
       const boats: BoatRecord[] = apiBoats.map((boat) => ({ id: boat.id, apiId: boat.id, imageUrl: boat.imageUrl, documents: boat.documents, name: boat.name, registrationNumber: boat.registrationNumber, registrationDate: boat.registrationDate, hullNumber: boat.hullNumber, length: `${boat.lengthMeters} m`, width: `${boat.widthMeters} m`, capacity: boat.maximumCapacity, ownerId: boat.ownerId, crewIds: crewDirectory.filter((member) => member.boatId === boat.id).map((member) => member.id), approval: boat.approval === "Rejected" ? "Declined" : boat.approval as ApprovalStatus, certifications: boat.documents.map((document) => document.name), tripIds: apiTrips.filter((trip) => trip.boatId === boat.id).map((trip) => trip.id) }));
       const crew: CrewRecord[] = crewDirectory.map((member) => ({ id: member.id, apiId: member.id, ownerId: member.ownerId, name: member.displayName, nic: member.nicNumber ?? "", email: member.email, phone: member.phoneNumber ?? "", address: "bio" in member ? member.bio ?? "" : "", role: member.position as CrewRecord["role"], boatId: member.boatId, approval: member.certified ? "Approved" : "Pending", certifications: member.certified ? ["Certified crew account"] : [], tripIds: apiTrips.filter((trip) => trip.crew.some((assignment) => assignment.crewUserId === member.id)).map((trip) => trip.id) }));
       setState({ owners, boats, crew });
-    }).catch(() => undefined);
+      setLoading(false);
+      if (retryTimer !== undefined) window.clearTimeout(retryTimer);
+    }).catch((reason: unknown) => {
+      if (!active || currentRequest !== requestVersion) return;
+      setLoading(false);
+      setError(reason instanceof Error ? reason.message : "Unable to load administrative records.");
+      retryTimer = window.setTimeout(load, 5000);
+    });
+    };
     load();
     const disconnect = connectOperations(session.accessToken, load);
-    return () => { active = false; disconnect(); };
-  }, [session]);
+    return () => {
+      active = false;
+      if (retryTimer !== undefined) window.clearTimeout(retryTimer);
+      disconnect();
+    };
+  }, [session, reloadVersion]);
 
   const patch = <K extends keyof RecordsState>(key: K, id: string, values: Partial<RecordsState[K][number]>) =>
     setState((current) => ({ ...current, [key]: current[key].map((item) => item.id === id ? { ...item, ...values } : item) }));
 
   const value: RecordsContextValue = {
     ...state,
+    loading,
+    error,
+    reload: () => setReloadVersion((current) => current + 1),
     updateBoat: async (id, values) => {
       const boat = state.boats.find((item) => item.id === id);
       const ownerId = values.ownerId ?? boat?.ownerId;

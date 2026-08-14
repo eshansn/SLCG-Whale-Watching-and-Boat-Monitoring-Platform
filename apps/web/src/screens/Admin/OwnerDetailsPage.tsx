@@ -3,6 +3,7 @@ import { ArrowLeft, Eye, Pencil, Trash2 } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAdminRecords } from './AdminRecordsContext';
 import EditRecordModal from './components/EditRecordModal';
+import { RecordUnavailable, RecordsErrorNotice } from './components/RecordsLoadState';
 
 export default function OwnerDetailsPage() {
   const { ownerId } = useParams();
@@ -11,7 +12,7 @@ export default function OwnerDetailsPage() {
   const owner = records.owners.find((item) => item.id === ownerId);
   const [editing, setEditing] = useState(false);
 
-  if (!owner) return <main className="p-10 text-center">Owner not found.</main>;
+  if (!owner) return <RecordUnavailable loading={records.loading} error={records.error} onRetry={records.reload} notFound="Owner not found."/>;
 
   const boats = records.boats.filter((boat) => boat.ownerId === owner.id);
   const remove = async () => {
@@ -30,6 +31,7 @@ export default function OwnerDetailsPage() {
   };
 
   return <main className="mx-auto max-w-6xl px-6 py-10">
+    <RecordsErrorNotice error={records.error} onRetry={records.reload}/>
     <div className="flex justify-between">
       <button onClick={() => nav(-1)} aria-label="Back to owners" title="Back" className="rounded-full p-2 text-indigo-700 hover:bg-indigo-50"><ArrowLeft size={20}/></button>
       <div className="flex gap-3">

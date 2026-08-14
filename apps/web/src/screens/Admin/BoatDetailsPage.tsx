@@ -7,6 +7,7 @@ import { useAdminRecords } from './AdminRecordsContext';
 import ApprovalControls from './components/ApprovalControls';
 import BoatReportModal from './components/BoatReportModal';
 import EditRecordModal from './components/EditRecordModal';
+import { RecordUnavailable, RecordsErrorNotice } from './components/RecordsLoadState';
 import TripHistory from './components/TripHistory';
 
 export default function BoatDetailsPage() {
@@ -19,7 +20,7 @@ export default function BoatDetailsPage() {
   const [reportOpen, setReportOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
-  if (!boat) return <main className="p-10 text-center">Boat not found.</main>;
+  if (!boat) return <RecordUnavailable loading={records.loading} error={records.error} onRetry={records.reload} notFound="Boat not found."/>;
 
   const owner = records.owners.find(item => item.id === boat.ownerId);
   const ownerCrew = records.crew.filter(item => item.ownerId === boat.ownerId);
@@ -51,6 +52,7 @@ export default function BoatDetailsPage() {
   };
 
   return <main className="mx-auto max-w-7xl px-6 py-10">
+    <RecordsErrorNotice error={records.error} onRetry={records.reload}/>
     <div className="flex justify-between">
       <button onClick={() => nav(-1)} aria-label="Back to boats" title="Back" className="rounded-full p-2 text-indigo-700"><ArrowLeft size={20}/></button>
       <div className="flex gap-3">
