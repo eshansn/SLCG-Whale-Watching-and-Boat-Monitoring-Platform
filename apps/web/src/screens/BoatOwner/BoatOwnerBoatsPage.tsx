@@ -12,7 +12,6 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../auth/useAuth";
 import { connectOperations, operationsApi } from "../../operations/operationsApi";
 
-import groupIcon from "../../assets/icons/group.svg";
 import infoIcon from "../../assets/icons/info.svg";
 import notificationIcon from "../../assets/icons/notification.svg";
 import userIcon from "../../assets/icons/user.svg";
@@ -74,15 +73,19 @@ function BoatOwnerBoatsPage() {
   const navigate = useNavigate();
   const {session}=useAuth();
   const [boats,setBoats]=useState<Boat[]>([]);
+  const [loading,setLoading]=useState(true);
+  const [error,setError]=useState("");
+  const [retryVersion,setRetryVersion]=useState(0);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   useEffect(()=>{
     if(!session)return;
     let active=true;
-    const load=()=>void operationsApi.boats(session.accessToken).then(records=>{if(active)setBoats(records.map(boat=>({id:boat.id,name:boat.name,registrationNumber:boat.registrationNumber,image:boat.imageUrl??"/OwnerBoat1.png",approval:boat.approval,wildlifeApproval:boat.wildlifeApproval})))}).catch(()=>undefined);
+    let requestVersion=0;
+    const load=()=>{const currentRequest=++requestVersion;void operationsApi.boats(session.accessToken).then(records=>{if(active&&currentRequest===requestVersion){setBoats(records.map(boat=>({id:boat.id,name:boat.name,registrationNumber:boat.registrationNumber,image:boat.imageUrl??"/OwnerBoat1.png",approval:boat.approval,wildlifeApproval:boat.wildlifeApproval})));setError("")}}).catch(loadError=>{if(active&&currentRequest===requestVersion)setError(loadError instanceof Error?loadError.message:"Unable to load boats.")}).finally(()=>{if(active&&currentRequest===requestVersion)setLoading(false)})};
     load();const disconnect=connectOperations(session.accessToken,load);
     return()=>{active=false;disconnect()};
-  },[session]);
+  },[session,retryVersion]);
 
   const approvedBoats=boats.filter(boat=>boat.approval==="Approved");
   const awaitingApprovalBoats=boats.filter(boat=>boat.approval!=="Approved");
@@ -181,6 +184,27 @@ function BoatOwnerBoatsPage() {
         >
           My Boats
         </h1>
+
+        {error && (
+          <div role="alert" className="mb-5 flex items-center justify-between gap-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700 sm:mb-7">
+            <span>{error}</span>
+            <button
+              type="button"
+              disabled={loading}
+              onClick={() => {
+                setLoading(true);
+                setRetryVersion((version) => version + 1);
+              }}
+              className="shrink-0 font-semibold underline disabled:opacity-50"
+            >
+              {loading ? "Retrying…" : "Retry"}
+            </button>
+          </div>
+        )}
+
+        {loading && boats.length === 0 && (
+          <p className="mb-5 text-sm text-slate-500 sm:mb-7">Loading boats…</p>
+        )}
 
         <div
           className="
@@ -288,13 +312,13 @@ function BoatOwnerBoatsPage() {
               </button>
             </article>
           ))}
-          {approvedBoats.length===0&&<p className="md:col-span-2 lg:col-span-3 text-sm text-slate-500">No boats have completed approval yet.</p>}
+          {!loading&&!error&&approvedBoats.length===0&&<p className="md:col-span-2 lg:col-span-3 text-sm text-slate-500">No boats have completed approval yet.</p>}
 
           <h2 className="md:col-span-2 lg:col-span-3 mt-3 text-[17px] font-semibold sm:text-[20px]">Yet to be Approved</h2>
           {awaitingApprovalBoats.map((boat) => (
             <BoatCard key={boat.id} boat={boat} onOpen={()=>navigate(`/owner/boats/${boat.id}`)}/>
           ))}
-          {awaitingApprovalBoats.length===0&&<p className="md:col-span-2 lg:col-span-3 text-sm text-slate-500">No boats are awaiting approval.</p>}
+          {!loading&&!error&&awaitingApprovalBoats.length===0&&<p className="md:col-span-2 lg:col-span-3 text-sm text-slate-500">No boats are awaiting approval.</p>}
 
           {/* Register boat panel */}
           <section
