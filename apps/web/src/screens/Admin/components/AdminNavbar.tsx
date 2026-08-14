@@ -50,6 +50,7 @@ const AdminNavbar = () => {
   const { logout, session } = useAuth();
   const isWildlife = session?.roles.includes("Wildlife") ?? false;
   const homePath = isWildlife ? "/wildlife" : "/admin";
+  const notificationsPath = isWildlife ? "/wildlife/complaints" : "/admin/complaints";
   const navigationItems = adminNavigationItems
     .filter((item) => !isWildlife || item.label !== "Staff")
     .map((item) => isWildlife ? { ...item, path: item.path.replace("/admin", "/wildlife") } : item);
@@ -73,6 +74,7 @@ const AdminNavbar = () => {
         <nav className="hidden items-center gap-6 text-sm lg:flex" aria-label="Admin navigation">
           <button
             type="button"
+            onClick={() => navigate(notificationsPath)}
             aria-label="Notifications"
             className="flex items-center justify-center text-slate-500 transition-colors hover:text-[#14223d]"
           >
