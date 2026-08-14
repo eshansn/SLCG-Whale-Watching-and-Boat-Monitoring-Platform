@@ -14,7 +14,7 @@ export default function BoatDetailsPage() {
   const nav = useNavigate();
   const { session } = useAuth();
   const records = useAdminRecords();
-  const boat = records.boats.find(item => item.id === Number(boatId ?? fleetId ?? id));
+  const boat = records.boats.find(item => item.id === (boatId ?? fleetId ?? id));
   const [editing, setEditing] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -84,7 +84,7 @@ export default function BoatDetailsPage() {
     </div>
 
     {editing && (
-      <EditRecordModal title="boat" fields={[{key:'name',label:'Boat name'},{key:'registrationNumber',label:'Registration number'},{key:'registrationDate',label:'Registration date',type:'date'},{key:'hullNumber',label:'Hull number'},{key:'capacity',label:'Maximum capacity',type:'number'},{key:'length',label:'Length'},{key:'width',label:'Width'},{key:'ownerId',label:'Owner',type:'select',options:records.owners.map(item=>({label:item.name,value:String(item.id)}))}]} initial={boat} onClose={() => setEditing(false)} onSave={async values => { try { await records.updateBoat(boat.id, {...values, capacity:Number(values.capacity), ownerId:Number(values.ownerId)}); setEditing(false); } catch (reason) { alert(reason instanceof Error ? reason.message : 'The boat could not be updated.'); } }}/>
+      <EditRecordModal title="boat" fields={[{key:'name',label:'Boat name'},{key:'registrationNumber',label:'Registration number'},{key:'registrationDate',label:'Registration date',type:'date'},{key:'hullNumber',label:'Hull number'},{key:'capacity',label:'Maximum capacity',type:'number'},{key:'length',label:'Length'},{key:'width',label:'Width'},{key:'ownerId',label:'Owner',type:'select',options:records.owners.map(item=>({label:item.name,value:item.id}))}]} initial={boat} onClose={() => setEditing(false)} onSave={async values => { try { await records.updateBoat(boat.id, {...values, capacity:Number(values.capacity), ownerId:String(values.ownerId)}); setEditing(false); } catch (reason) { alert(reason instanceof Error ? reason.message : 'The boat could not be updated.'); } }}/>
     )}
     {reportOpen && session && (
       <BoatReportModal boat={boat} owner={owner} crew={ownerCrew} token={session.accessToken} onClose={() => setReportOpen(false)}/>

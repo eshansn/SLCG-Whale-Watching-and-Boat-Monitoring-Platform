@@ -1,2 +1,18 @@
-import{Link}from'react-router-dom';import{useOperations}from'../../../operations/useOperations';import{formatTripDate}from'../../../operations/operationsApi';
-export default function TripHistory({tripIds}:{tripIds:number[]}){const{trips,loading}=useOperations();const records=trips.filter((_,index)=>tripIds.includes(index+101));return <section className="rounded-2xl bg-white p-6 shadow-sm"><h2 className="text-lg font-semibold">Trip history</h2>{loading?<p className="mt-5 text-sm text-slate-500">Loading trips…</p>:records.length===0?<p className="mt-5 text-sm text-slate-500">No trips recorded yet.</p>:<div className="mt-5 overflow-x-auto"><table className="w-full min-w-[560px] text-left text-sm"><thead className="border-b text-xs uppercase text-slate-400"><tr><th className="py-3">Trip</th><th>Date</th><th>Route</th><th>Passengers</th><th>Status</th></tr></thead><tbody>{records.map(t=><tr key={t.id} className="border-b border-slate-100"><td className="py-4"><Link className="font-semibold text-indigo-700" to={`/admin/trip-info/${t.id}`}>#{t.id.slice(0,8)}</Link></td><td>{formatTripDate(t.scheduledDepartureUtc)}</td><td>{t.route}</td><td>{t.passengerCount}</td><td>{t.status}</td></tr>)}</tbody></table></div>}</section>}
+import { Link } from 'react-router-dom';
+import { formatTripDate } from '../../../operations/operationsApi';
+import { useOperations } from '../../../operations/useOperations';
+
+export default function TripHistory({ tripIds }: { tripIds: string[] }) {
+  const { trips, loading } = useOperations();
+  const records = trips.filter((trip) => tripIds.includes(trip.id));
+
+  return <section className="rounded-2xl bg-white p-6 shadow-sm">
+    <h2 className="text-lg font-semibold">Trip history</h2>
+    {loading ? <p className="mt-5 text-sm text-slate-500">Loading trips…</p> : records.length === 0 ? <p className="mt-5 text-sm text-slate-500">No trips recorded yet.</p> : <div className="mt-5 overflow-x-auto">
+      <table className="w-full min-w-[560px] text-left text-sm">
+        <thead className="border-b text-xs uppercase text-slate-400"><tr><th className="py-3">Trip</th><th>Date</th><th>Route</th><th>Passengers</th><th>Status</th></tr></thead>
+        <tbody>{records.map((trip) => <tr key={trip.id} className="border-b border-slate-100"><td className="py-4"><Link className="font-semibold text-indigo-700" to={`/admin/trip-info/${trip.id}`}>#{trip.id.slice(0,8)}</Link></td><td>{formatTripDate(trip.scheduledDepartureUtc)}</td><td>{trip.route}</td><td>{trip.passengerCount}</td><td>{trip.status}</td></tr>)}</tbody>
+      </table>
+    </div>}
+  </section>;
+}

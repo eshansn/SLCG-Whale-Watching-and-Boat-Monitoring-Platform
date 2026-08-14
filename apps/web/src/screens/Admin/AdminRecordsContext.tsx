@@ -6,14 +6,14 @@ import { connectOperations, operationsApi } from "../../operations/operationsApi
 
 interface RecordsState { boats: BoatRecord[]; crew: CrewRecord[]; owners: OwnerRecord[] }
 interface RecordsContextValue extends RecordsState {
-  updateBoat: (id: number, values: Partial<BoatRecord>) => Promise<void>;
-  updateCrew: (id: number, values: Partial<CrewRecord>) => Promise<void>;
-  updateOwner: (id: number, values: Partial<OwnerRecord>) => Promise<void>;
-  setBoatApproval: (id: number, status: ApprovalStatus, reason?: string) => Promise<void>;
-  setCrewApproval: (id: number, status: ApprovalStatus, reason?: string) => Promise<void>;
-  deleteBoat: (id: number) => Promise<void>;
-  deleteCrew: (id: number) => Promise<void>;
-  deleteOwner: (id: number) => Promise<void>;
+  updateBoat: (id: string, values: Partial<BoatRecord>) => Promise<void>;
+  updateCrew: (id: string, values: Partial<CrewRecord>) => Promise<void>;
+  updateOwner: (id: string, values: Partial<OwnerRecord>) => Promise<void>;
+  setBoatApproval: (id: string, status: ApprovalStatus, reason?: string) => Promise<void>;
+  setCrewApproval: (id: string, status: ApprovalStatus, reason?: string) => Promise<void>;
+  deleteBoat: (id: string) => Promise<void>;
+  deleteCrew: (id: string) => Promise<void>;
+  deleteOwner: (id: string) => Promise<void>;
 }
 
 const initial: RecordsState = { boats: [], crew: [], owners: [] };
@@ -33,14 +33,10 @@ export function AdminRecordsProvider({ children }: { children: ReactNode }) {
       session.roles.includes("Admin") ? operationsApi.adminCrew(session.accessToken) : Promise.resolve(null),
     ]).then(([apiBoats, apiTrips, directory, adminCrew]) => {
       if (!active) return;
-      const ownerIds = new Map(directory.owners.map((owner, index) => [owner.id, index + 1]));
-      const boatIds = new Map(apiBoats.map((boat, index) => [boat.id, index + 1]));
-      const tripIds = new Map(apiTrips.map((trip, index) => [trip.id, index + 101]));
       const crewDirectory = adminCrew ?? directory.crew;
-      const crewIds = new Map(crewDirectory.map((member, index) => [member.id, index + 1]));
-      const owners: OwnerRecord[] = directory.owners.map((owner) => ({ id: ownerIds.get(owner.id)!, apiId: owner.id, name: owner.displayName, nic: owner.nicNumber ?? "", email: owner.email, phone: owner.phoneNumber ?? "", address: owner.bio ?? "", boatIds: apiBoats.filter((boat) => boat.ownerId === owner.id).map((boat) => boatIds.get(boat.id)!) }));
-      const boats: BoatRecord[] = apiBoats.map((boat) => ({ id: boatIds.get(boat.id)!, apiId: boat.id, imageUrl: boat.imageUrl, documents: boat.documents, name: boat.name, registrationNumber: boat.registrationNumber, registrationDate: boat.registrationDate, hullNumber: boat.hullNumber, length: `${boat.lengthMeters} m`, width: `${boat.widthMeters} m`, capacity: boat.maximumCapacity, ownerId: ownerIds.get(boat.ownerId)!, crewIds: crewDirectory.filter((member) => member.boatId === boat.id).map((member) => crewIds.get(member.id)!), approval: boat.approval === "Rejected" ? "Declined" : boat.approval as ApprovalStatus, certifications: boat.documents.map((document) => document.name), tripIds: apiTrips.filter((trip) => trip.boatId === boat.id).map((trip) => tripIds.get(trip.id)!) }));
-      const crew: CrewRecord[] = crewDirectory.map((member) => ({ id: crewIds.get(member.id)!, apiId: member.id, ownerId: member.ownerId ? ownerIds.get(member.ownerId) : undefined, name: member.displayName, nic: member.nicNumber ?? "", email: member.email, phone: member.phoneNumber ?? "", address: "bio" in member ? member.bio ?? "" : "", role: member.position as CrewRecord["role"], boatId: member.boatId ? boatIds.get(member.boatId) : undefined, approval: member.certified ? "Approved" : "Pending", certifications: member.certified ? ["Certified crew account"] : [], tripIds: apiTrips.filter((trip) => trip.crew.some((assignment) => assignment.crewUserId === member.id)).map((trip) => tripIds.get(trip.id)!) }));
+      const owners: OwnerRecord[] = directory.owners.map((owner) => ({ id: owner.id, apiId: owner.id, name: owner.displayName, nic: owner.nicNumber ?? "", email: owner.email, phone: owner.phoneNumber ?? "", address: owner.bio ?? "", boatIds: apiBoats.filter((boat) => boat.ownerId === owner.id).map((boat) => boat.id) }));
+      const boats: BoatRecord[] = apiBoats.map((boat) => ({ id: boat.id, apiId: boat.id, imageUrl: boat.imageUrl, documents: boat.documents, name: boat.name, registrationNumber: boat.registrationNumber, registrationDate: boat.registrationDate, hullNumber: boat.hullNumber, length: `${boat.lengthMeters} m`, width: `${boat.widthMeters} m`, capacity: boat.maximumCapacity, ownerId: boat.ownerId, crewIds: crewDirectory.filter((member) => member.boatId === boat.id).map((member) => member.id), approval: boat.approval === "Rejected" ? "Declined" : boat.approval as ApprovalStatus, certifications: boat.documents.map((document) => document.name), tripIds: apiTrips.filter((trip) => trip.boatId === boat.id).map((trip) => trip.id) }));
+      const crew: CrewRecord[] = crewDirectory.map((member) => ({ id: member.id, apiId: member.id, ownerId: member.ownerId, name: member.displayName, nic: member.nicNumber ?? "", email: member.email, phone: member.phoneNumber ?? "", address: "bio" in member ? member.bio ?? "" : "", role: member.position as CrewRecord["role"], boatId: member.boatId, approval: member.certified ? "Approved" : "Pending", certifications: member.certified ? ["Certified crew account"] : [], tripIds: apiTrips.filter((trip) => trip.crew.some((assignment) => assignment.crewUserId === member.id)).map((trip) => trip.id) }));
       setState({ owners, boats, crew });
     }).catch(() => undefined);
     load();
@@ -48,7 +44,7 @@ export function AdminRecordsProvider({ children }: { children: ReactNode }) {
     return () => { active = false; disconnect(); };
   }, [session]);
 
-  const patch = <K extends keyof RecordsState>(key: K, id: number, values: Partial<RecordsState[K][number]>) =>
+  const patch = <K extends keyof RecordsState>(key: K, id: string, values: Partial<RecordsState[K][number]>) =>
     setState((current) => ({ ...current, [key]: current[key].map((item) => item.id === id ? { ...item, ...values } : item) }));
 
   const value: RecordsContextValue = {
