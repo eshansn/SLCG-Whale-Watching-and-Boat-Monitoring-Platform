@@ -25,6 +25,7 @@ public sealed class CrewController(WhaleWatchingDbContext db) : ControllerBase
                 user.PhoneNumber,
                 user.CrewType ?? "Crew Member",
                 user.NicNumber,
+                user.Bio,
                 user.IsCrewCertified,
                 db.OwnerCrewMemberships.Where(membership => membership.CrewUserId == user.Id)
                     .OrderBy(membership => membership.AddedAtUtc)
@@ -41,4 +42,4 @@ public sealed class CrewController(WhaleWatchingDbContext db) : ControllerBase
 }
 
 public sealed record AdminCrewDto(Guid Id, string DisplayName, string Email, string? PhoneNumber,
-    string Position, string? NicNumber, bool Certified, Guid? OwnerId, Guid? BoatId);
+    string Position, string? NicNumber, string? Bio, bool Certified, Guid? OwnerId, Guid? BoatId);

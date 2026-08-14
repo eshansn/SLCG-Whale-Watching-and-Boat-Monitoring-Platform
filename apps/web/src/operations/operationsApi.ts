@@ -5,13 +5,16 @@ const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, ''
 export interface BoatDocument { id:string; name:string; fileName:string; contentType:string; uploadedAtUtc:string; expirationDate?:string }
 export interface Boat { id:string; ownerId:string; ownerName:string; name:string; registrationNumber:string; registrationDate:string; hullNumber:string; lengthMeters:number; widthMeters:number; maximumSpeedKnots:number; maximumCapacity:number; lifeJacketCount:number; gpsDeviceId?:string; approval:string; wildlifeApproval:string; imageUrl?:string; documents:BoatDocument[] }
 export interface CreateBoat { name:string; registrationNumber:string; registrationDate:string; hullNumber:string; lengthMeters:number; widthMeters:number; maximumCapacity:number; imageUrl?:string; maximumSpeedKnots:number; lifeJacketCount:number; gpsDeviceId?:string }
+export interface UpdateAdminBoat { ownerId:string; name:string; registrationNumber:string; registrationDate:string; hullNumber:string; lengthMeters:number; widthMeters:number; maximumCapacity:number }
+export interface UpdateAdminOwner { name:string; nic:string; email:string; phone:string; address:string }
+export interface UpdateAdminCrew extends UpdateAdminOwner { role:string; boatId?:string }
 export interface TripCrew { crewUserId:string; name:string; email:string; position:string; nicNumber?:string; certified:boolean }
 export interface TripPassenger { id:string; name:string; identificationNumber:string; phoneNumber:string; ageCategory:string; passengerType:string; gender:string; registeredAtUtc:string }
 export interface Trip { id:string; boatId:string; vesselName:string; registrationNumber:string; ownerName:string; scheduledDepartureUtc:string; actualDepartureUtc?:string; actualArrivalUtc?:string; route:string; passengerCount:number; status:string; shoreApproval:string; wildlifeShoreApproval:string; shoreNotes?:string; updatedAtUtc:string; invitationCode?:string; crew:TripCrew[]; hasActiveSos:boolean }
 export interface DirectoryOwner { id:string; displayName:string; email:string; phoneNumber?:string; nicNumber?:string; bio?:string }
 export interface DirectoryCrew { id:string; displayName:string; email:string; phoneNumber?:string; position:string; boatId?:string; ownerId:string; nicNumber?:string; certified:boolean }
 export interface OperationsDirectory { owners:DirectoryOwner[]; crew:DirectoryCrew[] }
-export interface AdminCrew { id:string; displayName:string; email:string; phoneNumber?:string; position:string; nicNumber?:string; certified:boolean; ownerId?:string; boatId?:string }
+export interface AdminCrew { id:string; displayName:string; email:string; phoneNumber?:string; position:string; nicNumber?:string; bio?:string; certified:boolean; ownerId?:string; boatId?:string }
 export interface SosAlert { id:string; tripId:string; vesselName:string; registrationNumber:string; location:string; passengersOnboard:number; natureOfEmergency:string; raisedAtUtc:string }
 export interface SosAction { id:string; sosEventId:string; takenByName:string; details:string; takenAtUtc:string }
 export interface TransferBoat { id:string; name:string; registrationNumber:string; status:string; ownerId:string; ownerName:string }
@@ -70,6 +73,11 @@ export const operationsApi = {
   approveBoat:(token:string,id:string,approval:'Approved'|'Rejected',notes?:string)=>request<void>(`/api/operations/boats/${id}/approval`,token,{method:'PATCH',body:JSON.stringify({approval,notes})}),
   deleteBoat:(token:string,id:string)=>request<void>(`/api/operations/boats/${id}`,token,{method:'DELETE'}),
   approveCrew:(token:string,id:string,approval:'Approved'|'Rejected',notes?:string)=>request<void>(`/api/operations/crew/${id}/approval`,token,{method:'PATCH',body:JSON.stringify({approval,notes})}),
+  updateAdminBoat:(token:string,id:string,details:UpdateAdminBoat)=>request<void>(`/api/admin/records/boats/${id}`,token,{method:'PATCH',body:JSON.stringify(details)}),
+  updateAdminOwner:(token:string,id:string,details:UpdateAdminOwner)=>request<void>(`/api/admin/records/owners/${id}`,token,{method:'PATCH',body:JSON.stringify(details)}),
+  updateAdminCrew:(token:string,id:string,details:UpdateAdminCrew)=>request<void>(`/api/admin/records/crew/${id}`,token,{method:'PATCH',body:JSON.stringify(details)}),
+  deleteAdminOwner:(token:string,id:string)=>request<void>(`/api/admin/records/owners/${id}`,token,{method:'DELETE'}),
+  deleteAdminCrew:(token:string,id:string)=>request<void>(`/api/admin/records/crew/${id}`,token,{method:'DELETE'}),
   transferOptions:(token:string,sourceTripId:string)=>request<TransferOptions>(`/api/operations/transfers/source/${sourceTripId}`,token),
   searchTransferBoats:(token:string,sourceTripId:string,query:string)=>request<TransferBoat[]>(`/api/operations/transfers/destination-boats?sourceTripId=${encodeURIComponent(sourceTripId)}&query=${encodeURIComponent(query)}`,token),
   transferBoatTrips:(token:string,sourceTripId:string,boatId:string)=>request<TransferTrip[]>(`/api/operations/transfers/destination-boats/${encodeURIComponent(boatId)}/trips?sourceTripId=${encodeURIComponent(sourceTripId)}`,token),
