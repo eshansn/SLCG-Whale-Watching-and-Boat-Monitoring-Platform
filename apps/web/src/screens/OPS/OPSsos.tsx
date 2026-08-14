@@ -63,6 +63,9 @@ export default function OPSSOS() {
   const navigate = useNavigate();
   const {session}=useAuth();
   const [alerts,setAlerts] = useState<EmergencyAlert[]>([]);
+  const [loading,setLoading] = useState(true);
+  const [error,setError] = useState("");
+  const [retryVersion,setRetryVersion] = useState(0);
   const [searchValue, setSearchValue] = useState("");
   const [sortOption, setSortOption] = useState<SortOption>("vessel-asc");
   const [currentPage, setCurrentPage] = useState(1);
@@ -71,10 +74,11 @@ export default function OPSSOS() {
   useEffect(()=>{
     if(!session)return;
     let active=true;
-    const load=()=>void operationsApi.sosAlerts(session.accessToken).then(items=>{if(active)setAlerts(items)}).catch(()=>undefined);
+    let requestVersion=0;
+    const load=()=>{const currentRequest=++requestVersion;void operationsApi.sosAlerts(session.accessToken).then(items=>{if(active&&currentRequest===requestVersion){setAlerts(items);setError("")}}).catch(loadError=>{if(active&&currentRequest===requestVersion)setError(loadError instanceof Error?loadError.message:"Unable to load emergency alerts.")}).finally(()=>{if(active&&currentRequest===requestVersion)setLoading(false)})};
     load(); const interval=window.setInterval(load,5000); const disconnect=connectOperations(session.accessToken,load);
     return()=>{active=false;window.clearInterval(interval);disconnect()};
-  },[session]);
+  },[session,retryVersion]);
 
   const filteredAndSortedAlerts = useMemo(() => {
     const searchTerm = searchValue.trim().toLowerCase();
@@ -217,6 +221,23 @@ export default function OPSSOS() {
             </div>
           </div>
 
+          {error && (
+            <div role="alert" className="mt-6 flex items-center justify-between gap-4 rounded-md bg-red-50 px-4 py-3 text-sm text-red-700">
+              <span>{error}</span>
+              <button
+                type="button"
+                disabled={loading}
+                onClick={() => {
+                  setLoading(true);
+                  setRetryVersion((version) => version + 1);
+                }}
+                className="shrink-0 font-semibold underline disabled:opacity-50"
+              >
+                {loading ? "Retrying…" : "Retry"}
+              </button>
+            </div>
+          )}
+
           <div className="mt-6 overflow-x-auto">
             <table className="w-full min-w-[980px] border-collapse text-left">
               <thead>
@@ -260,7 +281,13 @@ export default function OPSSOS() {
             </table>
           </div>
 
-          {visibleAlerts.length === 0 && (
+          {loading && alerts.length === 0 && (
+            <div className="py-16 text-center text-sm text-slate-400">
+              Loading emergency alerts…
+            </div>
+          )}
+
+          {!loading && !error && visibleAlerts.length === 0 && (
             <div className="py-16 text-center">
               <Icon name="search" size={30} className="mx-auto" />
               <h2 className="mt-4 text-sm font-semibold">No alerts found</h2>
