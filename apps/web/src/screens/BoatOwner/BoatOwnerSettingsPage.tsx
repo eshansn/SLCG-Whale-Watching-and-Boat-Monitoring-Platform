@@ -15,9 +15,11 @@ import {
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../auth/useAuth";
 import { changePassword } from "../../auth/authApi";
+import {
+  readPortalPreference,
+  writePortalPreference,
+} from "../../settings/portalPreferences";
 
-import groupIcon from "../../assets/icons/group.svg";
-import infoIcon from "../../assets/icons/info.svg";
 import notificationIcon from "../../assets/icons/notification.svg";
 import userIcon from "../../assets/icons/user.svg";
 import vesselIcon from "../../assets/icons/vessel.svg";
@@ -125,8 +127,12 @@ function BoatOwnerSettingsPage() {
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [appNotifications, setAppNotifications] =
-    useState(true);
-  const [autoUpdates, setAutoUpdates] = useState(true);
+    useState(() =>
+      readPortalPreference(session?.userId, "boat-owner", "notifications"),
+    );
+  const [autoUpdates, setAutoUpdates] = useState(() =>
+    readPortalPreference(session?.userId, "boat-owner", "autoUpdates"),
+  );
   const [statusMessage, setStatusMessage] = useState("");
   const [passwordOpen,setPasswordOpen]=useState(false);
   const [passwords,setPasswords]=useState({currentPassword:"",newPassword:"",confirmPassword:""});
@@ -269,9 +275,16 @@ function BoatOwnerSettingsPage() {
             label="App notifications"
             checked={appNotifications}
             onChange={() => {
-              setAppNotifications(
-                (currentValue) => !currentValue,
-              );
+              setAppNotifications((currentValue) => {
+                const nextValue = !currentValue;
+                writePortalPreference(
+                  session?.userId,
+                  "boat-owner",
+                  "notifications",
+                  nextValue,
+                );
+                return nextValue;
+              });
             }}
           />
         </section>
@@ -299,9 +312,16 @@ function BoatOwnerSettingsPage() {
             label="Automatic updates"
             checked={autoUpdates}
             onChange={() => {
-              setAutoUpdates(
-                (currentValue) => !currentValue,
-              );
+              setAutoUpdates((currentValue) => {
+                const nextValue = !currentValue;
+                writePortalPreference(
+                  session?.userId,
+                  "boat-owner",
+                  "autoUpdates",
+                  nextValue,
+                );
+                return nextValue;
+              });
             }}
           />
         </section>

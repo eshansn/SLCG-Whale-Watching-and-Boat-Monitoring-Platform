@@ -3,25 +3,30 @@ import { useState } from "react";
 
 import { useAuth } from "../../auth/useAuth";
 import { operationsApi } from "../../operations/operationsApi";
+import {
+  readPortalPreference,
+  type PortalPreference,
+  writePortalPreference,
+} from "../../settings/portalPreferences";
 
 export default function ShoreSettings() {
   const { session } = useAuth();
   const [notifications, setNotifications] = useState(
-    () => localStorage.getItem("shore.notifications") !== "false",
+    () => readPortalPreference(session?.userId, "shore", "notifications"),
   );
   const [autoUpdates, setAutoUpdates] = useState(
-    () => localStorage.getItem("shore.autoUpdates") !== "false",
+    () => readPortalPreference(session?.userId, "shore", "autoUpdates"),
   );
   const [refreshing, setRefreshing] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState(false);
 
   const savePreference = (
-    key: string,
+    preference: PortalPreference,
     value: boolean,
     update: (next: boolean) => void,
   ) => {
-    localStorage.setItem(key, String(value));
+    writePortalPreference(session?.userId, "shore", preference, value);
     update(value);
   };
 
@@ -65,7 +70,7 @@ export default function ShoreSettings() {
             checked={notifications}
             onChange={(value) =>
               savePreference(
-                "shore.notifications",
+                "notifications",
                 value,
                 setNotifications,
               )
@@ -76,7 +81,7 @@ export default function ShoreSettings() {
             detail="Keep trip records synchronized automatically"
             checked={autoUpdates}
             onChange={(value) =>
-              savePreference("shore.autoUpdates", value, setAutoUpdates)
+              savePreference("autoUpdates", value, setAutoUpdates)
             }
           />
           <button
