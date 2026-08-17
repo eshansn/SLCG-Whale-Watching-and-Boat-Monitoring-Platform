@@ -114,10 +114,16 @@ function BoatOwnerNewBoatPage() {
     useState<ReadonlySet<string>>(() => new Set());
   const [savingDraftOwnerIds, setSavingDraftOwnerIds] =
     useState<ReadonlySet<string>>(() => new Set());
+  const [draftLoadState, setDraftLoadState] =
+    useState<{ ownerId: string; loading: boolean }>();
   const [today] = useState(() => new Date().toISOString().slice(0, 10));
   const statusMessage = ownerId ? statusMessages[ownerId] ?? "" : "";
   const submitting = ownerId ? submittingOwnerIds.has(ownerId) : false;
   const savingDraft = ownerId ? savingDraftOwnerIds.has(ownerId) : false;
+  const draftLoading = ownerId !== undefined
+    && (!draftLoadState
+      || draftLoadState.ownerId !== ownerId
+      || draftLoadState.loading);
   const currentRegistration = ownerId !== undefined
     && registrationState?.ownerId === ownerId
     ? registrationState
@@ -160,7 +166,10 @@ function BoatOwnerNewBoatPage() {
   useEffect(() => {
     if (!ownerId) return;
     const startingRevision = draftEditRevisions.current.get(ownerId) ?? 0;
-    if (startingRevision > 0) return;
+    if (startingRevision > 0) {
+      setDraftLoadState({ ownerId, loading: false });
+      return;
+    }
     let active = true;
 
     void loadBoatRegistrationDraft(ownerId).then((draft) => {
@@ -197,6 +206,8 @@ function BoatOwnerNewBoatPage() {
         && (draftEditRevisions.current.get(ownerId) ?? 0) === startingRevision) {
         setStatusMessage("The saved boat draft could not be restored.");
       }
+    }).finally(() => {
+      if (active) setDraftLoadState({ ownerId, loading: false });
     });
 
     return () => { active = false; };
@@ -311,7 +322,7 @@ function BoatOwnerNewBoatPage() {
   };
 
   const handleSaveDraft = async (): Promise<void> => {
-    if (!ownerId || draftSaveLocks.current.has(ownerId)
+    if (!ownerId || draftLoading || draftSaveLocks.current.has(ownerId)
       || submissionLocks.current.has(ownerId)) return;
     const savedRevision = draftEditRevisions.current.get(ownerId) ?? 0;
     draftSaveLocks.current.add(ownerId);
@@ -341,7 +352,7 @@ function BoatOwnerNewBoatPage() {
   ): Promise<void> => {
     event.preventDefault();
 
-    if (!session || !ownerId || submissionLocks.current.has(ownerId)
+    if (!session || !ownerId || draftLoading || submissionLocks.current.has(ownerId)
       || draftSaveLocks.current.has(ownerId)) return;
 
     if (!boatPhoto) {
@@ -957,7 +968,7 @@ function BoatOwnerNewBoatPage() {
           <button
             type="button"
             onClick={handleSaveDraft}
-            disabled={savingDraft || submitting}
+            disabled={draftLoading || savingDraft || submitting}
             className="
               min-h-[58px] w-full
               rounded-[10px] border
@@ -975,12 +986,12 @@ function BoatOwnerNewBoatPage() {
               disabled:opacity-60
             "
           >
-            <span className="inline-flex items-center gap-2"><Save size={19}/>{savingDraft ? "Saving..." : "Save as Draft"}</span>
+            <span className="inline-flex items-center gap-2"><Save size={19}/>{draftLoading ? "Loading Draft..." : savingDraft ? "Saving..." : "Save as Draft"}</span>
           </button>
 
           <button
             type="submit"
-            disabled={submitting || savingDraft}
+            disabled={draftLoading || submitting || savingDraft}
             className="
               min-h-[58px] w-full
               rounded-[10px] bg-[#080d68]
