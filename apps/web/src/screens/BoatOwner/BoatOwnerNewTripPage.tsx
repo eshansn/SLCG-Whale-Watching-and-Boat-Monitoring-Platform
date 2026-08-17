@@ -11,6 +11,7 @@ import {
   X,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../auth/useAuth";
 import { useOperations } from "../../operations/useOperations";
 import { operationsApi } from "../../operations/operationsApi";
 import type { OwnerCrew } from "../../operations/operationsApi";
@@ -69,9 +70,21 @@ function createMinimumTripDateTime(): string {
   ).toISOString().slice(0, 16);
 }
 
+type CrewState = {
+  accountId: string;
+  records: OwnerCrew[];
+};
+
+type CrewSelectionState = {
+  accountId: string;
+  crewUserIds: string[];
+};
+
 function BoatOwnerNewTripPage() {
   const navigate = useNavigate();
+  const { session } = useAuth();
   const { boats, loading, token } = useOperations();
+  const accountId = session?.userId;
 
   const [isMenuOpen, setIsMenuOpen] =
     useState(false);
@@ -88,11 +101,30 @@ function BoatOwnerNewTripPage() {
   const [statusMessage, setStatusMessage] =
     useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [crew, setCrew] = useState<OwnerCrew[]>([]);
-  const [selectedCrew, setSelectedCrew] = useState<string[]>([]);
+  const [crewState, setCrewState] = useState<CrewState>();
+  const [selectedCrewState, setSelectedCrewState] = useState<CrewSelectionState>();
+  const crew = accountId !== undefined && crewState?.accountId === accountId
+    ? crewState.records
+    : [];
+  const selectedCrew = accountId !== undefined && selectedCrewState?.accountId === accountId
+    ? selectedCrewState.crewUserIds
+    : [];
   const effectiveSelectedVessel = selectedVessel || boats[0]?.id || "";
 
-  useEffect(() => { if (token) operationsApi.ownerCrew(token).then(setCrew).catch(() => setStatusMessage('Unable to load your crew.')); }, [token]);
+  useEffect(() => {
+    if (!token || !accountId) return;
+    let active = true;
+    void operationsApi.ownerCrew(token)
+      .then((records) => {
+        if (active) setCrewState({ accountId, records });
+      })
+      .catch(() => {
+        if (active) setStatusMessage("Unable to load your crew.");
+      });
+    return () => {
+      active = false;
+    };
+  }, [accountId, token]);
 
   useEffect(() => {
     const previousOverflow =
@@ -143,7 +175,7 @@ function BoatOwnerNewTripPage() {
         ? `The trip has been scheduled successfully. ${created.crewUserIds.length} available crew members were assigned automatically.`
         : `The trip has been scheduled successfully with ${created.crewUserIds.length} selected crew members.`);
       setTripDateTime("");
-      setSelectedCrew([]);
+      if (accountId) setSelectedCrewState({ accountId, crewUserIds: [] });
     } catch (error) { setStatusMessage(error instanceof Error ? error.message : "Unable to schedule trip."); }
     finally { setSubmitting(false); }
   };
@@ -282,7 +314,20 @@ function BoatOwnerNewTripPage() {
               <span className="truncate text-sm">{member.name}</span>
               <span className="truncate text-sm text-slate-600">{member.position}</span>
               <input type="checkbox" checked={selectedCrew.includes(member.crewUserId)}
-                onChange={() => setSelectedCrew((current) => current.includes(member.crewUserId) ? current.filter((id) => id !== member.crewUserId) : [...current, member.crewUserId])}
+                onChange={() => {
+                  if (!accountId) return;
+                  setSelectedCrewState((current) => {
+                    const crewUserIds = current?.accountId === accountId
+                      ? current.crewUserIds
+                      : [];
+                    return {
+                      accountId,
+                      crewUserIds: crewUserIds.includes(member.crewUserId)
+                        ? crewUserIds.filter((id) => id !== member.crewUserId)
+                        : [...crewUserIds, member.crewUserId],
+                    };
+                  });
+                }}
                 className="h-4 w-4 accent-[#162d54]" />
             </label>) : <p className="p-4 text-sm text-slate-500">No certified crew members are in your crew pool. Add them from My Crew first.</p>}
           </div>
