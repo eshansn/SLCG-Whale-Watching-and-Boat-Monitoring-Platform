@@ -102,6 +102,7 @@ function BoatOwnerNewBoatPage() {
   const ownerId = session?.userId;
   const activeOwnerIdRef = useRef(ownerId);
   const submissionLocks = useRef(new Set<string>());
+  const draftSaveLocks = useRef(new Set<string>());
   const draftEditRevisions = useRef(new Map<string, number>());
 
   const [registrationState, setRegistrationState] =
@@ -111,9 +112,12 @@ function BoatOwnerNewBoatPage() {
     useState<Record<string, string>>({});
   const [submittingOwnerIds, setSubmittingOwnerIds] =
     useState<ReadonlySet<string>>(() => new Set());
+  const [savingDraftOwnerIds, setSavingDraftOwnerIds] =
+    useState<ReadonlySet<string>>(() => new Set());
   const [today] = useState(() => new Date().toISOString().slice(0, 10));
   const statusMessage = ownerId ? statusMessages[ownerId] ?? "" : "";
   const submitting = ownerId ? submittingOwnerIds.has(ownerId) : false;
+  const savingDraft = ownerId ? savingDraftOwnerIds.has(ownerId) : false;
   const currentRegistration = ownerId !== undefined
     && registrationState?.ownerId === ownerId
     ? registrationState
@@ -307,12 +311,28 @@ function BoatOwnerNewBoatPage() {
   };
 
   const handleSaveDraft = async (): Promise<void> => {
-    if (!ownerId) return;
+    if (!ownerId || draftSaveLocks.current.has(ownerId)
+      || submissionLocks.current.has(ownerId)) return;
+    const savedRevision = draftEditRevisions.current.get(ownerId) ?? 0;
+    draftSaveLocks.current.add(ownerId);
+    setSavingDraftOwnerIds((current) => new Set(current).add(ownerId));
     try {
       await saveBoatRegistrationDraft(ownerId, { boatForm, boatPhoto, certifications });
-      setStatusMessage("The boat information has been saved as a draft.");
+      if ((draftEditRevisions.current.get(ownerId) ?? 0) === savedRevision) {
+        setStatusMessage("The boat information has been saved as a draft.");
+      }
     } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : "Unable to save the boat draft.");
+      if ((draftEditRevisions.current.get(ownerId) ?? 0) === savedRevision) {
+        setStatusMessage(error instanceof Error ? error.message : "Unable to save the boat draft.");
+      }
+    } finally {
+      draftSaveLocks.current.delete(ownerId);
+      setSavingDraftOwnerIds((current) => {
+        if (!current.has(ownerId)) return current;
+        const next = new Set(current);
+        next.delete(ownerId);
+        return next;
+      });
     }
   };
 
@@ -321,7 +341,8 @@ function BoatOwnerNewBoatPage() {
   ): Promise<void> => {
     event.preventDefault();
 
-    if (!session || !ownerId || submissionLocks.current.has(ownerId)) return;
+    if (!session || !ownerId || submissionLocks.current.has(ownerId)
+      || draftSaveLocks.current.has(ownerId)) return;
 
     if (!boatPhoto) {
       setStatusMessage(
@@ -936,6 +957,7 @@ function BoatOwnerNewBoatPage() {
           <button
             type="button"
             onClick={handleSaveDraft}
+            disabled={savingDraft || submitting}
             className="
               min-h-[58px] w-full
               rounded-[10px] border
@@ -949,14 +971,16 @@ function BoatOwnerNewBoatPage() {
               focus-visible:ring-2
               focus-visible:ring-[#080d68]
               focus-visible:ring-offset-2
+              disabled:cursor-not-allowed
+              disabled:opacity-60
             "
           >
-            <span className="inline-flex items-center gap-2"><Save size={19}/>Save as Draft</span>
+            <span className="inline-flex items-center gap-2"><Save size={19}/>{savingDraft ? "Saving..." : "Save as Draft"}</span>
           </button>
 
           <button
             type="submit"
-            disabled={submitting}
+            disabled={submitting || savingDraft}
             className="
               min-h-[58px] w-full
               rounded-[10px] bg-[#080d68]
