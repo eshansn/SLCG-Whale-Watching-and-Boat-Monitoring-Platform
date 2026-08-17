@@ -311,10 +311,16 @@ function BoatOwnerTripInfoPage() {
     textArea.style.position = "fixed";
     textArea.style.opacity = "0";
     document.body.appendChild(textArea);
-    textArea.select();
-    textArea.setSelectionRange(0, invitationUrl.length);
-    const copied = document.execCommand("copy");
-    textArea.remove();
+    let copied: boolean;
+    try {
+      textArea.select();
+      textArea.setSelectionRange(0, invitationUrl.length);
+      copied = document.execCommand("copy");
+    } catch {
+      copied = false;
+    } finally {
+      textArea.remove();
+    }
     setCopyStatus(copied ? "Link copied." : "Unable to copy the link on this browser.");
   };
 
