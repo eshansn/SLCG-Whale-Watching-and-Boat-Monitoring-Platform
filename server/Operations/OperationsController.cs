@@ -503,7 +503,8 @@ public sealed class OperationsController(WhaleWatchingDbContext db, IHubContext<
     [Authorize(Roles = $"{PortalRoles.BoatOwner},{PortalRoles.BoatCrew},{PortalRoles.Ops}")]
     public async Task<ActionResult> UpdateStatus(Guid id, StatusRequest request, CancellationToken ct)
     {
-        if (!Enum.TryParse<TripStatus>(request.Status, true, out var status)) return ValidationProblem("Invalid status.");
+        if (!Enum.TryParse<TripStatus>(request.Status, true, out var status) || !Enum.IsDefined(status))
+            return ValidationProblem("Invalid status.");
         var trip = await db.Trips.Include(x => x.Boat).Include(x => x.CrewAssignments)
             .SingleOrDefaultAsync(x => x.Id == id, ct);
         if (trip is null) return NotFound();
@@ -511,12 +512,25 @@ public sealed class OperationsController(WhaleWatchingDbContext db, IHubContext<
             (User.IsInRole(PortalRoles.BoatOwner) && trip.Boat.OwnerId == UserId) ||
             (User.IsInRole(PortalRoles.BoatCrew) && trip.CrewAssignments.Any(x => x.CrewUserId == UserId));
         if (!canUpdate) return Forbid();
+        if (!CanTransitionTripStatus(trip.Status, status))
+            return Conflict(new { message = $"Trip status cannot change from {trip.Status} to {status}." });
+        if (trip.Status == status) return NoContent();
+
         trip.Status = status; trip.UpdatedAtUtc = DateTimeOffset.UtcNow;
         if (status == TripStatus.Ongoing) trip.ActualDepartureUtc ??= DateTimeOffset.UtcNow;
         if (status == TripStatus.Completed) trip.ActualArrivalUtc ??= DateTimeOffset.UtcNow;
         await db.SaveChangesAsync(ct); await hub.Clients.All.SendAsync("operationsChanged", new { entity = "trip", id }, ct);
         return NoContent();
     }
+
+    private static bool CanTransitionTripStatus(TripStatus current, TripStatus next) =>
+        current == next || current switch
+        {
+            TripStatus.Scheduled => next is TripStatus.Boarding or TripStatus.Ongoing or TripStatus.Cancelled,
+            TripStatus.Boarding => next is TripStatus.Ongoing or TripStatus.Cancelled,
+            TripStatus.Ongoing => next is TripStatus.Completed or TripStatus.Cancelled,
+            _ => false,
+        };
 
     private Guid UserId => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub")!);
     private IQueryable<Boat> ScopeBoats(IQueryable<Boat> query)
