@@ -161,7 +161,7 @@ public sealed class OperationsController(WhaleWatchingDbContext db, IHubContext<
                 boat.Approval.ToString(), boat.WildlifeApproval.ToString(),
                 trip?.ShoreApproval.ToString() ?? ApprovalStatus.Pending.ToString(),
                 trip?.WildlifeShoreApproval.ToString() ?? ApprovalStatus.Pending.ToString(),
-                (boat.Approval == ApprovalStatus.Approved || boat.WildlifeApproval == ApprovalStatus.Approved) &&
+                boat.Approval == ApprovalStatus.Approved && boat.WildlifeApproval == ApprovalStatus.Approved &&
                     trip?.ShoreApproval == ApprovalStatus.Approved && trip.WildlifeShoreApproval == ApprovalStatus.Approved,
                 gps?.Latitude, gps?.Longitude, gps?.RecordedAtUtc, trip?.ActualDepartureUtc,
                 trip?.ActualArrivalUtc, boat.LengthMeters, boat.WidthMeters, gps?.SpeedKnots,
@@ -515,6 +515,21 @@ public sealed class OperationsController(WhaleWatchingDbContext db, IHubContext<
         if (!CanTransitionTripStatus(trip.Status, status))
             return Conflict(new { message = $"Trip status cannot change from {trip.Status} to {status}." });
         if (trip.Status == status) return NoContent();
+        if (status == TripStatus.Ongoing)
+        {
+            var incompleteApprovals = new List<string>();
+            if (trip.Boat.Approval != ApprovalStatus.Approved) incompleteApprovals.Add("boat certification");
+            if (trip.Boat.WildlifeApproval != ApprovalStatus.Approved)
+                incompleteApprovals.Add("wildlife boat approval");
+            if (trip.ShoreApproval != ApprovalStatus.Approved) incompleteApprovals.Add("SLCG shore approval");
+            if (trip.WildlifeShoreApproval != ApprovalStatus.Approved)
+                incompleteApprovals.Add("wildlife shore approval");
+            if (incompleteApprovals.Count > 0)
+                return Conflict(new
+                {
+                    message = $"The trip cannot start until these approvals are complete: {string.Join(", ", incompleteApprovals)}."
+                });
+        }
 
         trip.Status = status; trip.UpdatedAtUtc = DateTimeOffset.UtcNow;
         if (status == TripStatus.Ongoing) trip.ActualDepartureUtc ??= DateTimeOffset.UtcNow;
