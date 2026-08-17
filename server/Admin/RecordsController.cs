@@ -68,7 +68,17 @@ public sealed class RecordsController(
         boat.WidthMeters = request.WidthMeters;
         boat.MaximumCapacity = request.MaximumCapacity;
 
-        await db.SaveChangesAsync(ct);
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException)
+        {
+            if (await db.Boats.AsNoTracking()
+                .AnyAsync(item => item.Id != id && item.RegistrationNumber == registrationNumber, ct))
+                return Conflict(new { message = "That boat registration number is already in use." });
+            throw;
+        }
         await hub.Clients.All.SendAsync("operationsChanged", new { entity = "boat", id }, ct);
         return NoContent();
     }
