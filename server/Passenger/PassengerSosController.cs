@@ -36,7 +36,18 @@ public sealed class PassengerSosController(WhaleWatchingDbContext db, IHubContex
             RaisedAtUtc = DateTimeOffset.UtcNow };
         db.SosEvents.Add(sos);
         session.Trip.UpdatedAtUtc = DateTimeOffset.UtcNow;
-        await db.SaveChangesAsync(ct);
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException)
+        {
+            db.Entry(sos).State = EntityState.Detached;
+            existing = await db.SosEvents.AsNoTracking().SingleOrDefaultAsync(x => x.TripId == session.TripId &&
+                x.RaisedByUserId == session.PassengerId && x.ResolvedAtUtc == null, ct);
+            if (existing is not null) return Ok(new { existing.Id, raisedAtUtc = existing.RaisedAtUtc });
+            throw;
+        }
         await hub.Clients.All.SendAsync("operationsChanged", new { entity = "sos", id = sos.Id, tripId = sos.TripId }, ct);
         return Created($"/api/operations/sos/{sos.Id}", new { sos.Id, sos.RaisedAtUtc });
     }

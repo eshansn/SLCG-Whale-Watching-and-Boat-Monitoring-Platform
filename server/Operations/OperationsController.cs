@@ -225,7 +225,19 @@ public sealed class OperationsController(WhaleWatchingDbContext db, IHubContext<
         if (existing is not null) return Ok(new { id = existing.Id, raisedAtUtc = existing.RaisedAtUtc });
         var sos = new SosEvent { Id = Guid.NewGuid(), TripId = id, RaisedByUserId = UserId,
             Message = "Emergency assistance requested by assigned boat crew", RaisedAtUtc = DateTimeOffset.UtcNow };
-        db.SosEvents.Add(sos); trip.UpdatedAtUtc = DateTimeOffset.UtcNow; await db.SaveChangesAsync(ct);
+        db.SosEvents.Add(sos); trip.UpdatedAtUtc = DateTimeOffset.UtcNow;
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException)
+        {
+            db.Entry(sos).State = EntityState.Detached;
+            existing = await db.SosEvents.AsNoTracking().SingleOrDefaultAsync(x =>
+                x.TripId == id && x.RaisedByUserId == UserId && x.ResolvedAtUtc == null, ct);
+            if (existing is not null) return Ok(new { id = existing.Id, raisedAtUtc = existing.RaisedAtUtc });
+            throw;
+        }
         await hub.Clients.All.SendAsync("operationsChanged", new { entity = "sos", id = sos.Id, tripId = id }, ct);
         return Created($"/api/operations/sos/{sos.Id}", new { id = sos.Id, raisedAtUtc = sos.RaisedAtUtc });
     }

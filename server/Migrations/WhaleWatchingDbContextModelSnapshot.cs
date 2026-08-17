@@ -796,6 +796,10 @@ namespace WhaleWatching.Api.Migrations
 
                     b.HasIndex("TripId");
 
+                    b.HasIndex("TripId", "RaisedByUserId")
+                        .IsUnique()
+                        .HasFilter("[ResolvedAtUtc] IS NULL");
+
                     b.ToTable("SosEvents");
                 });
 

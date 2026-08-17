@@ -145,7 +145,10 @@ public sealed class WhaleWatchingDbContext(DbContextOptions<WhaleWatchingDbConte
         modelBuilder.Entity<Trip>().HasIndex(x => x.InvitationCode).IsUnique().HasFilter("[InvitationCode] IS NOT NULL");
         modelBuilder.Entity<Trip>().HasOne(x => x.PassengerVerificationFinalizedByUser).WithMany()
             .HasForeignKey(x => x.PassengerVerificationFinalizedByUserId).OnDelete(DeleteBehavior.Restrict);
-        modelBuilder.Entity<SosEvent>().Property(x => x.Message).HasMaxLength(1000).IsRequired();
+        var sosEvent = modelBuilder.Entity<SosEvent>();
+        sosEvent.Property(x => x.Message).HasMaxLength(1000).IsRequired();
+        sosEvent.HasIndex(x => new { x.TripId, x.RaisedByUserId }).IsUnique()
+            .HasFilter("[ResolvedAtUtc] IS NULL");
         var sosAction = modelBuilder.Entity<SosAction>();
         sosAction.Property(x => x.Details).HasMaxLength(1000).IsRequired();
         sosAction.HasIndex(x => new { x.SosEventId, x.TakenAtUtc });
