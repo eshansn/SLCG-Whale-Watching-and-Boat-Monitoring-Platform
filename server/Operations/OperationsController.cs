@@ -514,6 +514,50 @@ public sealed class OperationsController(WhaleWatchingDbContext db, IHubContext<
         return NoContent();
     }
 
+    [HttpDelete("trips/{id:guid}")]
+    [Authorize(Roles = PortalRoles.Admin)]
+    public async Task<IActionResult> DeleteTrip(Guid id, CancellationToken ct)
+    {
+        var strategy = db.Database.CreateExecutionStrategy();
+        var deleted = false;
+        var result = await strategy.ExecuteAsync<IActionResult>(async () =>
+        {
+            await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
+            var trip = await db.Trips.SingleOrDefaultAsync(x => x.Id == id, ct);
+            if (trip is null) return NotFound();
+
+            if (trip.Status != TripStatus.Scheduled || trip.ActualDepartureUtc is not null ||
+                trip.ActualArrivalUtc is not null)
+                return Conflict(new { message = "Only a trip that has not started can be deleted." });
+
+            if (trip.ShoreApproval != ApprovalStatus.Pending ||
+                trip.WildlifeShoreApproval != ApprovalStatus.Pending ||
+                trip.PassengerVerificationFinalizedAtUtc is not null)
+                return Conflict(new { message = "This trip has approval or verification history and cannot be deleted." });
+
+            var hasOperationalHistory = trip.PassengerCount != 0 || trip.ChildrenCount != 0 ||
+                trip.SpecialNeedsCount != 0 ||
+                await db.TripPassengers.AnyAsync(x => x.TripId == id, ct) ||
+                await db.PassengerSessions.AnyAsync(x => x.TripId == id, ct) ||
+                await db.WildlifeMonitoringRecords.AnyAsync(x => x.TripId == id, ct) ||
+                await db.PassengerComplaints.AnyAsync(x => x.TripId == id, ct) ||
+                await db.SosEvents.AnyAsync(x => x.TripId == id, ct) ||
+                await db.TripTransfers.AnyAsync(x => x.SourceTripId == id || x.DestinationTripId == id, ct);
+            if (hasOperationalHistory)
+                return Conflict(new { message = "This trip has operational history and cannot be deleted." });
+
+            db.Trips.Remove(trip);
+            await db.SaveChangesAsync(ct);
+            await transaction.CommitAsync(ct);
+            deleted = true;
+            return NoContent();
+        });
+
+        if (deleted)
+            await hub.Clients.All.SendAsync("operationsChanged", new { entity = "trip", id, deleted = true }, ct);
+        return result;
+    }
+
     [HttpPatch("trips/{id:guid}/status")]
     [Authorize(Roles = $"{PortalRoles.BoatOwner},{PortalRoles.BoatCrew},{PortalRoles.Ops}")]
     public async Task<ActionResult> UpdateStatus(Guid id, StatusRequest request, CancellationToken ct)

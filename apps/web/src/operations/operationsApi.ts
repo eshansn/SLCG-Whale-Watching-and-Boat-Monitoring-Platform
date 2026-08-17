@@ -59,6 +59,7 @@ export const operationsApi = {
   trips:(token:string)=>request<Trip[]>('/api/operations/trips',token),
   tripPassengers:(token:string,tripId:string)=>request<TripPassenger[]>(`/api/operations/trips/${tripId}/passengers?updated=${Date.now()}`,token,{cache:'no-store'}),
   createTrip:(token:string,boatId:string,scheduledDepartureUtc:string,crewUserIds:string[])=>request<CreateTripResult>('/api/operations/trips',token,{method:'POST',body:JSON.stringify({boatId,scheduledDepartureUtc,route:'To be confirmed',passengerCount:0,crewUserIds})}),
+  deleteTrip:(token:string,id:string)=>request<void>(`/api/operations/trips/${id}`,token,{method:'DELETE'}),
   directory:(token:string)=>request<OperationsDirectory>('/api/operations/directory',token),
   adminCrew:(token:string)=>request<AdminCrew[]>('/api/admin/crew',token),
   ownerCrew:(token:string)=>request<OwnerCrew[]>('/api/operations/owner/crew',token),

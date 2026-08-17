@@ -11,6 +11,7 @@ import {
 } from "react-router-dom";
 import { Download } from "lucide-react";
 import { Icon } from "../../components/ui/icon";
+import { operationsApi } from "../../operations/operationsApi";
 import { useOperations } from "../../operations/useOperations";
 import TripReportModal from "./components/TripReportModal";
 
@@ -145,7 +146,8 @@ const Trips = () => {
   void initialTrips;
   const location = useLocation();
   const navigate = useNavigate();
-  const { trips: databaseTrips, boats: databaseBoats, loading: operationsLoading } = useOperations();
+  const { trips: databaseTrips, boats: databaseBoats, loading: operationsLoading, reload, token } = useOperations();
+  const isAdminPortal = location.pathname.startsWith("/admin");
 
   const [trips, setTrips] =
     useState<ScheduledTrip[]>([]);
@@ -177,6 +179,9 @@ const Trips = () => {
 
   const [reportOpen, setReportOpen] =
     useState(false);
+
+  const [deletingTripId, setDeletingTripId] =
+    useState<string>();
 
   const filteredAndSortedTrips = useMemo(() => {
     const searchTerm =
@@ -385,14 +390,14 @@ const Trips = () => {
     navigate(`${portalPrefix}/trip-info/${tripId}`);
   };
 
-  const handleDeleteTrip = (
+  const handleDeleteTrip = async (
     tripId: string,
-  ): void => {
+  ): Promise<void> => {
     const selectedTrip = trips.find(
       (trip) => trip.id === tripId,
     );
 
-    if (!selectedTrip) {
+    if (!selectedTrip || !token || deletingTripId) {
       return;
     }
 
@@ -404,11 +409,19 @@ const Trips = () => {
       return;
     }
 
-    setTrips((previousTrips) =>
-      previousTrips.filter(
-        (trip) => trip.id !== tripId,
-      ),
-    );
+    setDeletingTripId(tripId);
+    try {
+      await operationsApi.deleteTrip(token, tripId);
+      await reload();
+    } catch (reason) {
+      window.alert(
+        reason instanceof Error
+          ? reason.message
+          : "The trip could not be deleted.",
+      );
+    } finally {
+      setDeletingTripId(undefined);
+    }
   };
 
   const getPaginationItems =
@@ -745,23 +758,24 @@ const Trips = () => {
                           />
                         </button>
 
-                        <button
+                        {isAdminPortal && <button
                           type="button"
+                          disabled={deletingTripId !== undefined}
                           onClick={() =>
-                            handleDeleteTrip(
+                            void handleDeleteTrip(
                               trip.id,
                             )
                           }
                           aria-label={`Delete ${trip.vesselName} trip`}
                           title="Delete trip"
-                          className="flex h-9 w-9 items-center justify-center text-[#FF0000] transition-transform hover:scale-110"
+                          className="flex h-9 w-9 items-center justify-center text-[#FF0000] transition-transform hover:scale-110 disabled:cursor-not-allowed disabled:opacity-40"
                         >
                           <Icon
                             name="delete"
                             size={19}
                             className="text-[#FF0000] [&_*]:stroke-[#FF0000] [&_*]:fill-[#FF0000]"
                           />
-                        </button>
+                        </button>}
                       </div>
                     </td>
                   </tr>
@@ -837,14 +851,15 @@ const Trips = () => {
                     View
                   </button>
 
-                  <button
+                  {isAdminPortal && <button
                     type="button"
+                    disabled={deletingTripId !== undefined}
                     onClick={() =>
-                      handleDeleteTrip(
+                      void handleDeleteTrip(
                         trip.id,
                       )
                     }
-                    className="flex items-center gap-2 rounded-md border border-red-200 px-4 py-2 text-xs font-medium text-[#FF0000]"
+                    className="flex items-center gap-2 rounded-md border border-red-200 px-4 py-2 text-xs font-medium text-[#FF0000] disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     <Icon
                       name="delete"
@@ -852,7 +867,7 @@ const Trips = () => {
                       className="[&_*]:stroke-[#FF0000] [&_*]:fill-[#FF0000]"
                     />
                     Delete
-                  </button>
+                  </button>}
                 </div>
               </article>
             ))}
