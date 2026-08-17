@@ -211,8 +211,14 @@ export default function BoatCrewTripDetails() {
     const anchor = document.createElement("a");
     anchor.href = url;
     anchor.download = `trip-${trip.registrationNumber}-qr.svg`;
-    anchor.click();
-    URL.revokeObjectURL(url);
+    anchor.style.display = "none";
+    document.body.appendChild(anchor);
+    try {
+      anchor.click();
+    } finally {
+      anchor.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1_000);
+    }
   };
   const startTrip = async () => {
     if (!token || startingTrip) return;
@@ -286,6 +292,7 @@ export default function BoatCrewTripDetails() {
                         : "Copy link"}
                 </button>
                 <button
+                  type="button"
                   onClick={download}
                   className="flex items-center gap-2 rounded-lg bg-[#162d54] px-3 py-2 text-xs font-semibold text-white"
                 >
