@@ -17,7 +17,7 @@ export default function BoatCrewDashboard() {
     if (!session) return;
     crewApi.profile(session.accessToken).then(profile => {
       setProfile(profile);
-      if (profile.hasProfilePhoto) void crewApi.photo(session.accessToken).then(setPhoto);
+      if (profile.hasProfilePhoto) void crewApi.photo(session.accessToken).then(setPhoto).catch(() => setPhoto(undefined));
     }).catch(() => undefined);
   }, [session]);
 

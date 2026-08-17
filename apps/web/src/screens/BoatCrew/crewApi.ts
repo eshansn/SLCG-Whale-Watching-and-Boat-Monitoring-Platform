@@ -4,6 +4,6 @@ async function json<T>(path:string,token:string,init?:RequestInit):Promise<T>{co
 export const crewApi={
  profile:(token:string)=>json<CrewProfile>('/api/crew/profile',token),
  update:(token:string,data:{email:string;phoneNumber:string;bio:string})=>json<CrewProfile>('/api/crew/profile',token,{method:'PATCH',body:JSON.stringify(data)}),
- photo:async(token:string)=>{const r=await fetch(`${BASE}/api/crew/profile/photo`,{headers:{Authorization:`Bearer ${token}`}});return r.ok?URL.createObjectURL(await r.blob()):undefined},
+ photo:async(token:string)=>{const r=await fetch(`${BASE}/api/crew/profile/photo`,{headers:{Authorization:`Bearer ${token}`}});if(!r.ok)throw new Error('Unable to load profile photo.');return URL.createObjectURL(await r.blob())},
  uploadPhoto:async(token:string,photo:File)=>{const body=new FormData();body.append('photo',photo);const r=await fetch(`${BASE}/api/crew/profile/photo`,{method:'POST',headers:{Authorization:`Bearer ${token}`},body});if(!r.ok)throw new Error('Unable to upload profile photo.');return r.json() as Promise<CrewProfile>},
 };
