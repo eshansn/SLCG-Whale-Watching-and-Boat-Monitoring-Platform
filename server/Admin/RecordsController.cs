@@ -155,6 +155,12 @@ public sealed class RecordsController(
             }
         }
 
+        var staleTripAssignments = db.TripCrewAssignments.Where(assignment => assignment.CrewUserId == id &&
+            (assignment.Trip.Status == TripStatus.Scheduled || assignment.Trip.Status == TripStatus.Boarding));
+        if (selectedBoat is not null)
+            staleTripAssignments = staleTripAssignments.Where(assignment => assignment.Trip.BoatId != selectedBoat.Id);
+        db.TripCrewAssignments.RemoveRange(await staleTripAssignments.ToListAsync(ct));
+
         await db.SaveChangesAsync(ct);
         await hub.Clients.All.SendAsync("operationsChanged", new { entity = "crew", id }, ct);
         return NoContent();
