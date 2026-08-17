@@ -22,6 +22,10 @@ public sealed class RecordsController(
     [HttpPatch("boats/{id:guid}")]
     public async Task<IActionResult> UpdateBoat(Guid id, UpdateAdminBoatRequest request, CancellationToken ct)
     {
+        if (request.RegistrationDate == default ||
+            request.RegistrationDate > DateOnly.FromDateTime(DateTime.UtcNow))
+            return ValidationProblem("Registration date must be a valid date that is not in the future.");
+
         var boat = await db.Boats.SingleOrDefaultAsync(item => item.Id == id, ct);
         if (boat is null) return NotFound();
 
