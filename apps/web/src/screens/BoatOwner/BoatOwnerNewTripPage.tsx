@@ -88,6 +88,12 @@ type TripSubmissionState = {
   submitting: boolean;
 };
 
+type TripFormState = {
+  accountId: string;
+  selectedVessel: string;
+  tripDateTime: string;
+};
+
 function BoatOwnerNewTripPage() {
   const navigate = useNavigate();
   const { session } = useAuth();
@@ -98,11 +104,8 @@ function BoatOwnerNewTripPage() {
   const [isMenuOpen, setIsMenuOpen] =
     useState(false);
 
-  const [selectedVessel, setSelectedVessel] =
-    useState("");
-
-  const [tripDateTime, setTripDateTime] =
-    useState("");
+  const [tripFormState, setTripFormState] =
+    useState<TripFormState>();
 
   const [minimumTripDateTime] =
     useState(createMinimumTripDateTime);
@@ -111,6 +114,12 @@ function BoatOwnerNewTripPage() {
     useState<TripSubmissionState>();
   const [crewState, setCrewState] = useState<CrewState>();
   const [selectedCrewState, setSelectedCrewState] = useState<CrewSelectionState>();
+  const currentTripForm = accountId !== undefined
+    && tripFormState?.accountId === accountId
+    ? tripFormState
+    : undefined;
+  const selectedVessel = currentTripForm?.selectedVessel ?? "";
+  const tripDateTime = currentTripForm?.tripDateTime ?? "";
   const currentTripSubmission = accountId !== undefined
     && tripSubmissionState?.accountId === accountId
     ? tripSubmissionState
@@ -181,6 +190,22 @@ function BoatOwnerNewTripPage() {
       : current);
   };
 
+  const updateTripForm = (
+    updates: Partial<Pick<TripFormState, "selectedVessel" | "tripDateTime">>,
+  ): void => {
+    if (!accountId) return;
+    setTripFormState((current) => ({
+      accountId,
+      selectedVessel: current?.accountId === accountId
+        ? current.selectedVessel
+        : "",
+      tripDateTime: current?.accountId === accountId
+        ? current.tripDateTime
+        : "",
+      ...updates,
+    }));
+  };
+
   const handleScheduleTrip = async (
     event: FormEvent<HTMLFormElement>,
   ): Promise<void> => {
@@ -229,7 +254,7 @@ function BoatOwnerNewTripPage() {
           : `The trip has been scheduled successfully with ${created.crewUserIds.length} selected crew members.`,
         submitting: true,
       });
-      setTripDateTime("");
+      updateTripForm({ tripDateTime: "" });
       setSelectedCrewState({ accountId, crewUserIds: [] });
     } catch (error) {
       if (activeAccountIdRef.current === accountId) {
@@ -337,9 +362,7 @@ function BoatOwnerNewTripPage() {
               id="tripVessel"
               value={effectiveSelectedVessel}
               onChange={(event) => {
-                setSelectedVessel(
-                  event.target.value,
-                );
+                updateTripForm({ selectedVessel: event.target.value });
                 clearStatusMessage();
               }}
               className="
@@ -420,7 +443,7 @@ function BoatOwnerNewTripPage() {
             min={minimumTripDateTime}
             value={tripDateTime}
             onChange={(event) => {
-              setTripDateTime(event.target.value);
+              updateTripForm({ tripDateTime: event.target.value });
               clearStatusMessage();
             }}
             className="
