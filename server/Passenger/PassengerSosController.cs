@@ -24,8 +24,8 @@ public sealed class PassengerSosController(WhaleWatchingDbContext db, IHubContex
         var session = await db.PassengerSessions.Include(x => x.Passenger).Include(x => x.Trip)
             .SingleOrDefaultAsync(x => x.TokenHash == tokenHash && x.ExpiresAtUtc > DateTimeOffset.UtcNow, ct);
         if (session is null) return Unauthorized(new { message = "Your passenger session has expired. Please scan the trip QR code again." });
-        if (session.Trip.Status is TripStatus.Completed or TripStatus.Cancelled)
-            return Conflict(new { message = "An SOS cannot be raised for a completed or cancelled trip." });
+        if (session.Trip.Status != TripStatus.Ongoing)
+            return Conflict(new { message = "An SOS can only be raised while the trip is ongoing." });
 
         var existing = await db.SosEvents.SingleOrDefaultAsync(x => x.TripId == session.TripId &&
             x.RaisedByUserId == session.PassengerId && x.ResolvedAtUtc == null, ct);
