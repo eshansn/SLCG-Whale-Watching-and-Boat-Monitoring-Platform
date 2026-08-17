@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using System.Data;
 using System.Security.Claims;
 using System.Security.Cryptography;
@@ -282,6 +283,13 @@ public sealed class OperationsController(WhaleWatchingDbContext db, IHubContext<
     [Authorize(Policy = PortalPolicies.BoatOwner)]
     public async Task<ActionResult> CreateBoat(CreateBoatRequest request, CancellationToken ct)
     {
+        if (string.IsNullOrWhiteSpace(request.Name) || string.IsNullOrWhiteSpace(request.RegistrationNumber) ||
+            string.IsNullOrWhiteSpace(request.HullNumber))
+            return ValidationProblem("Boat name, registration number, and hull number are required.");
+        if (request.RegistrationDate == default ||
+            request.RegistrationDate > DateOnly.FromDateTime(DateTime.UtcNow))
+            return ValidationProblem("Registration date must be a valid date that is not in the future.");
+
         var boat = new Boat { Id = Guid.NewGuid(), OwnerId = UserId, Name = request.Name.Trim(),
             RegistrationNumber = request.RegistrationNumber.Trim(), RegistrationDate = request.RegistrationDate,
             HullNumber = request.HullNumber.Trim(), LengthMeters = request.LengthMeters,
@@ -524,9 +532,18 @@ public sealed record SosAlertDto(Guid Id, Guid TripId, string VesselName, string
 public sealed record SosActionDto(Guid Id, Guid SosEventId, string TakenByName, string Details,
     DateTimeOffset TakenAtUtc);
 public sealed record SosActionRequest(string? Details);
-public sealed record CreateBoatRequest(string Name, string RegistrationNumber, DateOnly RegistrationDate,
-    string HullNumber, decimal LengthMeters, decimal WidthMeters, int MaximumCapacity, string? ImageUrl,
-    decimal MaximumSpeedKnots = 0, int LifeJacketCount = 0, string? GpsDeviceId = null);
+public sealed record CreateBoatRequest(
+    [property: Required, StringLength(160, MinimumLength = 1)] string Name,
+    [property: Required, StringLength(64, MinimumLength = 1)] string RegistrationNumber,
+    DateOnly RegistrationDate,
+    [property: Required, StringLength(64, MinimumLength = 1)] string HullNumber,
+    [property: Range(typeof(decimal), "0.01", "100000")] decimal LengthMeters,
+    [property: Range(typeof(decimal), "0.01", "100000")] decimal WidthMeters,
+    [property: Range(1, 100000)] int MaximumCapacity,
+    string? ImageUrl,
+    [property: Range(typeof(decimal), "0", "9999.99")] decimal MaximumSpeedKnots = 0,
+    [property: Range(0, 100000)] int LifeJacketCount = 0,
+    [property: StringLength(128)] string? GpsDeviceId = null);
 public sealed record CreateTripRequest(Guid BoatId, DateTimeOffset ScheduledDepartureUtc, string Route,
     int PassengerCount, IReadOnlyList<Guid> CrewUserIds, int ChildrenCount = 0, int SpecialNeedsCount = 0);
 public sealed record ApprovalRequest(string Approval, string? Notes);
