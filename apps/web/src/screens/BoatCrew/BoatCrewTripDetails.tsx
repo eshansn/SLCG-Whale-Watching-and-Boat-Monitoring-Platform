@@ -36,33 +36,40 @@ export default function BoatCrewTripDetails() {
   useEffect(() => {
     if (!token || !trip?.id) return;
     let active = true;
+    let requestInFlight = false;
     const load = async () => {
-      const [passengerResult, attendanceResult] = await Promise.allSettled([
-        operationsApi.tripPassengers(token, trip.id),
-        getCrewAttendance(token, trip.id),
-      ]);
-      if (!active) return;
+      if (requestInFlight) return;
+      requestInFlight = true;
+      try {
+        const [passengerResult, attendanceResult] = await Promise.allSettled([
+          operationsApi.tripPassengers(token, trip.id),
+          getCrewAttendance(token, trip.id),
+        ]);
+        if (!active) return;
 
-      if (passengerResult.status === "fulfilled") {
-        setPassengers(passengerResult.value);
-        setPassengerError("");
-      } else {
-        setPassengerError(
-          passengerResult.reason instanceof Error
-            ? passengerResult.reason.message
-            : "Unable to load passenger information.",
-        );
-      }
+        if (passengerResult.status === "fulfilled") {
+          setPassengers(passengerResult.value);
+          setPassengerError("");
+        } else {
+          setPassengerError(
+            passengerResult.reason instanceof Error
+              ? passengerResult.reason.message
+              : "Unable to load passenger information.",
+          );
+        }
 
-      if (attendanceResult.status === "fulfilled") {
-        setAttendance(attendanceResult.value);
-        setAttendanceError("");
-      } else {
-        setAttendanceError(
-          attendanceResult.reason instanceof Error
-            ? attendanceResult.reason.message
-            : "Unable to load attendance information.",
-        );
+        if (attendanceResult.status === "fulfilled") {
+          setAttendance(attendanceResult.value);
+          setAttendanceError("");
+        } else {
+          setAttendanceError(
+            attendanceResult.reason instanceof Error
+              ? attendanceResult.reason.message
+              : "Unable to load attendance information.",
+          );
+        }
+      } finally {
+        requestInFlight = false;
       }
     };
     void load();
@@ -76,7 +83,10 @@ export default function BoatCrewTripDetails() {
   useEffect(() => {
     if (!token || !trip?.boatId) return;
     let active = true;
+    let requestInFlight = false;
     const load = async () => {
+      if (requestInFlight) return;
+      requestInFlight = true;
       try {
         const vessels = await operationsApi.vesselMap(token);
         if (active) {
@@ -91,6 +101,8 @@ export default function BoatCrewTripDetails() {
               : "Unable to load live vessel location.",
           );
         }
+      } finally {
+        requestInFlight = false;
       }
     };
     void load();
