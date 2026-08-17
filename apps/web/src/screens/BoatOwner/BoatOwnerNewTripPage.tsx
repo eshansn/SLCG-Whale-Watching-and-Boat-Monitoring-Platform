@@ -15,8 +15,6 @@ import { useOperations } from "../../operations/useOperations";
 import { operationsApi } from "../../operations/operationsApi";
 import type { OwnerCrew } from "../../operations/operationsApi";
 
-import groupIcon from "../../assets/icons/group.svg";
-import infoIcon from "../../assets/icons/info.svg";
 import notificationIcon from "../../assets/icons/notification.svg";
 import userIcon from "../../assets/icons/user.svg";
 import vesselIcon from "../../assets/icons/vessel.svg";
