@@ -1,5 +1,7 @@
 import {
   useEffect,
+  useLayoutEffect,
+  useRef,
   useState,
   type FormEvent,
 } from "react";
@@ -80,11 +82,18 @@ type CrewSelectionState = {
   crewUserIds: string[];
 };
 
+type TripSubmissionState = {
+  accountId: string;
+  statusMessage: string;
+  submitting: boolean;
+};
+
 function BoatOwnerNewTripPage() {
   const navigate = useNavigate();
   const { session } = useAuth();
   const { boats, loading, token } = useOperations();
   const accountId = session?.userId;
+  const activeAccountIdRef = useRef(accountId);
 
   const [isMenuOpen, setIsMenuOpen] =
     useState(false);
@@ -98,11 +107,16 @@ function BoatOwnerNewTripPage() {
   const [minimumTripDateTime] =
     useState(createMinimumTripDateTime);
 
-  const [statusMessage, setStatusMessage] =
-    useState("");
-  const [submitting, setSubmitting] = useState(false);
+  const [tripSubmissionState, setTripSubmissionState] =
+    useState<TripSubmissionState>();
   const [crewState, setCrewState] = useState<CrewState>();
   const [selectedCrewState, setSelectedCrewState] = useState<CrewSelectionState>();
+  const currentTripSubmission = accountId !== undefined
+    && tripSubmissionState?.accountId === accountId
+    ? tripSubmissionState
+    : undefined;
+  const statusMessage = currentTripSubmission?.statusMessage ?? "";
+  const submitting = currentTripSubmission?.submitting ?? false;
   const crew = accountId !== undefined && crewState?.accountId === accountId
     ? crewState.records
     : [];
@@ -110,6 +124,13 @@ function BoatOwnerNewTripPage() {
     ? selectedCrewState.crewUserIds
     : [];
   const effectiveSelectedVessel = selectedVessel || boats[0]?.id || "";
+
+  useLayoutEffect(() => {
+    activeAccountIdRef.current = accountId;
+    return () => {
+      activeAccountIdRef.current = undefined;
+    };
+  }, [accountId]);
 
   useEffect(() => {
     if (!token || !accountId) return;
@@ -119,7 +140,15 @@ function BoatOwnerNewTripPage() {
         if (active) setCrewState({ accountId, records });
       })
       .catch(() => {
-        if (active) setStatusMessage("Unable to load your crew.");
+        if (active) {
+          setTripSubmissionState((current) => ({
+            accountId,
+            statusMessage: "Unable to load your crew.",
+            submitting: current?.accountId === accountId
+              ? current.submitting
+              : false,
+          }));
+        }
       });
     return () => {
       active = false;
@@ -145,39 +174,78 @@ function BoatOwnerNewTripPage() {
     navigate(path);
   };
 
+  const clearStatusMessage = (): void => {
+    if (!accountId) return;
+    setTripSubmissionState((current) => current?.accountId === accountId
+      ? { ...current, statusMessage: "" }
+      : current);
+  };
+
   const handleScheduleTrip = async (
     event: FormEvent<HTMLFormElement>,
   ): Promise<void> => {
     event.preventDefault();
 
+    if (!token || !accountId) return;
+
     if (!effectiveSelectedVessel) {
-      setStatusMessage(
-        "Please select a vessel.",
-      );
+      setTripSubmissionState({
+        accountId,
+        statusMessage: "Please select a vessel.",
+        submitting: false,
+      });
       return;
     }
 
     if (!tripDateTime) {
-      setStatusMessage(
-        "Please select the trip date and time.",
-      );
+      setTripSubmissionState({
+        accountId,
+        statusMessage: "Please select the trip date and time.",
+        submitting: false,
+      });
       return;
     }
-    if (!token) return;
     const scheduled = new Date(tripDateTime);
     if (Number.isNaN(scheduled.getTime()) || scheduled <= new Date()) {
-      setStatusMessage("Please select a future date and time."); return;
+      setTripSubmissionState({
+        accountId,
+        statusMessage: "Please select a future date and time.",
+        submitting: false,
+      });
+      return;
     }
     try {
-      setSubmitting(true); setStatusMessage("Scheduling trip...");
+      setTripSubmissionState({
+        accountId,
+        statusMessage: "Scheduling trip...",
+        submitting: true,
+      });
       const created = await operationsApi.createTrip(token, effectiveSelectedVessel, scheduled.toISOString(), selectedCrew);
-      setStatusMessage(created.crewAutoAssigned
-        ? `The trip has been scheduled successfully. ${created.crewUserIds.length} available crew members were assigned automatically.`
-        : `The trip has been scheduled successfully with ${created.crewUserIds.length} selected crew members.`);
+      if (activeAccountIdRef.current !== accountId) return;
+      setTripSubmissionState({
+        accountId,
+        statusMessage: created.crewAutoAssigned
+          ? `The trip has been scheduled successfully. ${created.crewUserIds.length} available crew members were assigned automatically.`
+          : `The trip has been scheduled successfully with ${created.crewUserIds.length} selected crew members.`,
+        submitting: true,
+      });
       setTripDateTime("");
-      if (accountId) setSelectedCrewState({ accountId, crewUserIds: [] });
-    } catch (error) { setStatusMessage(error instanceof Error ? error.message : "Unable to schedule trip."); }
-    finally { setSubmitting(false); }
+      setSelectedCrewState({ accountId, crewUserIds: [] });
+    } catch (error) {
+      if (activeAccountIdRef.current === accountId) {
+        setTripSubmissionState({
+          accountId,
+          statusMessage: error instanceof Error ? error.message : "Unable to schedule trip.",
+          submitting: true,
+        });
+      }
+    } finally {
+      if (activeAccountIdRef.current === accountId) {
+        setTripSubmissionState((current) => current?.accountId === accountId
+          ? { ...current, submitting: false }
+          : current);
+      }
+    }
   };
 
   return (
@@ -272,7 +340,7 @@ function BoatOwnerNewTripPage() {
                 setSelectedVessel(
                   event.target.value,
                 );
-                setStatusMessage("");
+                clearStatusMessage();
               }}
               className="
                 min-h-[52px] w-full
@@ -353,7 +421,7 @@ function BoatOwnerNewTripPage() {
             value={tripDateTime}
             onChange={(event) => {
               setTripDateTime(event.target.value);
-              setStatusMessage("");
+              clearStatusMessage();
             }}
             className="
               min-h-[52px] w-full
