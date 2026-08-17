@@ -64,6 +64,13 @@ const menuItems: MenuItem[] = [
   },
 ];
 
+function createMinimumTripDateTime(): string {
+  const now = new Date();
+  return new Date(
+    now.getTime() - now.getTimezoneOffset() * 60_000,
+  ).toISOString().slice(0, 16);
+}
+
 function BoatOwnerNewTripPage() {
   const navigate = useNavigate();
   const { boats, loading, token } = useOperations();
@@ -76,6 +83,9 @@ function BoatOwnerNewTripPage() {
 
   const [tripDateTime, setTripDateTime] =
     useState("");
+
+  const [minimumTripDateTime] =
+    useState(createMinimumTripDateTime);
 
   const [statusMessage, setStatusMessage] =
     useState("");
@@ -296,7 +306,7 @@ function BoatOwnerNewTripPage() {
           <input
             id="tripDateTime"
             type="datetime-local"
-            min={new Date(Date.now() - new Date().getTimezoneOffset() * 60_000).toISOString().slice(0, 16)}
+            min={minimumTripDateTime}
             value={tripDateTime}
             onChange={(event) => {
               setTripDateTime(event.target.value);
