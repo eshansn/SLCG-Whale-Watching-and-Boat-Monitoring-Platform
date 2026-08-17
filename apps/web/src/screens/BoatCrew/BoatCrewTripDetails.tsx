@@ -18,6 +18,36 @@ import {
   type CrewAttendanceStatus,
 } from "./crewAttendanceApi";
 
+type CopyState = "idle" | "copying" | "copied" | "error";
+
+async function copyText(text: string) {
+  if (navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return;
+    } catch {
+      // Fall through for browsers that expose the API but deny clipboard access.
+    }
+  }
+
+  const textarea = document.createElement("textarea");
+  textarea.value = text;
+  textarea.readOnly = true;
+  textarea.style.position = "fixed";
+  textarea.style.opacity = "0";
+  textarea.style.pointerEvents = "none";
+  document.body.appendChild(textarea);
+  textarea.select();
+
+  try {
+    if (!document.execCommand("copy")) {
+      throw new Error("Clipboard copy was rejected.");
+    }
+  } finally {
+    textarea.remove();
+  }
+}
+
 export default function BoatCrewTripDetails() {
   const { tripId } = useParams<{ tripId: string }>();
   const { trips, loading, error, reload, token } = useOperations();
@@ -32,6 +62,7 @@ export default function BoatCrewTripDetails() {
   const [sort, setSort] = useState("name");
   const [startingTrip, setStartingTrip] = useState(false);
   const [startError, setStartError] = useState("");
+  const [copyState, setCopyState] = useState<CopyState>("idle");
 
   useEffect(() => {
     if (!token || !trip?.id) return;
@@ -160,7 +191,14 @@ export default function BoatCrewTripDetails() {
   };
 
   const copy = async () => {
-    if (invitationUrl) await navigator.clipboard.writeText(invitationUrl);
+    if (!invitationUrl || copyState === "copying") return;
+    setCopyState("copying");
+    try {
+      await copyText(invitationUrl);
+      setCopyState("copied");
+    } catch {
+      setCopyState("error");
+    }
   };
   const download = () => {
     const svg = document.getElementById("crew-trip-qr");
@@ -233,10 +271,19 @@ export default function BoatCrewTripDetails() {
             {invitationUrl && (
               <div className="mt-3 flex justify-center gap-2">
                 <button
+                  type="button"
+                  disabled={copyState === "copying"}
                   onClick={() => void copy()}
-                  className="flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold"
+                  className="flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold disabled:opacity-50"
                 >
-                  <Copy size={15} />Copy link
+                  <Copy size={15} />
+                  {copyState === "copying"
+                    ? "Copying..."
+                    : copyState === "copied"
+                      ? "Copied"
+                      : copyState === "error"
+                        ? "Copy failed"
+                        : "Copy link"}
                 </button>
                 <button
                   onClick={download}
