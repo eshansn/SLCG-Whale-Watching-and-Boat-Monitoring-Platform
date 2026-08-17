@@ -26,6 +26,18 @@ import {
   type CertificationDraft as Certification,
 } from "./boatRegistrationDraftStorage";
 
+const initialBoatForm: BoatFormData = {
+  name: "Mirissa King",
+  registrationNumber: "SL-WB-0016",
+  registrationDate: "2026-06-10",
+  maximumCapacity: "150",
+  boatLength: "25.7",
+  hullNumber: "156466",
+  boatWidth: "5.7",
+  maximumSpeedKnots: "28",
+  lifeJacketCount: "155",
+};
+
 const initialCertifications: Certification[] = [
   {
     id: "sole-proprietorship",
@@ -66,6 +78,24 @@ const initialCertifications: Certification[] = [
   },
 ];
 
+type BoatRegistrationState = {
+  ownerId: string;
+  boatForm: BoatFormData;
+  boatPhoto: File | null;
+  boatPhotoPreview: string;
+  certifications: Certification[];
+};
+
+function createInitialRegistrationState(ownerId: string): BoatRegistrationState {
+  return {
+    ownerId,
+    boatForm: { ...initialBoatForm },
+    boatPhoto: null,
+    boatPhotoPreview: "",
+    certifications: initialCertifications.map((certificate) => ({ ...certificate })),
+  };
+}
+
 function BoatOwnerNewBoatPage() {
   const navigate = useNavigate();
   const { session } = useAuth();
@@ -73,29 +103,8 @@ function BoatOwnerNewBoatPage() {
   const activeOwnerIdRef = useRef(ownerId);
   const submissionLocks = useRef(new Set<string>());
 
-  const [boatForm, setBoatForm] =
-    useState<BoatFormData>({
-      name: "Mirissa King",
-      registrationNumber: "SL-WB-0016",
-      registrationDate: "2026-06-10",
-      maximumCapacity: "150",
-      boatLength: "25.7",
-      hullNumber: "156466",
-      boatWidth: "5.7",
-      maximumSpeedKnots: "28",
-      lifeJacketCount: "155",
-    });
-
-  const [boatPhoto, setBoatPhoto] =
-    useState<File | null>(null);
-
-  const [boatPhotoPreview, setBoatPhotoPreview] =
-    useState("");
-
-  const [certifications, setCertifications] =
-    useState<Certification[]>(
-      initialCertifications,
-    );
+  const [registrationState, setRegistrationState] =
+    useState<BoatRegistrationState>();
 
   const [statusMessages, setStatusMessages] =
     useState<Record<string, string>>({});
@@ -104,6 +113,14 @@ function BoatOwnerNewBoatPage() {
   const [today] = useState(() => new Date().toISOString().slice(0, 10));
   const statusMessage = ownerId ? statusMessages[ownerId] ?? "" : "";
   const submitting = ownerId ? submittingOwnerIds.has(ownerId) : false;
+  const currentRegistration = ownerId !== undefined
+    && registrationState?.ownerId === ownerId
+    ? registrationState
+    : undefined;
+  const boatForm = currentRegistration?.boatForm ?? initialBoatForm;
+  const boatPhoto = currentRegistration?.boatPhoto ?? null;
+  const boatPhotoPreview = currentRegistration?.boatPhotoPreview ?? "";
+  const certifications = currentRegistration?.certifications ?? initialCertifications;
   const setStatusMessage = useCallback((message: string): void => {
     if (!ownerId) return;
     setStatusMessages((current) => current[ownerId] === message
@@ -120,26 +137,47 @@ function BoatOwnerNewBoatPage() {
     };
   }, [ownerId]);
 
+  const updateRegistrationDraft = (
+    updater: (current: BoatRegistrationState) => BoatRegistrationState,
+  ): void => {
+    if (!ownerId) return;
+    setRegistrationState((current) => updater(
+      current?.ownerId === ownerId
+        ? current
+        : createInitialRegistrationState(ownerId),
+    ));
+  };
+
   useEffect(() => {
     if (!ownerId) return;
     let active = true;
 
     void loadBoatRegistrationDraft(ownerId).then((draft) => {
       if (!active || !draft) return;
-      setBoatForm(draft.boatForm);
-      setBoatPhoto(draft.boatPhoto);
-      setCertifications(initialCertifications.map((certificate) => {
+      const restoredCertifications = initialCertifications.map((certificate) => {
         const saved = draft.certifications.find((item) => item.id === certificate.id);
         return saved ? { ...certificate, ...saved } : certificate;
-      }));
+      });
+      setRegistrationState({
+        ownerId,
+        boatForm: draft.boatForm,
+        boatPhoto: draft.boatPhoto,
+        boatPhotoPreview: "",
+        certifications: restoredCertifications,
+      });
       if (draft.boatPhoto) {
         const reader = new FileReader();
         reader.onload = () => {
-          if (active) setBoatPhotoPreview(typeof reader.result === "string" ? reader.result : "");
+          if (!active) return;
+          setRegistrationState((current) => current?.ownerId === ownerId
+            && current.boatPhoto === draft.boatPhoto
+            ? {
+                ...current,
+                boatPhotoPreview: typeof reader.result === "string" ? reader.result : "",
+              }
+            : current);
         };
         reader.readAsDataURL(draft.boatPhoto);
-      } else {
-        setBoatPhotoPreview("");
       }
       setStatusMessage("Your saved boat draft has been restored.");
     }).catch(() => {
@@ -153,9 +191,12 @@ function BoatOwnerNewBoatPage() {
     field: keyof BoatFormData,
     value: string,
   ): void => {
-    setBoatForm((currentForm) => ({
-      ...currentForm,
-      [field]: value,
+    updateRegistrationDraft((current) => ({
+      ...current,
+      boatForm: {
+        ...current.boatForm,
+        [field]: value,
+      },
     }));
 
     setStatusMessage("");
@@ -167,20 +208,27 @@ function BoatOwnerNewBoatPage() {
     const selectedFile =
       event.target.files?.[0] ?? null;
 
-    if (!selectedFile) {
+    if (!selectedFile || !ownerId) {
       return;
     }
 
-    setBoatPhoto(selectedFile);
+    const photoOwnerId = ownerId;
+    updateRegistrationDraft((current) => ({
+      ...current,
+      boatPhoto: selectedFile,
+    }));
 
     const reader = new FileReader();
 
     reader.onload = () => {
-      setBoatPhotoPreview(
-        typeof reader.result === "string"
-          ? reader.result
-          : "",
-      );
+      if (activeOwnerIdRef.current !== photoOwnerId) return;
+      setRegistrationState((current) => current?.ownerId === photoOwnerId
+        && current.boatPhoto === selectedFile
+        ? {
+            ...current,
+            boatPhotoPreview: typeof reader.result === "string" ? reader.result : "",
+          }
+        : current);
     };
 
     reader.readAsDataURL(selectedFile);
@@ -198,20 +246,20 @@ function BoatOwnerNewBoatPage() {
       return;
     }
 
-    setCertifications(
-      (currentCertifications) =>
-        currentCertifications.map(
-          (certification) =>
-            certification.id ===
-            certificationId
-              ? {
-                  ...certification,
-                  fileName: selectedFile.name,
-                  file: selectedFile,
-                }
-              : certification,
-        ),
-    );
+    updateRegistrationDraft((current) => ({
+      ...current,
+      certifications: current.certifications.map(
+        (certification) =>
+          certification.id ===
+          certificationId
+            ? {
+                ...certification,
+                fileName: selectedFile.name,
+                file: selectedFile,
+              }
+            : certification,
+      ),
+    }));
 
     setStatusMessage("");
   };
@@ -219,28 +267,31 @@ function BoatOwnerNewBoatPage() {
   const removeCertificate = (
     certificationId: string,
   ): void => {
-    setCertifications(
-      (currentCertifications) =>
-        currentCertifications.map(
-          (certification) =>
-            certification.id ===
-            certificationId
-              ? {
-                  ...certification,
-                  fileName: "",
-                  file: undefined,
-                  expirationDate: certification.requiresExpirationDate ? "" : certification.expirationDate,
-                }
-              : certification,
-        ),
-    );
+    updateRegistrationDraft((current) => ({
+      ...current,
+      certifications: current.certifications.map(
+        (certification) =>
+          certification.id ===
+          certificationId
+            ? {
+                ...certification,
+                fileName: "",
+                file: undefined,
+                expirationDate: certification.requiresExpirationDate ? "" : certification.expirationDate,
+              }
+            : certification,
+      ),
+    }));
 
     setStatusMessage("");
   };
 
   const updateCertificateExpiration = (certificationId: string, expirationDate: string): void => {
-    setCertifications((currentCertifications) => currentCertifications.map((certification) =>
-      certification.id === certificationId ? { ...certification, expirationDate } : certification));
+    updateRegistrationDraft((current) => ({
+      ...current,
+      certifications: current.certifications.map((certification) =>
+        certification.id === certificationId ? { ...certification, expirationDate } : certification),
+    }));
     setStatusMessage("");
   };
 
@@ -347,6 +398,7 @@ function BoatOwnerNewBoatPage() {
   return (
     <main className="boat-owner-page min-h-dvh w-full overflow-x-hidden bg-white text-black">
       <form
+        key={ownerId ?? "anonymous"}
         onSubmit={handleRequestApproval}
         className="
           mx-auto w-full max-w-[800px]
