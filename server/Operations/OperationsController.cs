@@ -364,7 +364,10 @@ public sealed class OperationsController(WhaleWatchingDbContext db, IHubContext<
         if (!Enum.TryParse<ApprovalStatus>(request.Approval, true, out var approval) || approval == ApprovalStatus.Pending)
             return ValidationProblem("Approval must be Approved or Rejected.");
         var boat = await db.Boats.FindAsync([id], ct); if (boat is null) return NotFound();
-        boat.Approval = approval;
+        if (User.IsInRole(PortalRoles.Wildlife) && !User.IsInRole(PortalRoles.Admin))
+            boat.WildlifeApproval = approval;
+        else
+            boat.Approval = approval;
         await db.SaveChangesAsync(ct);
         await hub.Clients.All.SendAsync("operationsChanged", new { entity = "boat", id }, ct);
         return NoContent();
