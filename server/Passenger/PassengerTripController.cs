@@ -27,7 +27,8 @@ public sealed class PassengerTripController(WhaleWatchingDbContext db) : Control
             .Select(x => new PassengerTripPreviewDto(x.Trip.Id, x.Trip.Boat.Name,
                 x.Trip.Boat.RegistrationNumber, x.Trip.ScheduledDepartureUtc, x.Trip.Status.ToString(),
                 x.Trip.ShoreApproval.ToString(), x.Trip.Boat.MaximumCapacity,
-                x.Trip.Status != TripStatus.Completed && x.Trip.Status != TripStatus.Cancelled,
+                x.Trip.Status != TripStatus.Completed && x.Trip.Status != TripStatus.Cancelled &&
+                    x.Trip.PassengerVerificationFinalizedAtUtc == null,
                 x.Trip.InvitationCode ?? string.Empty))
             .SingleOrDefaultAsync(ct);
         return preview is null ? Unauthorized() : Ok(preview);
@@ -80,7 +81,8 @@ public sealed class PassengerTripController(WhaleWatchingDbContext db) : Control
         var preview = await db.Trips.AsNoTracking().Where(x => x.InvitationCode == invitationCode)
             .Select(x => new PassengerTripPreviewDto(x.Id, x.Boat.Name, x.Boat.RegistrationNumber,
                 x.ScheduledDepartureUtc, x.Status.ToString(), x.ShoreApproval.ToString(),
-                x.Boat.MaximumCapacity, x.Status != TripStatus.Completed && x.Status != TripStatus.Cancelled,
+                x.Boat.MaximumCapacity, x.Status != TripStatus.Completed && x.Status != TripStatus.Cancelled &&
+                    x.PassengerVerificationFinalizedAtUtc == null,
                 x.InvitationCode ?? string.Empty))
             .SingleOrDefaultAsync(ct);
         return preview is null ? NotFound() : Ok(preview);
@@ -98,6 +100,8 @@ public sealed class PassengerTripController(WhaleWatchingDbContext db) : Control
         if (trip is null) return NotFound();
         if (trip.Status is TripStatus.Completed or TripStatus.Cancelled)
             return Conflict(new { message = "This trip is no longer accepting passenger registrations." });
+        if (trip.PassengerVerificationFinalizedAtUtc is not null)
+            return Conflict(new { message = "Passenger registration closed when shore verification was finalized." });
         if (trip.PassengerCount >= trip.Boat.MaximumCapacity)
             return Conflict(new { message = "This trip has reached its maximum passenger capacity." });
         if (SpecialNeedsInvalid(request)) return ValidationProblem("Select the special need and confirm self-care responsibility.");
@@ -150,6 +154,8 @@ public sealed class PassengerTripController(WhaleWatchingDbContext db) : Control
         var alreadyJoined = await db.TripPassengers.AnyAsync(x => x.TripId == trip.Id && x.PassengerId == passenger.Id, ct);
         if (!alreadyJoined)
         {
+            if (trip.PassengerVerificationFinalizedAtUtc is not null)
+                return Conflict(new { message = "Passenger registration closed when shore verification was finalized." });
             if (trip.PassengerCount >= trip.Boat.MaximumCapacity)
                 return Conflict(new { message = "This trip has reached its maximum passenger capacity." });
             db.TripPassengers.Add(new TripPassenger { Id = Guid.NewGuid(), TripId = trip.Id,
@@ -183,6 +189,8 @@ public sealed class PassengerTripController(WhaleWatchingDbContext db) : Control
             if (session is null) return Unauthorized();
             if (session.Trip.Status is TripStatus.Completed or TripStatus.Cancelled)
                 return Conflict(new { message = "This trip is no longer accepting passenger registrations." });
+            if (session.Trip.PassengerVerificationFinalizedAtUtc is not null)
+                return Conflict(new { message = "Passenger registration closed when shore verification was finalized." });
             if (session.Trip.PassengerCount >= session.Trip.Boat.MaximumCapacity)
                 return Conflict(new { message = "This trip has reached its maximum passenger capacity." });
             if (SpecialNeedsInvalid(request)) return ValidationProblem("Select the special need and confirm self-care responsibility.");

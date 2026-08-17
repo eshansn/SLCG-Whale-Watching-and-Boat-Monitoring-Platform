@@ -151,21 +151,30 @@ public sealed class PassengerAttendanceController(WhaleWatchingDbContext db,
     public async Task<ActionResult<TripAttendanceDto>> Finalize(Guid tripId,
         FinalizeAttendanceRequest request, CancellationToken ct)
     {
-        var trip = await db.Trips.SingleOrDefaultAsync(x => x.Id == tripId, ct);
-        if (trip is null) return NotFound();
-        if (trip.PassengerVerificationFinalizedAtUtc is not null)
-            return Conflict(new { message = "Passenger verification has already been finalized." });
-        if (trip.Status is not (TripStatus.Scheduled or TripStatus.Boarding))
-            return Conflict(new { message = "Passenger verification cannot be finalized for this trip." });
-        var total = await db.TripPassengers.CountAsync(x => x.TripId == tripId, ct);
-        var checkedCount = await db.TripPassengerAttendances.CountAsync(x =>
-            x.TripPassenger.TripId == tripId && x.Status != PassengerAttendanceStatus.NotChecked, ct);
-        if (checkedCount < total && !request.ConfirmIncomplete)
-            return Conflict(new { message = $"{total - checkedCount} passengers have not been checked yet. Confirm incomplete verification to continue." });
-        trip.PassengerVerificationFinalizedAtUtc = DateTimeOffset.UtcNow;
-        trip.PassengerVerificationFinalizedByUserId = UserId;
-        trip.UpdatedAtUtc = DateTimeOffset.UtcNow;
-        await db.SaveChangesAsync(ct);
+        var strategy = db.Database.CreateExecutionStrategy();
+        var error = await strategy.ExecuteAsync<ActionResult?>(async () =>
+        {
+            await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
+            var trip = await db.Trips.SingleOrDefaultAsync(x => x.Id == tripId, ct);
+            if (trip is null) return NotFound();
+            if (trip.PassengerVerificationFinalizedAtUtc is not null)
+                return Conflict(new { message = "Passenger verification has already been finalized." });
+            if (trip.Status is not (TripStatus.Scheduled or TripStatus.Boarding))
+                return Conflict(new { message = "Passenger verification cannot be finalized for this trip." });
+            var total = await db.TripPassengers.CountAsync(x => x.TripId == tripId, ct);
+            var checkedCount = await db.TripPassengerAttendances.CountAsync(x =>
+                x.TripPassenger.TripId == tripId && x.Status != PassengerAttendanceStatus.NotChecked, ct);
+            if (checkedCount < total && !request.ConfirmIncomplete)
+                return Conflict(new { message = $"{total - checkedCount} passengers have not been checked yet. Confirm incomplete verification to continue." });
+            trip.PassengerVerificationFinalizedAtUtc = DateTimeOffset.UtcNow;
+            trip.PassengerVerificationFinalizedByUserId = UserId;
+            trip.UpdatedAtUtc = DateTimeOffset.UtcNow;
+            await db.SaveChangesAsync(ct);
+            await transaction.CommitAsync(ct);
+            return null;
+        });
+        if (error is not null) return error;
+
         await hub.Clients.All.SendAsync("operationsChanged", new { entity = "passengerAttendanceFinalized", tripId }, ct);
         return Ok(await BuildManifest(tripId, ct));
     }
