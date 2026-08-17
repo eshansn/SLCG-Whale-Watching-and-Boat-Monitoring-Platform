@@ -294,12 +294,17 @@ public sealed class OperationsController(WhaleWatchingDbContext db, IHubContext<
         if (await db.Boats.AsNoTracking().AnyAsync(x => x.RegistrationNumber == registrationNumber, ct))
             return Conflict(new { message = "A boat with this registration number already exists." });
 
+        var gpsDeviceId = string.IsNullOrWhiteSpace(request.GpsDeviceId) ? null : request.GpsDeviceId.Trim();
+        if (gpsDeviceId is not null &&
+            await db.Boats.AsNoTracking().AnyAsync(x => x.GpsDeviceId == gpsDeviceId, ct))
+            return Conflict(new { message = "This GPS device ID is already assigned to another boat." });
+
         var boat = new Boat { Id = Guid.NewGuid(), OwnerId = UserId, Name = request.Name.Trim(),
             RegistrationNumber = registrationNumber, RegistrationDate = request.RegistrationDate,
             HullNumber = request.HullNumber.Trim(), LengthMeters = request.LengthMeters,
             WidthMeters = request.WidthMeters, MaximumCapacity = request.MaximumCapacity,
             MaximumSpeedKnots = request.MaximumSpeedKnots,
-            LifeJacketCount = request.LifeJacketCount, GpsDeviceId = request.GpsDeviceId,
+            LifeJacketCount = request.LifeJacketCount, GpsDeviceId = gpsDeviceId,
             Approval = ApprovalStatus.Pending, WildlifeApproval = ApprovalStatus.Pending, ImageUrl = request.ImageUrl };
         db.Boats.Add(boat);
         try
@@ -311,6 +316,9 @@ public sealed class OperationsController(WhaleWatchingDbContext db, IHubContext<
             db.Entry(boat).State = EntityState.Detached;
             if (await db.Boats.AsNoTracking().AnyAsync(x => x.RegistrationNumber == registrationNumber, ct))
                 return Conflict(new { message = "A boat with this registration number already exists." });
+            if (gpsDeviceId is not null &&
+                await db.Boats.AsNoTracking().AnyAsync(x => x.GpsDeviceId == gpsDeviceId, ct))
+                return Conflict(new { message = "This GPS device ID is already assigned to another boat." });
             throw;
         }
         await hub.Clients.All.SendAsync("operationsChanged", new { entity = "boat", id = boat.Id }, ct);
