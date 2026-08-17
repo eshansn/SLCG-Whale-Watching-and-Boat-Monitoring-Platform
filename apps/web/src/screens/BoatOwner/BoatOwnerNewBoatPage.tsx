@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useRef,
   useState,
   type ChangeEvent,
   type FormEvent,
@@ -93,6 +94,8 @@ function BoatOwnerNewBoatPage() {
 
   const [statusMessage, setStatusMessage] =
     useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const submissionLock = useRef(false);
   const [today] = useState(() => new Date().toISOString().slice(0, 10));
   const ownerId = session?.userId;
 
@@ -235,6 +238,8 @@ function BoatOwnerNewBoatPage() {
   ): Promise<void> => {
     event.preventDefault();
 
+    if (submissionLock.current) return;
+
     if (!boatPhoto) {
       setStatusMessage(
         "Please upload a photograph of the boat.",
@@ -274,6 +279,8 @@ function BoatOwnerNewBoatPage() {
     }
 
     if (!session) return;
+    submissionLock.current = true;
+    setSubmitting(true);
     let createdBoatId: string | undefined;
     try {
       setStatusMessage("Submitting your boat approval request...");
@@ -304,6 +311,9 @@ function BoatOwnerNewBoatPage() {
         }
       }
       setStatusMessage(message);
+    } finally {
+      submissionLock.current = false;
+      setSubmitting(false);
     }
   };
 
@@ -856,6 +866,7 @@ function BoatOwnerNewBoatPage() {
 
           <button
             type="submit"
+            disabled={submitting}
             className="
               min-h-[58px] w-full
               rounded-[10px] bg-[#080d68]
@@ -868,9 +879,11 @@ function BoatOwnerNewBoatPage() {
               focus-visible:ring-2
               focus-visible:ring-[#080d68]
               focus-visible:ring-offset-2
+              disabled:cursor-not-allowed
+              disabled:opacity-60
             "
           >
-            <span className="inline-flex items-center gap-2"><Send size={19}/>Request Approval</span>
+            <span className="inline-flex items-center gap-2"><Send size={19}/>{submitting ? "Submitting..." : "Request Approval"}</span>
           </button>
         </div>
       </form>
