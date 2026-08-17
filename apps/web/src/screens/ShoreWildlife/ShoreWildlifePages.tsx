@@ -218,6 +218,8 @@ export function WildlifeRecords() {
     setRetryVersion((version) => version + 1);
   };
 
+  const completedRows = rows.filter((record) => record.status === 'Completed');
+
   return (
     <Shell
       title="Monitoring Records"
@@ -235,7 +237,7 @@ export function WildlifeRecords() {
         {loading && !rows.length && !error && (
           <p className="rounded-xl bg-white p-8 text-center text-sm text-slate-400 shadow-sm">Loading monitoring records…</p>
         )}
-        {rows.map((record) => {
+        {completedRows.map((record) => {
           const expanded = open === record.id;
           return (
             <section key={record.id} className="rounded-xl bg-white shadow-sm">
@@ -325,8 +327,8 @@ export function WildlifeRecords() {
             </section>
           );
         })}
-        {!loading && !error && !rows.length && (
-          <p className="rounded-xl bg-white p-8 text-center text-sm text-slate-400 shadow-sm">No monitoring records are available.</p>
+        {!loading && !error && !completedRows.length && (
+          <p className="rounded-xl bg-white p-8 text-center text-sm text-slate-400 shadow-sm">No finalized monitoring records are available.</p>
         )}
       </div>
     </Shell>
