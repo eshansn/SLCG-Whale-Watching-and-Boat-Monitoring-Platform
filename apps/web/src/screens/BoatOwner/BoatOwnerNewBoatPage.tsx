@@ -1,5 +1,7 @@
 import {
+  useCallback,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   type ChangeEvent,
@@ -67,6 +69,9 @@ const initialCertifications: Certification[] = [
 function BoatOwnerNewBoatPage() {
   const navigate = useNavigate();
   const { session } = useAuth();
+  const ownerId = session?.userId;
+  const activeOwnerIdRef = useRef(ownerId);
+  const submissionLocks = useRef(new Set<string>());
 
   const [boatForm, setBoatForm] =
     useState<BoatFormData>({
@@ -92,12 +97,28 @@ function BoatOwnerNewBoatPage() {
       initialCertifications,
     );
 
-  const [statusMessage, setStatusMessage] =
-    useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const submissionLock = useRef(false);
+  const [statusMessages, setStatusMessages] =
+    useState<Record<string, string>>({});
+  const [submittingOwnerIds, setSubmittingOwnerIds] =
+    useState<ReadonlySet<string>>(() => new Set());
   const [today] = useState(() => new Date().toISOString().slice(0, 10));
-  const ownerId = session?.userId;
+  const statusMessage = ownerId ? statusMessages[ownerId] ?? "" : "";
+  const submitting = ownerId ? submittingOwnerIds.has(ownerId) : false;
+  const setStatusMessage = useCallback((message: string): void => {
+    if (!ownerId) return;
+    setStatusMessages((current) => current[ownerId] === message
+      ? current
+      : { ...current, [ownerId]: message });
+  }, [ownerId]);
+
+  useLayoutEffect(() => {
+    activeOwnerIdRef.current = ownerId;
+    return () => {
+      if (activeOwnerIdRef.current === ownerId) {
+        activeOwnerIdRef.current = undefined;
+      }
+    };
+  }, [ownerId]);
 
   useEffect(() => {
     if (!ownerId) return;
@@ -126,7 +147,7 @@ function BoatOwnerNewBoatPage() {
     });
 
     return () => { active = false; };
-  }, [ownerId]);
+  }, [ownerId, setStatusMessage]);
 
   const updateFormField = (
     field: keyof BoatFormData,
@@ -238,7 +259,7 @@ function BoatOwnerNewBoatPage() {
   ): Promise<void> => {
     event.preventDefault();
 
-    if (submissionLock.current) return;
+    if (!session || !ownerId || submissionLocks.current.has(ownerId)) return;
 
     if (!boatPhoto) {
       setStatusMessage(
@@ -278,9 +299,8 @@ function BoatOwnerNewBoatPage() {
       return;
     }
 
-    if (!session) return;
-    submissionLock.current = true;
-    setSubmitting(true);
+    submissionLocks.current.add(ownerId);
+    setSubmittingOwnerIds((current) => new Set(current).add(ownerId));
     let createdBoatId: string | undefined;
     try {
       setStatusMessage("Submitting your boat approval request...");
@@ -299,7 +319,9 @@ function BoatOwnerNewBoatPage() {
       }
       await clearBoatRegistrationDraft(session.userId).catch(() => undefined);
       setStatusMessage("Your boat approval request has been submitted successfully.");
-      navigate(`/owner/boats/${created.id}`);
+      if (activeOwnerIdRef.current === ownerId) {
+        navigate(`/owner/boats/${created.id}`);
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to submit the boat.";
       if (createdBoatId) {
@@ -312,8 +334,13 @@ function BoatOwnerNewBoatPage() {
       }
       setStatusMessage(message);
     } finally {
-      submissionLock.current = false;
-      setSubmitting(false);
+      submissionLocks.current.delete(ownerId);
+      setSubmittingOwnerIds((current) => {
+        if (!current.has(ownerId)) return current;
+        const next = new Set(current);
+        next.delete(ownerId);
+        return next;
+      });
     }
   };
 
