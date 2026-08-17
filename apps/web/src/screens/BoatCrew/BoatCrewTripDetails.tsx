@@ -20,7 +20,7 @@ import {
 
 export default function BoatCrewTripDetails() {
   const { tripId } = useParams<{ tripId: string }>();
-  const { trips, loading, error, token } = useOperations();
+  const { trips, loading, error, reload, token } = useOperations();
   const trip = trips.find((item) => item.id === tripId);
   const [passengers, setPassengers] = useState<TripPassenger[]>([]);
   const [passengerError, setPassengerError] = useState("");
@@ -183,6 +183,7 @@ export default function BoatCrewTripDetails() {
     setStartError("");
     try {
       await operationsApi.status(token, trip.id, isOngoing ? "Completed" : "Ongoing");
+      await reload();
     } catch (reason) {
       setStartError(
         reason instanceof Error
