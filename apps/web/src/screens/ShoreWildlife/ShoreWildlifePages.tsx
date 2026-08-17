@@ -188,10 +188,33 @@ export function WildlifeRecords() {
   const { session } = useAuth();
   const [rows, setRows] = useState<MonitoringRecord[]>([]);
   const [open, setOpen] = useState<string>();
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [retryVersion, setRetryVersion] = useState(0);
 
   useEffect(() => {
-    if (session) wildlifeApi.records(session.accessToken).then(setRows);
-  }, [session]);
+    if (!session) return;
+    let active = true;
+    void wildlifeApi.records(session.accessToken)
+      .then((nextRows) => {
+        if (!active) return;
+        setRows(nextRows);
+        setError('');
+      })
+      .catch((loadError) => {
+        if (!active) return;
+        setError(loadError instanceof Error ? loadError.message : 'Unable to load monitoring records.');
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => { active = false; };
+  }, [session, retryVersion]);
+
+  const retry = () => {
+    setLoading(true);
+    setRetryVersion((version) => version + 1);
+  };
 
   return (
     <Shell
@@ -199,6 +222,17 @@ export function WildlifeRecords() {
       sub="View and download finalized attendance snapshots"
     >
       <div className="space-y-3">
+        {error && (
+          <div role="alert" className="flex items-center justify-between gap-3 rounded-xl bg-red-50 p-5 text-sm text-red-700 shadow-sm">
+            <span>{error}</span>
+            <button type="button" disabled={loading} onClick={retry} className="shrink-0 font-semibold underline disabled:opacity-50">
+              {loading ? 'Retrying…' : 'Retry'}
+            </button>
+          </div>
+        )}
+        {loading && !rows.length && !error && (
+          <p className="rounded-xl bg-white p-8 text-center text-sm text-slate-400 shadow-sm">Loading monitoring records…</p>
+        )}
         {rows.map((record) => {
           const expanded = open === record.id;
           return (
@@ -289,6 +323,9 @@ export function WildlifeRecords() {
             </section>
           );
         })}
+        {!loading && !error && !rows.length && (
+          <p className="rounded-xl bg-white p-8 text-center text-sm text-slate-400 shadow-sm">No monitoring records are available.</p>
+        )}
       </div>
     </Shell>
   );
