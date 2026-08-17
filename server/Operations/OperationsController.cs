@@ -517,6 +517,12 @@ public sealed class OperationsController(WhaleWatchingDbContext db, IHubContext<
         if (trip.Status == status) return NoContent();
         if (status == TripStatus.Ongoing)
         {
+            if (trip.PassengerVerificationFinalizedAtUtc is null)
+                return Conflict(new
+                {
+                    message = "Passenger verification must be finalized by shore crew before starting the trip."
+                });
+
             var incompleteApprovals = new List<string>();
             if (trip.Boat.Approval != ApprovalStatus.Approved) incompleteApprovals.Add("boat certification");
             if (trip.Boat.WildlifeApproval != ApprovalStatus.Approved)
