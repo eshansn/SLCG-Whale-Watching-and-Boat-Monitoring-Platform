@@ -193,6 +193,8 @@ export function WildlifeRecords() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [retryVersion, setRetryVersion] = useState(0);
+  const [downloadingId, setDownloadingId] = useState<string>();
+  const [downloadError, setDownloadError] = useState<{ recordId: string; message: string }>();
 
   useEffect(() => {
     if (!session) return;
@@ -219,6 +221,21 @@ export function WildlifeRecords() {
   };
 
   const completedRows = rows.filter((record) => record.status === 'Completed');
+
+  const downloadRecord = async (record: MonitoringRecord) => {
+    setDownloadingId(record.id);
+    setDownloadError(undefined);
+    try {
+      await downloadWildlifeRecordPdf(record);
+    } catch (downloadFailure) {
+      setDownloadError({
+        recordId: record.id,
+        message: downloadFailure instanceof Error ? downloadFailure.message : 'Unable to download this record.',
+      });
+    } finally {
+      setDownloadingId((currentId) => currentId === record.id ? undefined : currentId);
+    }
+  };
 
   return (
     <Shell
@@ -315,11 +332,15 @@ export function WildlifeRecords() {
                   </div>
                   <button
                     type="button"
-                    onClick={() => void downloadWildlifeRecordPdf(record)}
-                    className="mt-5 rounded-lg bg-[#14223d] px-5 py-2.5 text-sm font-semibold text-white"
+                    disabled={downloadingId === record.id}
+                    onClick={() => void downloadRecord(record)}
+                    className="mt-5 rounded-lg bg-[#14223d] px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
                   >
-                    Download Record
+                    {downloadingId === record.id ? 'Preparing Download…' : 'Download Record'}
                   </button>
+                  {downloadError?.recordId === record.id && (
+                    <p role="alert" className="mt-3 text-sm text-red-600">{downloadError.message}</p>
+                  )}
                     </div>
                   </motion.div>
                 )}
