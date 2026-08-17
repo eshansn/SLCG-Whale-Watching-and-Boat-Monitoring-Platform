@@ -109,7 +109,7 @@ public sealed class WhaleWatchingDbContext(DbContextOptions<WhaleWatchingDbConte
         wildlifeRecord.Property(x => x.HarbourOfficerSignature).HasMaxLength(500000);
         wildlifeRecord.Property(x => x.MonitoringOfficerSignature).HasMaxLength(500000);
         wildlifeRecord.Property(x => x.SupervisorSignature).HasMaxLength(500000);
-        wildlifeRecord.HasIndex(x => new { x.TripId, x.CreatedAtUtc });
+        wildlifeRecord.HasIndex(x => x.TripId).IsUnique();
         wildlifeRecord.HasOne(x => x.Trip).WithMany().HasForeignKey(x => x.TripId).OnDelete(DeleteBehavior.Restrict);
         wildlifeRecord.HasOne(x => x.CreatedByUser).WithMany().HasForeignKey(x => x.CreatedByUserId).OnDelete(DeleteBehavior.Restrict);
 

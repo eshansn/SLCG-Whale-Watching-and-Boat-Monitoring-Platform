@@ -49,13 +49,28 @@ public sealed class WildlifeMonitoringController(WhaleWatchingDbContext db, IHub
     [HttpPost("records")]
     public async Task<ActionResult<WildlifeRecordDto>> Create(CreateWildlifeRecordRequest request, CancellationToken ct)
     {
+        var existing = await db.WildlifeMonitoringRecords.AsNoTracking()
+            .SingleOrDefaultAsync(x => x.TripId == request.TripId, ct);
+        if (existing is not null) return Ok(ToDto(existing));
         if (!await db.Trips.AnyAsync(x => x.Id == request.TripId, ct)) return NotFound(new { message = "Trip not found." });
         var now = DateTimeOffset.UtcNow;
         var record = new WildlifeMonitoringRecord { Id = Guid.NewGuid(), TripId = request.TripId,
             CreatedByUserId = UserId, TicketNumber = request.TicketNumber.Trim(), TidNumber = request.TidNumber.Trim(),
             MonitoringOfficer = request.MonitoringOfficer.Trim(), Supervisor = request.Supervisor.Trim(),
             Status = WildlifeMonitoringStatus.Draft, CreatedAtUtc = now, UpdatedAtUtc = now };
-        db.WildlifeMonitoringRecords.Add(record); await db.SaveChangesAsync(ct);
+        db.WildlifeMonitoringRecords.Add(record);
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException)
+        {
+            db.Entry(record).State = EntityState.Detached;
+            existing = await db.WildlifeMonitoringRecords.AsNoTracking()
+                .SingleOrDefaultAsync(x => x.TripId == request.TripId, ct);
+            if (existing is not null) return Ok(ToDto(existing));
+            throw;
+        }
         return Created($"/api/wildlife/records/{record.Id}", ToDto(record));
     }
 
