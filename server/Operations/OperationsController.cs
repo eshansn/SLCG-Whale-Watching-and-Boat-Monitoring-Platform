@@ -549,9 +549,16 @@ public sealed class OperationsController(WhaleWatchingDbContext db, IHubContext<
                 });
         }
 
-        trip.Status = status; trip.UpdatedAtUtc = DateTimeOffset.UtcNow;
-        if (status == TripStatus.Ongoing) trip.ActualDepartureUtc ??= DateTimeOffset.UtcNow;
-        if (status == TripStatus.Completed) trip.ActualArrivalUtc ??= DateTimeOffset.UtcNow;
+        var now = DateTimeOffset.UtcNow;
+        trip.Status = status; trip.UpdatedAtUtc = now;
+        if (status == TripStatus.Ongoing) trip.ActualDepartureUtc ??= now;
+        if (status == TripStatus.Completed) trip.ActualArrivalUtc ??= now;
+        if (status is TripStatus.Completed or TripStatus.Cancelled)
+        {
+            var activeSosAlerts = await db.SosEvents
+                .Where(x => x.TripId == id && x.ResolvedAtUtc == null).ToListAsync(ct);
+            foreach (var alert in activeSosAlerts) alert.ResolvedAtUtc = now;
+        }
         await db.SaveChangesAsync(ct); await hub.Clients.All.SendAsync("operationsChanged", new { entity = "trip", id }, ct);
         return NoContent();
     }
