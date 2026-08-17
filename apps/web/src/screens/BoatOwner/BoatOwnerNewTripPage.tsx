@@ -80,6 +80,7 @@ type CrewState = {
 type CrewSelectionState = {
   accountId: string;
   crewUserIds: string[];
+  revision: number;
 };
 
 type TripSubmissionState = {
@@ -92,6 +93,7 @@ type TripFormState = {
   accountId: string;
   selectedVessel: string;
   tripDateTime: string;
+  revision: number;
 };
 
 function BoatOwnerNewTripPage() {
@@ -194,16 +196,18 @@ function BoatOwnerNewTripPage() {
     updates: Partial<Pick<TripFormState, "selectedVessel" | "tripDateTime">>,
   ): void => {
     if (!accountId) return;
-    setTripFormState((current) => ({
-      accountId,
-      selectedVessel: current?.accountId === accountId
-        ? current.selectedVessel
-        : "",
-      tripDateTime: current?.accountId === accountId
-        ? current.tripDateTime
-        : "",
-      ...updates,
-    }));
+    setTripFormState((current) => {
+      const currentForm = current?.accountId === accountId
+        ? current
+        : undefined;
+      return {
+        accountId,
+        selectedVessel: currentForm?.selectedVessel ?? "",
+        tripDateTime: currentForm?.tripDateTime ?? "",
+        revision: (currentForm?.revision ?? 0) + 1,
+        ...updates,
+      };
+    });
   };
 
   const handleScheduleTrip = async (
@@ -239,6 +243,10 @@ function BoatOwnerNewTripPage() {
       });
       return;
     }
+    const submittedTripFormRevision = currentTripForm?.revision ?? 0;
+    const submittedCrewRevision = selectedCrewState?.accountId === accountId
+      ? selectedCrewState.revision
+      : 0;
     try {
       setTripSubmissionState({
         accountId,
@@ -254,8 +262,18 @@ function BoatOwnerNewTripPage() {
           : `The trip has been scheduled successfully with ${created.crewUserIds.length} selected crew members.`,
         submitting: true,
       });
-      updateTripForm({ tripDateTime: "" });
-      setSelectedCrewState({ accountId, crewUserIds: [] });
+      setTripFormState((current) => current?.accountId === accountId
+        && current.revision === submittedTripFormRevision
+        ? { ...current, tripDateTime: "", revision: current.revision + 1 }
+        : current);
+      setSelectedCrewState((current) => {
+        const currentRevision = current?.accountId === accountId
+          ? current.revision
+          : 0;
+        return currentRevision === submittedCrewRevision
+          ? { accountId, crewUserIds: [], revision: currentRevision + 1 }
+          : current;
+      });
     } catch (error) {
       if (activeAccountIdRef.current === accountId) {
         setTripSubmissionState({
@@ -416,6 +434,9 @@ function BoatOwnerNewTripPage() {
                       crewUserIds: crewUserIds.includes(member.crewUserId)
                         ? crewUserIds.filter((id) => id !== member.crewUserId)
                         : [...crewUserIds, member.crewUserId],
+                      revision: current?.accountId === accountId
+                        ? current.revision + 1
+                        : 1,
                     };
                   });
                 }}
