@@ -92,8 +92,8 @@ function BoatOwnerNewTripPage() {
   const [submitting, setSubmitting] = useState(false);
   const [crew, setCrew] = useState<OwnerCrew[]>([]);
   const [selectedCrew, setSelectedCrew] = useState<string[]>([]);
+  const effectiveSelectedVessel = selectedVessel || boats[0]?.id || "";
 
-  useEffect(() => { if (!selectedVessel && boats[0]) setSelectedVessel(boats[0].id); }, [boats, selectedVessel]);
   useEffect(() => { if (token) operationsApi.ownerCrew(token).then(setCrew).catch(() => setStatusMessage('Unable to load your crew.')); }, [token]);
 
   useEffect(() => {
@@ -120,7 +120,7 @@ function BoatOwnerNewTripPage() {
   ): Promise<void> => {
     event.preventDefault();
 
-    if (!selectedVessel) {
+    if (!effectiveSelectedVessel) {
       setStatusMessage(
         "Please select a vessel.",
       );
@@ -140,7 +140,7 @@ function BoatOwnerNewTripPage() {
     }
     try {
       setSubmitting(true); setStatusMessage("Scheduling trip...");
-      const created = await operationsApi.createTrip(token, selectedVessel, scheduled.toISOString(), selectedCrew);
+      const created = await operationsApi.createTrip(token, effectiveSelectedVessel, scheduled.toISOString(), selectedCrew);
       setStatusMessage(created.crewAutoAssigned
         ? `The trip has been scheduled successfully. ${created.crewUserIds.length} available crew members were assigned automatically.`
         : `The trip has been scheduled successfully with ${created.crewUserIds.length} selected crew members.`);
@@ -237,7 +237,7 @@ function BoatOwnerNewTripPage() {
           <div className="relative">
             <select
               id="tripVessel"
-              value={selectedVessel}
+              value={effectiveSelectedVessel}
               onChange={(event) => {
                 setSelectedVessel(
                   event.target.value,
