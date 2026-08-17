@@ -37,26 +37,32 @@ export default function BoatCrewTripDetails() {
     if (!token || !trip?.id) return;
     let active = true;
     const load = async () => {
-      try {
-        const [people, manifest] = await Promise.all([
-          operationsApi.tripPassengers(token, trip.id),
-          getCrewAttendance(token, trip.id),
-        ]);
-        if (active) {
-          setPassengers(people);
-          setAttendance(manifest);
-          setPassengerError("");
-          setAttendanceError("");
-        }
-      } catch (reason) {
-        if (active) {
-          const message =
-            reason instanceof Error
-              ? reason.message
-              : "Unable to load passenger information.";
-          setPassengerError(message);
-          setAttendanceError(message);
-        }
+      const [passengerResult, attendanceResult] = await Promise.allSettled([
+        operationsApi.tripPassengers(token, trip.id),
+        getCrewAttendance(token, trip.id),
+      ]);
+      if (!active) return;
+
+      if (passengerResult.status === "fulfilled") {
+        setPassengers(passengerResult.value);
+        setPassengerError("");
+      } else {
+        setPassengerError(
+          passengerResult.reason instanceof Error
+            ? passengerResult.reason.message
+            : "Unable to load passenger information.",
+        );
+      }
+
+      if (attendanceResult.status === "fulfilled") {
+        setAttendance(attendanceResult.value);
+        setAttendanceError("");
+      } else {
+        setAttendanceError(
+          attendanceResult.reason instanceof Error
+            ? attendanceResult.reason.message
+            : "Unable to load attendance information.",
+        );
       }
     };
     void load();
