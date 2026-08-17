@@ -10,16 +10,29 @@ export default function BoatCrewDashboard() {
   const nav = useNavigate();
   const { session } = useAuth();
   const { boats, trips, loading, error } = useOperations();
-  const [profile, setProfile] = useState<CrewProfile>();
-  const [photo, setPhoto] = useState<string>();
+  const [profileState, setProfileState] = useState<{ userId: string; profile: CrewProfile }>();
+  const [photoState, setPhotoState] = useState<{ userId: string; url: string }>();
+  const profile = profileState && profileState.userId === session?.userId ? profileState.profile : undefined;
+  const photo = photoState && photoState.userId === session?.userId ? photoState.url : undefined;
 
   useEffect(() => {
     if (!session) return;
-    crewApi.profile(session.accessToken).then(profile => {
-      setProfile(profile);
-      if (profile.hasProfilePhoto) void crewApi.photo(session.accessToken).then(setPhoto).catch(() => setPhoto(undefined));
+    let active = true;
+    crewApi.profile(session.accessToken).then(nextProfile => {
+      if (!active) return;
+      setProfileState({ userId: session.userId, profile: nextProfile });
+      if (nextProfile.hasProfilePhoto) void crewApi.photo(session.accessToken).then(nextPhoto => {
+        if (active) setPhotoState({ userId: session.userId, url: nextPhoto });
+        else URL.revokeObjectURL(nextPhoto);
+      }).catch(() => { if (active) setPhotoState(undefined); });
+      else setPhotoState(undefined);
     }).catch(() => undefined);
+    return () => { active = false; };
   }, [session]);
+
+  useEffect(() => () => {
+    if (photoState?.url) URL.revokeObjectURL(photoState.url);
+  }, [photoState]);
 
   const sorted = useMemo(() => [...trips].sort((a, b) => +new Date(a.scheduledDepartureUtc) - +new Date(b.scheduledDepartureUtc)), [trips]);
   const ongoing = sorted.find(trip => trip.status === 'Ongoing');
