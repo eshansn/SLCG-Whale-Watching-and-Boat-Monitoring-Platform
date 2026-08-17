@@ -6,6 +6,7 @@ import {
 import type { ChangeEvent } from "react";
 import {
   NavLink,
+  useLocation,
   useNavigate,
 } from "react-router-dom";
 import { Download } from "lucide-react";
@@ -142,6 +143,7 @@ const ITEMS_PER_PAGE = 4;
 
 const Trips = () => {
   void initialTrips;
+  const location = useLocation();
   const navigate = useNavigate();
   const { trips: databaseTrips, boats: databaseBoats, loading: operationsLoading } = useOperations();
 
@@ -377,7 +379,10 @@ const Trips = () => {
   const handleTripInfo = (
     tripId: string,
   ): void => {
-    navigate(`/admin/trip-info/${tripId}`);
+    const portalPrefix = location.pathname.startsWith("/wildlife")
+      ? "/wildlife"
+      : "/admin";
+    navigate(`${portalPrefix}/trip-info/${tripId}`);
   };
 
   const handleDeleteTrip = (
