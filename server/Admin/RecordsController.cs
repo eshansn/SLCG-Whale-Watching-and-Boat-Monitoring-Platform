@@ -114,10 +114,19 @@ public sealed class RecordsController(
             if (selectedBoat is null) return ValidationProblem("The selected boat does not exist.");
         }
 
+        var assignments = await db.CrewAssignments.Where(assignment => assignment.CrewUserId == id).ToListAsync(ct);
+        var activeBoatIds = assignments.Where(assignment => assignment.IsActive)
+            .Select(assignment => assignment.BoatId).ToArray();
+        var boatAssignmentChanged = selectedBoat is null
+            ? activeBoatIds.Length > 0
+            : activeBoatIds.Length != 1 || activeBoatIds[0] != selectedBoat.Id;
+        if (boatAssignmentChanged && await db.TripCrewAssignments.AnyAsync(assignment =>
+                assignment.CrewUserId == id && assignment.Trip.Status == TripStatus.Ongoing, ct))
+            return Conflict(new { message = "A crew member assigned to an ongoing trip cannot be reassigned or unassigned." });
+
         ApplyIdentity(crew, request.Name, request.Nic, request.Email, request.Phone, request.Address);
         crew.CrewType = request.Role.Trim();
 
-        var assignments = await db.CrewAssignments.Where(assignment => assignment.CrewUserId == id).ToListAsync(ct);
         foreach (var assignment in assignments) assignment.IsActive = false;
         if (selectedBoat is not null)
         {
