@@ -27,15 +27,15 @@ import {
 } from "./boatRegistrationDraftStorage";
 
 const initialBoatForm: BoatFormData = {
-  name: "Mirissa King",
-  registrationNumber: "SL-WB-0016",
-  registrationDate: "2026-06-10",
-  maximumCapacity: "150",
-  boatLength: "25.7",
-  hullNumber: "156466",
-  boatWidth: "5.7",
-  maximumSpeedKnots: "28",
-  lifeJacketCount: "155",
+  name: "",
+  registrationNumber: "",
+  registrationDate: "",
+  maximumCapacity: "",
+  boatLength: "",
+  hullNumber: "",
+  boatWidth: "",
+  maximumSpeedKnots: "",
+  lifeJacketCount: "",
 };
 
 const initialCertifications: Certification[] = [
@@ -383,6 +383,45 @@ function BoatOwnerNewBoatPage() {
       return;
     }
 
+    if (!boatForm.hullNumber.trim()) {
+      setStatusMessage("Please enter the hull number.");
+      return;
+    }
+
+    const lengthMeters = Number(boatForm.boatLength);
+    if (!boatForm.boatLength || !Number.isFinite(lengthMeters) || lengthMeters <= 0) {
+      setStatusMessage("Please enter a valid boat length greater than zero.");
+      return;
+    }
+
+    const widthMeters = Number(boatForm.boatWidth);
+    if (!boatForm.boatWidth || !Number.isFinite(widthMeters) || widthMeters <= 0) {
+      setStatusMessage("Please enter a valid boat width greater than zero.");
+      return;
+    }
+
+    const maximumCapacity = Number(boatForm.maximumCapacity);
+    if (!boatForm.maximumCapacity || !Number.isInteger(maximumCapacity) || maximumCapacity < 1) {
+      setStatusMessage("Please enter a valid maximum capacity of at least one.");
+      return;
+    }
+
+    const maximumSpeedKnots = boatForm.maximumSpeedKnots
+      ? Number(boatForm.maximumSpeedKnots)
+      : 0;
+    if (!Number.isFinite(maximumSpeedKnots) || maximumSpeedKnots < 0) {
+      setStatusMessage("Please enter a valid maximum speed.");
+      return;
+    }
+
+    const lifeJacketCount = boatForm.lifeJacketCount
+      ? Number(boatForm.lifeJacketCount)
+      : 0;
+    if (!Number.isInteger(lifeJacketCount) || lifeJacketCount < 0) {
+      setStatusMessage("Please enter a valid whole number of life jackets.");
+      return;
+    }
+
     const insurance = certifications.find((certificate) => certificate.id === "boat-insurance");
     if (insurance?.file && !insurance.expirationDate) {
       setStatusMessage("Please select the boat insurance expiration date.");
@@ -401,10 +440,9 @@ function BoatOwnerNewBoatPage() {
       const created = await operationsApi.createBoat(session.accessToken, {
         name: boatForm.name, registrationNumber: boatForm.registrationNumber,
         registrationDate: boatForm.registrationDate, hullNumber: boatForm.hullNumber,
-        lengthMeters: Number(boatForm.boatLength), widthMeters: Number(boatForm.boatWidth),
-        maximumCapacity: Number(boatForm.maximumCapacity), imageUrl: boatPhotoPreview || undefined,
-        maximumSpeedKnots: Number(boatForm.maximumSpeedKnots),
-        lifeJacketCount: Number(boatForm.lifeJacketCount),
+        lengthMeters, widthMeters, maximumCapacity, imageUrl: boatPhotoPreview || undefined,
+        maximumSpeedKnots,
+        lifeJacketCount,
       });
       createdBoatId = created.id;
       for (const certificate of certifications.filter((item) => item.file)) {
