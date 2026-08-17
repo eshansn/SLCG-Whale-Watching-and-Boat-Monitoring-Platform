@@ -309,10 +309,24 @@ function BoatOwnerTripInfoPage() {
   };
 
   const downloadQr = (): void => {
-    const svg = document.getElementById('trip-invitation-qr'); if (!svg || !trip) return;
-    const blob = new Blob([new XMLSerializer().serializeToString(svg)], { type: 'image/svg+xml' });
-    const url = URL.createObjectURL(blob); const link = document.createElement('a');
-    link.href = url; link.download = `trip-${trip.registrationNumber}-qr.svg`; link.click(); URL.revokeObjectURL(url);
+    const svg = document.getElementById("trip-invitation-qr");
+    if (!svg || !trip) return;
+    const blob = new Blob(
+      [new XMLSerializer().serializeToString(svg)],
+      { type: "image/svg+xml" },
+    );
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `trip-${trip.registrationNumber}-qr.svg`;
+    link.style.display = "none";
+    document.body.appendChild(link);
+    try {
+      link.click();
+    } finally {
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1_000);
+    }
   };
 
   const startTrip = async (): Promise<void> => {
