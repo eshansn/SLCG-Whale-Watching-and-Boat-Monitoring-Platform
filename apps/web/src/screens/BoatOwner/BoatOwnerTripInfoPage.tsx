@@ -102,7 +102,7 @@ function BoatOwnerTripInfoPage() {
   const navigate = useNavigate();
   const { tripId } =
     useParams<{ tripId: string }>();
-  const { trips, loading, error, token } = useOperations();
+  const { trips, loading, error, reload, token } = useOperations();
   const trip = trips.find((item) => item.id === tripId);
   const invitationUrl = trip?.invitationCode ? `${window.location.origin}/passenger/trip/${trip.invitationCode}` : '';
 
@@ -336,6 +336,7 @@ function BoatOwnerTripInfoPage() {
     setStartError("");
     try {
       await operationsApi.status(token, trip.id, isOngoing ? "Completed" : "Ongoing");
+      await reload();
     } catch (startFailure) {
       setStartError(startFailure instanceof Error ? startFailure.message : `Unable to ${isOngoing ? "end" : "start"} this trip.`);
     } finally {
