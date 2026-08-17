@@ -1,6 +1,7 @@
 import {
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import {
@@ -43,6 +44,26 @@ interface MenuItem {
   icon?: string;
   type?: "settings";
 }
+
+type OwnerSpeechRecognitionEvent = {
+  results: ArrayLike<ArrayLike<{ transcript: string }>>;
+};
+
+type OwnerSpeechRecognition = {
+  lang: string;
+  continuous: boolean;
+  interimResults: boolean;
+  start: () => void;
+  abort: () => void;
+  onend: (() => void) | null;
+  onerror: (() => void) | null;
+  onresult: ((event: OwnerSpeechRecognitionEvent) => void) | null;
+};
+
+type OwnerSpeechRecognitionWindow = {
+  SpeechRecognition?: new () => OwnerSpeechRecognition;
+  webkitSpeechRecognition?: new () => OwnerSpeechRecognition;
+};
 
 const menuItems: MenuItem[] = [
   {
@@ -102,6 +123,18 @@ function BoatOwnerTripInfoPage() {
   const [startingTrip,setStartingTrip]=useState(false);
   const [startError,setStartError]=useState("");
   const [copyStatus, setCopyStatus] = useState("");
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef<OwnerSpeechRecognition | null>(null);
+
+  useEffect(() => () => {
+    const recognition = recognitionRef.current;
+    if (!recognition) return;
+    recognition.onend = null;
+    recognition.onerror = null;
+    recognition.onresult = null;
+    recognition.abort();
+    recognitionRef.current = null;
+  }, []);
 
   useEffect(() => {
     if (!token || !trip?.id) return;
@@ -195,6 +228,58 @@ function BoatOwnerTripInfoPage() {
   const openPage = (path: string): void => {
     setIsMenuOpen(false);
     navigate(path);
+  };
+
+  const startVoiceSearch = (): void => {
+    if (isListening) return;
+    const speechWindow =
+      window as unknown as OwnerSpeechRecognitionWindow;
+    const SpeechRecognitionAPI =
+      speechWindow.SpeechRecognition ??
+      speechWindow.webkitSpeechRecognition;
+
+    if (!SpeechRecognitionAPI) {
+      window.alert(
+        "Voice search is not supported by this browser. Please use Chrome or Edge.",
+      );
+      return;
+    }
+
+    const recognition = new SpeechRecognitionAPI();
+    recognitionRef.current = recognition;
+    recognition.lang = "en-LK";
+    recognition.continuous = false;
+    recognition.interimResults = false;
+
+    const finish = () => {
+      if (recognitionRef.current === recognition) {
+        recognitionRef.current = null;
+      }
+      setIsListening(false);
+    };
+
+    recognition.onend = finish;
+    recognition.onerror = () => {
+      finish();
+      window.alert(
+        "Voice search failed. Check microphone permission and try again.",
+      );
+    };
+    recognition.onresult = (event) => {
+      const spokenText =
+        event.results[0]?.[0]?.transcript.trim();
+      if (spokenText) setSearchText(spokenText);
+    };
+
+    setIsListening(true);
+    try {
+      recognition.start();
+    } catch {
+      finish();
+      window.alert(
+        "Voice search could not start. Please try again.",
+      );
+    }
   };
 
   const copyInvitation = async (): Promise<void> => {
@@ -435,7 +520,18 @@ function BoatOwnerTripInfoPage() {
 
             <button
               type="button"
-              aria-label="Start voice search"
+              disabled={isListening}
+              aria-label={
+                isListening
+                  ? "Listening for passenger search"
+                  : "Start voice search"
+              }
+              title={
+                isListening
+                  ? "Listening..."
+                  : "Start voice search"
+              }
+              onClick={startVoiceSearch}
               className="
                 flex h-10 w-10 shrink-0
                 items-center justify-center
@@ -445,6 +541,7 @@ function BoatOwnerTripInfoPage() {
                 focus:outline-none
                 focus-visible:ring-2
                 focus-visible:ring-[#162d54]
+                disabled:opacity-50
               "
             >
               <Mic
