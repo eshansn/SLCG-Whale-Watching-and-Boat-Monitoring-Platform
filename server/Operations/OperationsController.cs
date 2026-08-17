@@ -219,8 +219,8 @@ public sealed class OperationsController(WhaleWatchingDbContext db, IHubContext<
     {
         var trip = await db.Trips.Include(x => x.CrewAssignments).SingleOrDefaultAsync(x => x.Id == id, ct);
         if (trip is null || !trip.CrewAssignments.Any(x => x.CrewUserId == UserId)) return NotFound();
-        if (trip.Status is TripStatus.Completed or TripStatus.Cancelled)
-            return Conflict(new { message = "An SOS cannot be raised for a completed or cancelled trip." });
+        if (trip.Status != TripStatus.Ongoing)
+            return Conflict(new { message = "An SOS can only be raised while the trip is ongoing." });
         var existing = await db.SosEvents.SingleOrDefaultAsync(x => x.TripId == id && x.RaisedByUserId == UserId && x.ResolvedAtUtc == null, ct);
         if (existing is not null) return Ok(new { id = existing.Id, raisedAtUtc = existing.RaisedAtUtc });
         var sos = new SosEvent { Id = Guid.NewGuid(), TripId = id, RaisedByUserId = UserId,
