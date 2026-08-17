@@ -139,12 +139,17 @@ function BoatOwnerTripInfoPage() {
   useEffect(() => {
     if (!token || !trip?.id) return;
     let active = true;
+    let requestInFlight = false;
     const loadPassengers = async (): Promise<void> => {
+      if (requestInFlight) return;
+      requestInFlight = true;
       try {
         const records = await operationsApi.tripPassengers(token, trip.id);
         if (active) { setPassengers(records); setPassengerError(""); }
       } catch (passengerLoadError) {
         if (active) setPassengerError(passengerLoadError instanceof Error ? passengerLoadError.message : "Unable to load passengers.");
+      } finally {
+        requestInFlight = false;
       }
     };
     void loadPassengers();
@@ -155,7 +160,10 @@ function BoatOwnerTripInfoPage() {
   useEffect(() => {
     if (!token || !trip?.boatId) return;
     let active = true;
+    let requestInFlight = false;
     const loadLocation = async (): Promise<void> => {
+      if (requestInFlight) return;
+      requestInFlight = true;
       try {
         const vessels = await operationsApi.vesselMap(token);
         if (active) {
@@ -164,6 +172,8 @@ function BoatOwnerTripInfoPage() {
         }
       } catch (locationError) {
         if (active) setMapError(locationError instanceof Error ? locationError.message : "Unable to load live vessel location.");
+      } finally {
+        requestInFlight = false;
       }
     };
     void loadLocation();
