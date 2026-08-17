@@ -290,15 +290,29 @@ public sealed class OperationsController(WhaleWatchingDbContext db, IHubContext<
             request.RegistrationDate > DateOnly.FromDateTime(DateTime.UtcNow))
             return ValidationProblem("Registration date must be a valid date that is not in the future.");
 
+        var registrationNumber = request.RegistrationNumber.Trim();
+        if (await db.Boats.AsNoTracking().AnyAsync(x => x.RegistrationNumber == registrationNumber, ct))
+            return Conflict(new { message = "A boat with this registration number already exists." });
+
         var boat = new Boat { Id = Guid.NewGuid(), OwnerId = UserId, Name = request.Name.Trim(),
-            RegistrationNumber = request.RegistrationNumber.Trim(), RegistrationDate = request.RegistrationDate,
+            RegistrationNumber = registrationNumber, RegistrationDate = request.RegistrationDate,
             HullNumber = request.HullNumber.Trim(), LengthMeters = request.LengthMeters,
             WidthMeters = request.WidthMeters, MaximumCapacity = request.MaximumCapacity,
             MaximumSpeedKnots = request.MaximumSpeedKnots,
             LifeJacketCount = request.LifeJacketCount, GpsDeviceId = request.GpsDeviceId,
             Approval = ApprovalStatus.Pending, WildlifeApproval = ApprovalStatus.Pending, ImageUrl = request.ImageUrl };
         db.Boats.Add(boat);
-        await db.SaveChangesAsync(ct);
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException)
+        {
+            db.Entry(boat).State = EntityState.Detached;
+            if (await db.Boats.AsNoTracking().AnyAsync(x => x.RegistrationNumber == registrationNumber, ct))
+                return Conflict(new { message = "A boat with this registration number already exists." });
+            throw;
+        }
         await hub.Clients.All.SendAsync("operationsChanged", new { entity = "boat", id = boat.Id }, ct);
         return Created($"api/operations/boats/{boat.Id}", new { boat.Id });
     }
