@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, Copy, Download, Mic, Play, Search, Square } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import Map, { Marker } from "react-map-gl/maplibre";
@@ -19,6 +19,26 @@ import {
 } from "./crewAttendanceApi";
 
 type CopyState = "idle" | "copying" | "copied" | "error";
+
+type CrewSpeechRecognitionEvent = {
+  results: ArrayLike<ArrayLike<{ transcript: string }>>;
+};
+
+type CrewSpeechRecognition = {
+  lang: string;
+  continuous: boolean;
+  interimResults: boolean;
+  start: () => void;
+  abort: () => void;
+  onend: (() => void) | null;
+  onerror: (() => void) | null;
+  onresult: ((event: CrewSpeechRecognitionEvent) => void) | null;
+};
+
+type CrewSpeechRecognitionWindow = {
+  SpeechRecognition?: new () => CrewSpeechRecognition;
+  webkitSpeechRecognition?: new () => CrewSpeechRecognition;
+};
 
 async function copyText(text: string) {
   if (navigator.clipboard?.writeText) {
@@ -63,6 +83,18 @@ export default function BoatCrewTripDetails() {
   const [startingTrip, setStartingTrip] = useState(false);
   const [startError, setStartError] = useState("");
   const [copyState, setCopyState] = useState<CopyState>("idle");
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef<CrewSpeechRecognition | null>(null);
+
+  useEffect(() => () => {
+    const recognition = recognitionRef.current;
+    if (!recognition) return;
+    recognition.onend = null;
+    recognition.onerror = null;
+    recognition.onresult = null;
+    recognition.abort();
+    recognitionRef.current = null;
+  }, []);
 
   useEffect(() => {
     if (!token || !trip?.id) return;
@@ -239,6 +271,45 @@ export default function BoatCrewTripDetails() {
     }
   };
 
+  const startVoiceSearch = () => {
+    if (isListening) return;
+    const speechWindow = window as unknown as CrewSpeechRecognitionWindow;
+    const SpeechRecognitionAPI =
+      speechWindow.SpeechRecognition ?? speechWindow.webkitSpeechRecognition;
+    if (!SpeechRecognitionAPI) {
+      window.alert("Voice search is not supported by this browser. Please use Chrome or Edge.");
+      return;
+    }
+
+    const recognition = new SpeechRecognitionAPI();
+    recognitionRef.current = recognition;
+    recognition.lang = "en-LK";
+    recognition.continuous = false;
+    recognition.interimResults = false;
+
+    const finish = () => {
+      if (recognitionRef.current === recognition) recognitionRef.current = null;
+      setIsListening(false);
+    };
+    recognition.onend = finish;
+    recognition.onerror = () => {
+      finish();
+      window.alert("Voice search failed. Check microphone permission and try again.");
+    };
+    recognition.onresult = (event) => {
+      const spokenText = event.results[0]?.[0]?.transcript.trim();
+      if (spokenText) setSearch(spokenText);
+    };
+
+    setIsListening(true);
+    try {
+      recognition.start();
+    } catch {
+      finish();
+      window.alert("Voice search could not start. Please try again.");
+    }
+  };
+
   return (
     <CrewLayout title="Trip Info">
       <div className="mx-auto w-full max-w-[1200px] px-4 pb-20 sm:px-7 lg:px-10">
@@ -354,8 +425,12 @@ export default function BoatCrewTripDetails() {
               />
             </div>
             <button
-              aria-label="Voice search"
-              className="grid h-10 w-10 place-items-center rounded-full hover:bg-slate-100"
+              type="button"
+              disabled={isListening}
+              aria-label={isListening ? "Listening for passenger search" : "Start voice search"}
+              title={isListening ? "Listening..." : "Start voice search"}
+              onClick={startVoiceSearch}
+              className="grid h-10 w-10 place-items-center rounded-full hover:bg-slate-100 disabled:opacity-50"
             >
               <Mic size={17} />
             </button>
