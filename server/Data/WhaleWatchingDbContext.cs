@@ -40,6 +40,8 @@ public sealed class WhaleWatchingDbContext(DbContextOptions<WhaleWatchingDbConte
         user.Property(x => x.Bio).HasMaxLength(1000);
         user.Property(x => x.CrewType).HasMaxLength(100);
         user.HasIndex(x => x.NicNumber).IsUnique().HasFilter("[NicNumber] IS NOT NULL");
+        user.HasIndex(x => x.NormalizedEmail).HasDatabaseName("EmailIndex").IsUnique()
+            .HasFilter("[NormalizedEmail] IS NOT NULL");
         var boat = modelBuilder.Entity<Boat>();
         boat.Property(x => x.Name).HasMaxLength(160).IsRequired();
         boat.Property(x => x.RegistrationNumber).HasMaxLength(64).IsRequired();

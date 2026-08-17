@@ -93,7 +93,8 @@ public sealed class RecordsController(
         if (conflict is not null) return Conflict(new { message = conflict });
 
         ApplyIdentity(owner, request.Name, request.Nic, request.Email, request.Phone, request.Address);
-        await db.SaveChangesAsync(ct);
+        conflict = await SaveIdentityChangesAsync(id, request.Email, request.Nic, ct);
+        if (conflict is not null) return Conflict(new { message = conflict });
         await hub.Clients.All.SendAsync("operationsChanged", new { entity = "owner", id }, ct);
         return NoContent();
     }
@@ -170,7 +171,8 @@ public sealed class RecordsController(
             staleTripAssignments = staleTripAssignments.Where(assignment => assignment.Trip.BoatId != selectedBoat.Id);
         db.TripCrewAssignments.RemoveRange(await staleTripAssignments.ToListAsync(ct));
 
-        await db.SaveChangesAsync(ct);
+        conflict = await SaveIdentityChangesAsync(id, request.Email, request.Nic, ct);
+        if (conflict is not null) return Conflict(new { message = conflict });
         await hub.Clients.All.SendAsync("operationsChanged", new { entity = "crew", id }, ct);
         return NoContent();
     }
@@ -228,11 +230,28 @@ public sealed class RecordsController(
     {
         var normalizedEmail = users.NormalizeEmail(emailValue.Trim());
         var normalizedNic = nicValue.Trim().ToUpperInvariant();
-        if (await db.Users.AnyAsync(user => user.Id != id && user.NormalizedEmail == normalizedEmail, ct))
+        if (await db.Users.AsNoTracking()
+            .AnyAsync(user => user.Id != id && user.NormalizedEmail == normalizedEmail, ct))
             return "That email address is already in use.";
-        if (await db.Users.AnyAsync(user => user.Id != id && user.NicNumber == normalizedNic, ct))
+        if (await db.Users.AsNoTracking().AnyAsync(user => user.Id != id && user.NicNumber == normalizedNic, ct))
             return "That NIC number is already in use.";
         return null;
+    }
+
+    private async Task<string?> SaveIdentityChangesAsync(
+        Guid id, string emailValue, string nicValue, CancellationToken ct)
+    {
+        try
+        {
+            await db.SaveChangesAsync(ct);
+            return null;
+        }
+        catch (DbUpdateException)
+        {
+            var conflict = await ValidateUniqueIdentityAsync(id, emailValue, nicValue, ct);
+            if (conflict is not null) return conflict;
+            throw;
+        }
     }
 
     private void ApplyIdentity(ApplicationUser user, string name, string nic, string email, string phone, string? address)

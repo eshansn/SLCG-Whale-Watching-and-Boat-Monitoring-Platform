@@ -240,7 +240,9 @@ namespace WhaleWatching.Api.Migrations
                         .HasFilter("[NicNumber] IS NOT NULL");
 
                     b.HasIndex("NormalizedEmail")
-                        .HasDatabaseName("EmailIndex");
+                        .IsUnique()
+                        .HasDatabaseName("EmailIndex")
+                        .HasFilter("[NormalizedEmail] IS NOT NULL");
 
                     b.HasIndex("NormalizedUserName")
                         .IsUnique()
