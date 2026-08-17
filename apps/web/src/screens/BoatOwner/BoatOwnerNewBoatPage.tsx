@@ -102,6 +102,7 @@ function BoatOwnerNewBoatPage() {
   const ownerId = session?.userId;
   const activeOwnerIdRef = useRef(ownerId);
   const submissionLocks = useRef(new Set<string>());
+  const draftEditRevisions = useRef(new Map<string, number>());
 
   const [registrationState, setRegistrationState] =
     useState<BoatRegistrationState>();
@@ -141,6 +142,10 @@ function BoatOwnerNewBoatPage() {
     updater: (current: BoatRegistrationState) => BoatRegistrationState,
   ): void => {
     if (!ownerId) return;
+    draftEditRevisions.current.set(
+      ownerId,
+      (draftEditRevisions.current.get(ownerId) ?? 0) + 1,
+    );
     setRegistrationState((current) => updater(
       current?.ownerId === ownerId
         ? current
@@ -150,10 +155,13 @@ function BoatOwnerNewBoatPage() {
 
   useEffect(() => {
     if (!ownerId) return;
+    const startingRevision = draftEditRevisions.current.get(ownerId) ?? 0;
+    if (startingRevision > 0) return;
     let active = true;
 
     void loadBoatRegistrationDraft(ownerId).then((draft) => {
-      if (!active || !draft) return;
+      if (!active || !draft
+        || (draftEditRevisions.current.get(ownerId) ?? 0) !== startingRevision) return;
       const restoredCertifications = initialCertifications.map((certificate) => {
         const saved = draft.certifications.find((item) => item.id === certificate.id);
         return saved ? { ...certificate, ...saved } : certificate;
@@ -181,7 +189,10 @@ function BoatOwnerNewBoatPage() {
       }
       setStatusMessage("Your saved boat draft has been restored.");
     }).catch(() => {
-      if (active) setStatusMessage("The saved boat draft could not be restored.");
+      if (active
+        && (draftEditRevisions.current.get(ownerId) ?? 0) === startingRevision) {
+        setStatusMessage("The saved boat draft could not be restored.");
+      }
     });
 
     return () => { active = false; };
