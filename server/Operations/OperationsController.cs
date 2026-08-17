@@ -366,8 +366,10 @@ public sealed class OperationsController(WhaleWatchingDbContext db, IHubContext<
             .SingleOrDefaultAsync(x => x.Id == id, ct);
         if (boat is null) return NotFound();
 
-        if (await db.Trips.AnyAsync(x => x.BoatId == id && x.Status == TripStatus.Ongoing, ct))
-            return Conflict(new { message = "An ongoing trip must be completed or cancelled before deleting this boat." });
+        if (await db.Trips.AnyAsync(x => x.BoatId == id &&
+                (x.Status == TripStatus.Scheduled || x.Status == TripStatus.Boarding ||
+                 x.Status == TripStatus.Ongoing), ct))
+            return Conflict(new { message = "Active trips must be completed or cancelled before deleting this boat." });
 
         boat.IsDeleted = true;
         foreach (var assignment in boat.CrewAssignments) assignment.IsActive = false;
