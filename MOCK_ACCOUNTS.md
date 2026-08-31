@@ -19,3 +19,4 @@ shorewildlife@wwms.test  ShoreWildlife#WWMS2026!Secure
 The operational seed contains two owners (`owner@wwms.test` and `suresh.fernando@wwms.test`, both using the Boat Owner password), four boats, and ten assigned crew accounts. The primary crew account is `crew@wwms.test`; the other seeded crew emails are `amal.fernando`, `dinesh.kumara`, `lahiru.jayasinghe`, `pradeep.senanayake`, `kasun.perera`, `chamara.silva`, `isuru.madushan`, `tharindu.bandara`, and `ravindu.gamage`, all at `@wwms.test` and all using the Boat Crew password.
 
 Every boat has scheduled and completed trips. These records and relationships are served from SQL Server to the owner, crew, admin, wildlife, shore, and OPS portals.
+

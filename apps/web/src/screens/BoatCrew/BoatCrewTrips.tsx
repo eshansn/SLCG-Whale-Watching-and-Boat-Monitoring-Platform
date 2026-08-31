@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronDown, Mic, Search, Ship } from "lucide-react";
+import { Mic, Search, Ship } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useOperations } from "../../operations/useOperations";
 import { CrewLayout, State } from "./components/CrewLayout";
@@ -141,10 +141,6 @@ export default function BoatCrewTrips() {
               <option value="time">Sort by: Time</option>
               <option value="status">Sort by: Status</option>
             </select>
-            <ChevronDown
-              className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-[#555]"
-              strokeWidth={1.5}
-            />
           </div>
         </section>
 

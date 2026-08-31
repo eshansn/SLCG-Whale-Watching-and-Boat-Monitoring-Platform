@@ -12,8 +12,6 @@ import {
   useParams,
 } from "react-router-dom";
 
-import groupIcon from "../../assets/icons/group.svg";
-import infoIcon from "../../assets/icons/info.svg";
 import notificationIcon from "../../assets/icons/notification.svg";
 import userIcon from "../../assets/icons/user.svg";
 import vesselIcon from "../../assets/icons/vessel.svg";
@@ -234,15 +232,15 @@ function BoatOwnerBoatInfoPage() {
               {selectedBoat.registrationNumber}
             </p>
 
-            <div className="mt-3 flex items-center gap-1">
-              <span
-                aria-hidden="true"
-                className="h-2 w-2 rounded-full bg-[#20e620]"
-              />
-
-              <span className="text-[8px] font-medium uppercase text-[#20d820] sm:text-[9px]">
-                {selectedBoat.approval}
-              </span>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {[
+                ['Administrative', selectedBoat.approval],
+                ['Wildlife Authority', selectedBoat.wildlifeApproval],
+              ].map(([label, status]) => (
+                <span key={label} className={`rounded-full px-2.5 py-1 text-[9px] font-semibold uppercase ${status === 'Approved' ? 'bg-emerald-50 text-emerald-700' : status === 'Rejected' ? 'bg-red-50 text-red-700' : 'bg-amber-50 text-amber-700'}`}>
+                  {label}: {status}
+                </span>
+              ))}
             </div>
           </div>
 

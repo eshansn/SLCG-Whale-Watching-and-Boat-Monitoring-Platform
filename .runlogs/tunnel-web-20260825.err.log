@@ -1,0 +1,120 @@
+npm notice run web@0.0.0 dev
+npm notice run vite --host 127.0.0.1 --port 5173
+10:45:45 AM [vite] (client) [console.error] [2026-08-25T05:15:45.737Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+10:46:05 AM [vite] (client) [console.error] [2026-08-25T05:16:06.434Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+10:46:07 AM [vite] (client) [console.error] [2026-08-25T05:16:08.381Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+10:46:12 AM [vite] (client) [console.error] TypeError: Importing a module script failed.
+10:46:12 AM [vite] (client) [console.error] TypeError: Importing a module script failed.
+11:14:02 AM [vite] (client) [console.error] [2026-08-25T05:44:02.117Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+11:14:42 AM [vite] (client) [console.error] Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+11:14:42 AM [vite] (client) [console.error] Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+11:14:43 AM [vite] (client) [console.error] Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+11:14:43 AM [vite] (client) [console.error] Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+11:14:43 AM [vite] (client) [console.error] Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+11:14:43 AM [vite] (client) [console.error] Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+11:14:43 AM [vite] (client) [console.error] Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+11:14:43 AM [vite] (client) [console.error] Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+11:14:43 AM [vite] (client) [console.error] Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+11:14:43 AM [vite] (client) [console.error] Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+11:14:43 AM [vite] (client) [console.error] Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+11:14:43 AM [vite] (client) [console.error] Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+11:14:43 AM [vite] (client) [console.error] Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+11:14:43 AM [vite] (client) [console.error] Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+11:14:43 AM [vite] (client) [console.error] Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+11:14:43 AM [vite] (client) [console.error] Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+11:14:43 AM [vite] (client) [console.error] Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+11:14:43 AM [vite] (client) [console.error] Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+11:14:43 AM [vite] (client) [console.error] Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+11:14:43 AM [vite] (client) [console.error] [2026-08-25T05:44:43.130Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+11:14:43 AM [vite] (client) [console.error] Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+11:15:02 AM [vite] (client) [console.error] Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+11:15:02 AM [vite] (client) [console.error] Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+11:15:02 AM [vite] (client) [console.error] Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+11:15:02 AM [vite] (client) [console.error] Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+11:15:02 AM [vite] (client) [console.error] Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+11:15:02 AM [vite] (client) [console.error] Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+11:15:02 AM [vite] (client) [console.error] Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+11:15:02 AM [vite] (client) [console.error] Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+11:15:02 AM [vite] (client) [console.error] Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+11:15:02 AM [vite] (client) [console.error] Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+11:15:02 AM [vite] (client) [console.error] Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+11:15:03 AM [vite] (client) [console.error] Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+11:15:03 AM [vite] (client) [console.error] Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+11:15:03 AM [vite] (client) [console.error] Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+11:15:03 AM [vite] (client) [console.error] Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+11:15:03 AM [vite] (client) [console.error] Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+11:15:03 AM [vite] (client) [console.error] Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+11:15:03 AM [vite] (client) [console.error] Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+11:15:03 AM [vite] (client) [console.error] Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+11:15:03 AM [vite] (client) [console.error] Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+11:15:03 AM [vite] (client) [console.error] Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+11:15:03 AM [vite] (client) [console.error] [2026-08-25T05:45:02.912Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+11:15:03 AM [vite] (client) [console.error] Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+11:15:03 AM [vite] (client) [console.error] Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+11:15:03 AM [vite] (client) [console.error] Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+11:15:03 AM [vite] (client) [console.error] Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+11:15:03 AM [vite] (client) [console.error] Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+11:15:03 AM [vite] (client) [console.error] Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+11:15:03 AM [vite] (client) [console.error] Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+11:15:03 AM [vite] (client) [console.error] Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+11:15:03 AM [vite] (client) [console.error] Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+11:15:03 AM [vite] (client) [console.error] Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+11:15:03 AM [vite] (client) [console.error] Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+11:15:03 AM [vite] (client) [console.error] Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+11:15:03 AM [vite] (client) [console.error] Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+11:15:03 AM [vite] (client) [console.error] Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+11:15:08 AM [vite] (client) [console.error] [2026-08-25T05:45:07.872Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+11:15:08 AM [vite] (client) [console.error] [2026-08-25T05:45:08.452Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+11:15:08 AM [vite] (client) [console.error] [2026-08-25T05:45:08.510Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+11:15:09 AM [vite] (client) [console.error] [2026-08-25T05:45:09.485Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+11:16:14 AM [vite] (client) [console.error] [2026-08-25T05:46:13.989Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+11:16:25 AM [vite] (client) [console.error] In HTML, whitespace text nodes cannot be a child of <tr>. Make sure you don't have any extra whitespace between tags on each line of your source code.
+This will cause a hydration error.
+
+  ...
+    <AdminRecordsProvider>
+      <div className="min-h-scre...">
+        <Routes>
+          <RenderedRoute match={{params:{}, ...}} routeContext={{outlet:null, ...}}>
+            <OpsRoute>
+              <ProtectedRoute allowedRoles={[...]}>
+                <OPStrips>
+                  <div className="min-h-scre...">
+                    <Navbar>
+                    <main className="mx-auto ma...">
+                      <section className="rounded-md...">
+                        <div>
+                        <div className="mt-6 overf...">
+                          <table className="w-full min...">
+                            <thead>
+>                             <tr className="border-b border-slate-100 text-[11px] text-slate-500">
+                                <th>
+                                <th>
+                                <th>
+                                <th>
+                                <th>
+                                <th>
+>                               {" "}
+                            ...
+                        ...
+
+11:16:26 AM [vite] (client) [console.error] [2026-08-25T05:46:26.157Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+11:16:30 AM [vite] (client) [console.error] [2026-08-25T05:46:30.430Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+11:16:44 AM [vite] (client) [console.error] [2026-08-25T05:46:44.341Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+11:18:42 AM [vite] (client) [console.error] [2026-08-25T05:48:42.025Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+11:18:44 AM [vite] (client) [console.error] [2026-08-25T05:48:44.107Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+11:18:48 AM [vite] (client) [console.error] [2026-08-25T05:48:48.625Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+11:35:01 AM [vite] (client) [console.error] [2026-08-25T06:05:02.325Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+11:35:35 AM [vite] (client) [console.warn] [2026-08-25T06:05:35.980Z] Warning: The page is being frozen, this will likely lead to the connection being closed and messages being lost. For more information see the docs at https://learn.microsoft.com/aspnet/core/signalr/javascript-client#bsleep
+11:35:35 AM [vite] (client) [console.warn] [2026-08-25T06:05:35.980Z] Warning: The page is being frozen, this will likely lead to the connection being closed and messages being lost. For more information see the docs at https://learn.microsoft.com/aspnet/core/signalr/javascript-client#bsleep
+11:38:05 AM [vite] (client) [console.error] [2026-08-25T06:08:06.429Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+11:38:22 AM [vite] (client) [console.error] [2026-08-25T06:08:23.253Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+11:39:00 AM [vite] (client) [console.error] `value` prop on `input` should not be null. Consider using an empty string to clear the component or `undefined` for uncontrolled components.
+11:39:00 AM [vite] (client) [console.error] A component is changing a controlled input to be uncontrolled. This is likely caused by the value changing from a defined to undefined, which should not happen. Decide between using a controlled or uncontrolled input element for the lifetime of the component. More info: https://react.dev/link/controlled-components
+11:39:15 AM [vite] (client) [console.error] [2026-08-25T06:09:15.999Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+11:40:18 AM [vite] (client) [console.error] [2026-08-25T06:10:18.774Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+11:41:21 AM [vite] (client) [console.error] [2026-08-25T06:11:22.213Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+11:41:35 AM [vite] (client) [console.error] [2026-08-25T06:11:35.807Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+11:41:49 AM [vite] (client) [console.error] [2026-08-25T06:11:49.594Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+11:41:51 AM [vite] (client) [console.error] [2026-08-25T06:11:51.766Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+11:42:55 AM [vite] (client) [console.error] [2026-08-25T06:12:56.014Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.

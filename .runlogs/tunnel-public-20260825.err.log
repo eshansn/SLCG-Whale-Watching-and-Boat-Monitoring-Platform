@@ -1,0 +1,2 @@
+npm notice run web@0.0.0 npx
+npm notice run lt --port 5173 --local-host 127.0.0.1

@@ -198,7 +198,7 @@ public sealed class OperationsController(WhaleWatchingDbContext db, IHubContext<
             .OrderByDescending(x => x.RaisedAtUtc)
             .Select(x => new { x.Id, x.TripId, x.Trip.BoatId, VesselName = x.Trip.Boat.Name,
                 x.Trip.Boat.RegistrationNumber, PassengersOnboard = x.Trip.PassengerCount,
-                NatureOfEmergency = x.Message, x.RaisedAtUtc }).ToListAsync(ct);
+                NatureOfEmergency = x.Message, x.RaisedAtUtc, HasActions = x.Actions.Any() }).ToListAsync(ct);
         var boatIds = alerts.Select(x => x.BoatId).Distinct().ToArray();
         var deviceIds = await db.Boats.AsNoTracking().Where(x => boatIds.Contains(x.Id) && x.GpsDeviceId != null)
             .Select(x => new { x.Id, x.GpsDeviceId }).ToListAsync(ct);
@@ -209,7 +209,7 @@ public sealed class OperationsController(WhaleWatchingDbContext db, IHubContext<
             var gps = telemetry.FirstOrDefault(t => t.DeviceId == device);
             return new SosAlertDto(x.Id, x.TripId, x.VesselName, x.RegistrationNumber,
                 gps is null ? "Location unavailable" : $"{gps.Latitude:F6}, {gps.Longitude:F6}",
-                x.PassengersOnboard, x.NatureOfEmergency, x.RaisedAtUtc);
+                x.PassengersOnboard, x.NatureOfEmergency, x.RaisedAtUtc, x.HasActions);
         }).ToList());
     }
 
@@ -577,15 +577,34 @@ public sealed class OperationsController(WhaleWatchingDbContext db, IHubContext<
         if (status == TripStatus.Ongoing)
         {
             if (trip.PassengerVerificationFinalizedAtUtc is null)
-                return Conflict(new
-                {
-                    message = "Passenger verification must be finalized by shore crew before starting the trip."
-                });
+            {
+                var totalPassengers = await db.TripPassengers.CountAsync(x => x.TripId == id, ct);
+                var checkedPassengers = await db.TripPassengerAttendances.CountAsync(x =>
+                    x.TripPassenger.TripId == id && x.Status != PassengerAttendanceStatus.NotChecked, ct);
+                var lastAttendanceCheck = totalPassengers > 0 && checkedPassengers == totalPassengers
+                    ? await db.TripPassengerAttendances
+                        .Where(x => x.TripPassenger.TripId == id &&
+                            x.Status != PassengerAttendanceStatus.NotChecked && x.CheckedByUserId != null)
+                        .OrderByDescending(x => x.UpdatedAtUtc)
+                        .Select(x => new { x.UpdatedAtUtc, x.CheckedByUserId })
+                        .FirstOrDefaultAsync(ct)
+                    : null;
+
+                if (lastAttendanceCheck is null)
+                    return Conflict(new
+                    {
+                        message = "Passenger verification must be finalized by shore crew before starting the trip."
+                    });
+
+                // Backfill trips whose full attendance was saved before automatic finalization was introduced.
+                trip.PassengerVerificationFinalizedAtUtc = lastAttendanceCheck.UpdatedAtUtc;
+                trip.PassengerVerificationFinalizedByUserId = lastAttendanceCheck.CheckedByUserId!.Value;
+            }
 
             var incompleteApprovals = new List<string>();
             if (trip.Boat.Approval != ApprovalStatus.Approved) incompleteApprovals.Add("boat certification");
             if (trip.Boat.WildlifeApproval != ApprovalStatus.Approved)
-                incompleteApprovals.Add("wildlife boat approval");
+                incompleteApprovals.Add("Wildlife Authority boat approval from the main Wildlife portal");
             if (trip.ShoreApproval != ApprovalStatus.Approved) incompleteApprovals.Add("SLCG shore approval");
             if (trip.WildlifeShoreApproval != ApprovalStatus.Approved)
                 incompleteApprovals.Add("wildlife shore approval");
@@ -653,7 +672,8 @@ public sealed record TripCrewDto(Guid CrewUserId, string Name, string Email, str
 public sealed record TripPassengerDto(Guid Id, string Name, string IdentificationNumber, string PhoneNumber,
     string AgeCategory, string PassengerType, string Gender, DateTimeOffset RegisteredAtUtc);
 public sealed record SosAlertDto(Guid Id, Guid TripId, string VesselName, string RegistrationNumber,
-    string Location, int PassengersOnboard, string NatureOfEmergency, DateTimeOffset RaisedAtUtc);
+    string Location, int PassengersOnboard, string NatureOfEmergency, DateTimeOffset RaisedAtUtc,
+    bool HasActions);
 public sealed record SosActionDto(Guid Id, Guid SosEventId, string TakenByName, string Details,
     DateTimeOffset TakenAtUtc);
 public sealed record SosActionRequest(string? Details);

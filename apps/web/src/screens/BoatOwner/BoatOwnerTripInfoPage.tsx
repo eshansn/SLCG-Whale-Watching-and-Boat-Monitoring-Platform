@@ -9,7 +9,6 @@ import {
   ArrowRightLeft,
   Copy,
   Download,
-  ChevronDown,
   Menu as MenuIcon,
   Mic,
   Play,
@@ -488,6 +487,12 @@ function BoatOwnerTripInfoPage() {
           </div>
         </section>
 
+        {(trip.status==="Scheduled"||trip.status==="Boarding")&&liveVessel&&<section className="mt-7 rounded-xl border border-slate-200 bg-slate-50/70 p-4"><h2 className="text-sm font-semibold text-[#162d54]">Departure approvals</h2><div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">{[
+          ['Administrative boat',liveVessel.certificationApproval],
+          ['Wildlife Authority boat',liveVessel.wildlifeApproval],
+          ['SLCG Shore trip',liveVessel.shoreApproval],
+          ['Wildlife Shore trip',liveVessel.wildlifeShoreApproval],
+        ].map(([label,status])=><div key={label} className="rounded-lg bg-white px-3 py-2 shadow-sm"><p className="text-[11px] text-slate-500">{label}</p><p className={`mt-1 text-xs font-semibold ${status==='Approved'?'text-emerald-700':status==='Rejected'?'text-red-700':'text-amber-700'}`}>{status}</p></div>)}</div></section>}
         {(trip.status==="Scheduled"||trip.status==="Boarding"||trip.status==="Ongoing")&&<div className="mt-7 flex flex-col items-center gap-3 border-t border-slate-100 pt-7"><button type="button" disabled={startingTrip} onClick={()=>void startTrip()} className="flex min-h-11 items-center gap-2 rounded-lg bg-[#162d54] px-6 py-3 text-sm font-semibold text-white hover:bg-[#203d6c] disabled:opacity-50">{trip.status==="Ongoing"?<Square size={18}/>:<Play size={18}/>} {startingTrip?(trip.status==="Ongoing"?"Ending...":"Starting..."):(trip.status==="Ongoing"?"End Trip":"Start Trip")}</button>{trip.status!=="Ongoing"&&<button type="button" onClick={()=>{setTransferStatus("");setTransferOpen(true)}} className="flex min-h-11 items-center gap-2 rounded-lg bg-[#162d54] px-6 py-3 text-sm font-semibold text-white hover:bg-[#203d6c]"><ArrowRightLeft size={18}/>Transfer Passengers / Crew</button>}{startError&&<p role="alert" className="text-center text-sm font-medium text-red-600">{startError}</p>}{transferStatus&&<p role="status" className="text-center text-sm font-medium text-emerald-700">{transferStatus}</p>}</div>}
 
         {/* Passenger information */}
@@ -620,15 +625,6 @@ function BoatOwnerTripInfoPage() {
                 </option>
               </select>
 
-              <ChevronDown
-                className="
-                  pointer-events-none
-                  absolute right-2 top-1/2
-                  h-4 w-4 -translate-y-1/2
-                "
-                strokeWidth={1.5}
-                aria-hidden="true"
-              />
             </div>
           </div>
 

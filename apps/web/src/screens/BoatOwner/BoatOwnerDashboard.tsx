@@ -15,7 +15,6 @@ import { useAuth } from "../../auth/useAuth";
 import { operationsApi, type Boat, type Trip } from "../../operations/operationsApi";
 import { ownerProfileApi } from "../../profiles/ownerProfileApi";
 
-import groupIcon from "../../assets/icons/group.svg";
 import infoIcon from "../../assets/icons/info.svg";
 import notificationIcon from "../../assets/icons/notification.svg";
 import userIcon from "../../assets/icons/user.svg";
@@ -402,11 +401,11 @@ function BoatOwnerDashboard() {
                   <div className="mt-3 flex items-center gap-1">
                     <span
                       aria-hidden="true"
-                      className={`h-2 w-2 rounded-full ${boat.approval === "Approved" ? "bg-[#20e620]" : boat.approval === "Rejected" ? "bg-red-500" : "bg-amber-500"}`}
+                      className={`h-2 w-2 rounded-full ${boat.approval === "Approved" && boat.wildlifeApproval === "Approved" ? "bg-[#20e620]" : boat.approval === "Rejected" || boat.wildlifeApproval === "Rejected" ? "bg-red-500" : "bg-amber-500"}`}
                     />
 
-                    <span className={`text-[8px] font-medium uppercase sm:text-[9px] ${boat.approval === "Approved" ? "text-[#20d820]" : boat.approval === "Rejected" ? "text-red-600" : "text-amber-600"}`}>
-                      {boat.approval}
+                    <span className={`text-[8px] font-medium uppercase sm:text-[9px] ${boat.approval === "Approved" && boat.wildlifeApproval === "Approved" ? "text-[#20d820]" : boat.approval === "Rejected" || boat.wildlifeApproval === "Rejected" ? "text-red-600" : "text-amber-600"}`}>
+                      Admin: {boat.approval} · Wildlife: {boat.wildlifeApproval}
                     </span>
                   </div>
                 </div>

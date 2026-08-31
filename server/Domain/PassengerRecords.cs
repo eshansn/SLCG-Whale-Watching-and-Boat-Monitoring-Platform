@@ -55,6 +55,20 @@ public sealed class PassengerSession
     public DateTimeOffset ExpiresAtUtc { get; set; }
 }
 
+public static class PassengerSessionPolicy
+{
+    private static readonly TimeSpan MinimumSessionLifetime = TimeSpan.FromDays(1);
+
+    public static DateTimeOffset GetExpiry(
+        DateTimeOffset scheduledDepartureUtc,
+        DateTimeOffset sessionCreatedAtUtc)
+    {
+        var tripExpiry = scheduledDepartureUtc.AddDays(1);
+        var minimumExpiry = sessionCreatedAtUtc.Add(MinimumSessionLifetime);
+        return tripExpiry > minimumExpiry ? tripExpiry : minimumExpiry;
+    }
+}
+
 public sealed class TripPassenger
 {
     public Guid Id { get; set; }

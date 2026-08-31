@@ -6,7 +6,6 @@ import {
   type FormEvent,
 } from "react";
 import {
-  ChevronDown,
   Menu as MenuIcon,
   Settings,
   CalendarPlus,
@@ -402,16 +401,6 @@ function BoatOwnerNewTripPage() {
               {boats.map((boat) => <option key={boat.id} value={boat.id}>{boat.name} — {boat.registrationNumber}</option>)}
             </select>
 
-            <ChevronDown
-              className="
-                pointer-events-none
-                absolute right-4 top-1/2
-                h-5 w-5 -translate-y-1/2
-                text-black
-              "
-              strokeWidth={2}
-              aria-hidden="true"
-            />
           </div>
         </div>
 

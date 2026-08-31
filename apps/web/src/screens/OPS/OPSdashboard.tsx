@@ -4,13 +4,49 @@ import { useDashboardStore } from './store/useDashboardStore';
 import Navbar from './components/Navbar';
 import {Icon} from '../../components/ui/icon';
 import { useAuth } from '../../auth/useAuth';
-import { useEffect } from 'react';
-import { connectOperations } from '../../operations/operationsApi';
+import { useEffect, useState } from 'react';
+import { connectOperations, operationsApi, type Trip } from '../../operations/operationsApi';
 
 export default function OPS() {
   const { vessels, activeVesselId, setActiveVessel, loadVessels } = useDashboardStore();
   const { session } = useAuth();
-  useEffect(() => { if (!session)return;const load=()=>void loadVessels(session.accessToken);load();const disconnect=connectOperations(session.accessToken,load);const interval=window.setInterval(load,10000);return()=>{disconnect();window.clearInterval(interval)}; }, [loadVessels, session]);
+  const [ongoingTrips, setOngoingTrips] = useState<Trip[]>([]);
+  const [emergencyCount, setEmergencyCount] = useState(0);
+
+  useEffect(() => {
+    if (!session) return;
+
+    let active = true;
+    let requestVersion = 0;
+    const load = () => {
+      const currentRequest = ++requestVersion;
+
+      // The map intentionally keeps its independent all-vessels data source.
+      void loadVessels(session.accessToken).catch((error) => {
+        console.error('Unable to refresh vessel locations.', error);
+      });
+
+      void Promise.all([
+        operationsApi.trips(session.accessToken),
+        operationsApi.sosAlerts(session.accessToken),
+      ]).then(([trips, alerts]) => {
+        if (!active || currentRequest !== requestVersion) return;
+        setOngoingTrips(trips.filter((trip) => trip.status === 'Ongoing'));
+        setEmergencyCount(alerts.filter((alert) => !alert.hasActions).length);
+      }).catch((error) => {
+        console.error('Unable to refresh OPS dashboard totals.', error);
+      });
+    };
+
+    load();
+    const disconnect = connectOperations(session.accessToken, load);
+    const interval = window.setInterval(load, 10000);
+    return () => {
+      active = false;
+      disconnect();
+      window.clearInterval(interval);
+    };
+  }, [loadVessels, session]);
   const activeVessel = vessels.find(v => v.id === activeVesselId);
 
   return (
@@ -34,7 +70,9 @@ export default function OPS() {
 
           {/* Emergency Alert Button */}
           <div className="bg-[#FF0B0B] text-white p-4 rounded-xl shadow-lg shadow-red-500/20 flex items-center justify-between cursor-pointer hover:scale-[1.02] transition-transform">
-            <span className="font-semibold tracking-wide">0 Emergencies</span>
+            <span className="font-semibold tracking-wide">
+              {emergencyCount} {emergencyCount === 1 ? 'Emergency' : 'Emergencies'}
+            </span>
             <Icon name="notification" size={20} className="fill-[#ffffff]" />
           </div>
 
@@ -42,19 +80,21 @@ export default function OPS() {
           <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5 flex-1 flex flex-col min-h-0">
             <div className="flex items-center justify-between mb-4 pb-4 border-b border-slate-50">
               <h3 className="font-bold text-[#1A2B4C]">
-                {vessels.length.toString().padStart(2, '0')} Ongoing Trips
+                {ongoingTrips.length} Ongoing {ongoingTrips.length === 1 ? 'Trip' : 'Trips'}
               </h3>
               <Icon name="vessel" size={20} className="fill-[#ffffff]" />
             </div>
             
             <ul className="space-y-1 overflow-y-auto flex-1 pr-2">
-              {vessels.map((vessel) => {
-                const isSelected = activeVesselId === vessel.id;
+              {ongoingTrips.map((trip) => {
+                const vessel = vessels.find((item) => item.id === trip.boatId);
+                const isSelected = activeVesselId === trip.boatId;
                 return (
                   <li 
-                    key={vessel.id}
-                    onClick={() => setActiveVessel(vessel.id)}
-                    className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-all duration-200 border-l-2
+                    key={trip.id}
+                    onClick={() => vessel && setActiveVessel(vessel.id)}
+                    className={`flex items-center justify-between p-3 rounded-lg transition-all duration-200 border-l-2
+                      ${vessel ? 'cursor-pointer' : 'cursor-default'}
                       ${isSelected 
                         ? 'bg-slate-50 border-[#1A2B4C]' 
                         : 'bg-transparent border-transparent hover:bg-slate-50/50'
@@ -62,15 +102,20 @@ export default function OPS() {
                     `}
                   >
                     <div>
-                      <p className="font-bold text-sm text-[#1A2B4C]">{vessel.name}</p>
-                      <p className="text-[10px] font-mono text-slate-400 mt-0.5 uppercase">{vessel.regNo}</p>
+                      <p className="font-bold text-sm text-[#1A2B4C]">{trip.vesselName}</p>
+                      <p className="text-[10px] font-mono text-slate-400 mt-0.5 uppercase">{trip.registrationNumber}</p>
                     </div>
-                    <button className="text-slate-300 hover:text-[#1A2B4C] transition-colors">
+                    <button type="button" aria-label={`Locate ${trip.vesselName} on map`} disabled={!vessel} className="text-slate-300 hover:text-[#1A2B4C] transition-colors disabled:opacity-40">
                       ⓘ
                     </button>
                   </li>
                 );
               })}
+              {ongoingTrips.length === 0 && (
+                <li className="rounded-lg bg-slate-50 px-4 py-6 text-center text-xs text-slate-400">
+                  No trips currently underway.
+                </li>
+              )}
             </ul>
           </div>
         </aside>

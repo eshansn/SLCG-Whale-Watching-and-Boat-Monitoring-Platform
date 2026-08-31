@@ -238,11 +238,12 @@ public sealed class PassengerTripController(WhaleWatchingDbContext db) : Control
     private static (PassengerSession Entity, string RawToken) CreateSession(Guid passengerId, Guid tripId,
         DateTimeOffset scheduledDepartureUtc)
     {
+        var now = DateTimeOffset.UtcNow;
         var raw = WebEncoders.Base64UrlEncode(RandomNumberGenerator.GetBytes(32));
         var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(raw)));
         return (new PassengerSession { Id = Guid.NewGuid(), PassengerId = passengerId, TripId = tripId,
-            TokenHash = hash, CreatedAtUtc = DateTimeOffset.UtcNow,
-            ExpiresAtUtc = scheduledDepartureUtc.AddDays(1) }, raw);
+            TokenHash = hash, CreatedAtUtc = now,
+            ExpiresAtUtc = PassengerSessionPolicy.GetExpiry(scheduledDepartureUtc, now) }, raw);
     }
 }
 

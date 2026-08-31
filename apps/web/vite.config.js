@@ -14,11 +14,17 @@ export default defineConfig({
         }),
     ],
     server: {
-        allowedHosts: ['nine-buttons-decide.loca.lt'],
+        // Allow ephemeral HTTPS tunnel hostnames used for remote testing.
+        allowedHosts: ['.loca.lt', '.trycloudflare.com'],
         proxy: {
             '/api': {
                 target: 'http://localhost:8080',
                 changeOrigin: true,
+            },
+            '/hubs': {
+                target: 'http://localhost:8080',
+                changeOrigin: true,
+                ws: true,
             },
         },
     },

@@ -126,8 +126,10 @@ public sealed class WildlifeMonitoringController(WhaleWatchingDbContext db, IHub
                 x.MonitoringOfficer != "" && x.Supervisor != "" && x.MonitoringOfficerSignature != null &&
                 x.SupervisorSignature != null && x.HarbourOfficerSignature != null && x.HarbourOfficerName != null, ct);
             if (!validRecord) return Conflict(new { message = "Complete all monitoring information and obtain all three signatures before approval." });
-            if (trip.Boat.Approval != ApprovalStatus.Approved && trip.Boat.WildlifeApproval != ApprovalStatus.Approved)
-                return Conflict(new { message = "The boat must be approved by an administrator or the main Wildlife portal first." });
+            if (trip.Boat.Approval != ApprovalStatus.Approved)
+                return Conflict(new { message = "The boat must receive administrative certification approval first." });
+            if (trip.Boat.WildlifeApproval != ApprovalStatus.Approved)
+                return Conflict(new { message = "The boat must receive Wildlife Authority approval in the main Wildlife portal first." });
         }
         trip.WildlifeShoreApproval = approval; trip.WildlifeShoreNotes = request.Notes?.Trim();
         trip.UpdatedAtUtc = DateTimeOffset.UtcNow; await db.SaveChangesAsync(ct);

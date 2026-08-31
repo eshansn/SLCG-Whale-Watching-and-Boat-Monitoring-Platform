@@ -5,7 +5,6 @@ import {
   useState,
 } from "react";
 import {
-  ChevronDown,
   CalendarPlus,
   Menu as MenuIcon,
   Mic,
@@ -500,16 +499,6 @@ function BoatOwnerTripsPage() {
               </option>
             </select>
 
-            <ChevronDown
-              className="
-                pointer-events-none
-                absolute right-2 top-1/2
-                h-4 w-4 -translate-y-1/2
-                text-[#555555]
-              "
-              strokeWidth={1.5}
-              aria-hidden="true"
-            />
           </div>
         </section>
 

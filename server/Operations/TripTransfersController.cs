@@ -141,7 +141,13 @@ public sealed class TripTransfersController(WhaleWatchingDbContext db, IHubConte
             foreach (var row in passengerRows) row.TripId = destination.Id;
             foreach (var row in crewRows) row.TripId = destination.Id;
             var sessions = await db.PassengerSessions.Where(x => x.TripId == source.Id && passengerIds.Contains(x.PassengerId)).ToListAsync(ct);
-            foreach (var session in sessions) { session.TripId = destination.Id; session.ExpiresAtUtc = destination.ScheduledDepartureUtc.AddDays(1); }
+            var sessionUpdatedAtUtc = DateTimeOffset.UtcNow;
+            foreach (var session in sessions)
+            {
+                session.TripId = destination.Id;
+                session.ExpiresAtUtc = PassengerSessionPolicy.GetExpiry(
+                    destination.ScheduledDepartureUtc, sessionUpdatedAtUtc);
+            }
             source.PassengerCount = Math.Max(0, sourcePassengerCount - passengerRows.Count);
             destination.PassengerCount = destinationPassengerCount + passengerRows.Count;
             var children = passengerRows.Count(x => string.Equals(x.Passenger.AgeCategory, "child", StringComparison.OrdinalIgnoreCase));

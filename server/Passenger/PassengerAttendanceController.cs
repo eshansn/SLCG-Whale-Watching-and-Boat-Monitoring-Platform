@@ -98,6 +98,7 @@ public sealed class PassengerAttendanceController(WhaleWatchingDbContext db,
             parsed[item.PassengerId] = status;
         }
         var strategy = db.Database.CreateExecutionStrategy();
+        var verificationFinalized = false;
         var action = await strategy.ExecuteAsync<ActionResult>(async () =>
         {
             await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
@@ -138,11 +139,26 @@ public sealed class PassengerAttendanceController(WhaleWatchingDbContext db,
                         Attendance = registration.Attendance, PreviousStatus = previous, NewStatus = next,
                         ChangedByUserId = UserId, ChangedAtUtc = now });
             }
-            await db.SaveChangesAsync(ct); await transaction.CommitAsync(ct);
+            await db.SaveChangesAsync(ct);
+
+            var totalPassengers = await db.TripPassengers.CountAsync(x => x.TripId == tripId, ct);
+            var checkedPassengers = await db.TripPassengerAttendances.CountAsync(x =>
+                x.TripPassenger.TripId == tripId && x.Status != PassengerAttendanceStatus.NotChecked, ct);
+            if (totalPassengers > 0 && checkedPassengers == totalPassengers)
+            {
+                trip.PassengerVerificationFinalizedAtUtc = now;
+                trip.PassengerVerificationFinalizedByUserId = UserId;
+                trip.UpdatedAtUtc = now;
+                verificationFinalized = true;
+                await db.SaveChangesAsync(ct);
+            }
+
+            await transaction.CommitAsync(ct);
             return Ok();
         });
         if (action is not OkResult) return action;
-        await hub.Clients.All.SendAsync("operationsChanged", new { entity = "passengerAttendance", tripId }, ct);
+        await hub.Clients.All.SendAsync("operationsChanged",
+            new { entity = verificationFinalized ? "passengerAttendanceFinalized" : "passengerAttendance", tripId }, ct);
         return Ok(await BuildGroup(tripId, primaryPassengerId, ct));
     }
 

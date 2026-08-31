@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronDown, Copy, Download, Mic, Play, Search, Square } from "lucide-react";
+import { Copy, Download, Mic, Play, Search, Square } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import Map, { Marker } from "react-map-gl/maplibre";
 import "maplibre-gl/dist/maplibre-gl.css";
@@ -444,7 +444,6 @@ export default function BoatCrewTripDetails() {
                 <option value="age">Sort by: Age</option>
                 <option value="passengerType">Sort by: Passenger type</option>
               </select>
-              <ChevronDown className="absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2" />
             </div>
           </div>
           <div className="mt-4 overflow-x-auto">

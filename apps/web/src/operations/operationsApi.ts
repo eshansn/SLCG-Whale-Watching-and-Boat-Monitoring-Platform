@@ -16,7 +16,7 @@ export interface DirectoryOwner { id:string; displayName:string; email:string; p
 export interface DirectoryCrew { id:string; displayName:string; email:string; phoneNumber?:string; position:string; boatId?:string; ownerId:string; nicNumber?:string; certified:boolean }
 export interface OperationsDirectory { owners:DirectoryOwner[]; crew:DirectoryCrew[] }
 export interface AdminCrew { id:string; displayName:string; email:string; phoneNumber?:string; position:string; nicNumber?:string; bio?:string; certified:boolean; ownerId?:string; boatId?:string }
-export interface SosAlert { id:string; tripId:string; vesselName:string; registrationNumber:string; location:string; passengersOnboard:number; natureOfEmergency:string; raisedAtUtc:string }
+export interface SosAlert { id:string; tripId:string; vesselName:string; registrationNumber:string; location:string; passengersOnboard:number; natureOfEmergency:string; raisedAtUtc:string; hasActions:boolean }
 export interface SosAction { id:string; sosEventId:string; takenByName:string; details:string; takenAtUtc:string }
 export interface TransferBoat { id:string; name:string; registrationNumber:string; status:string; ownerId:string; ownerName:string }
 export interface TransferTrip { id:string; boatName:string; registrationNumber:string; ownerName:string; scheduledDepartureUtc:string; passengerCount:number; maximumCapacity:number; crewCount:number; status:string }
