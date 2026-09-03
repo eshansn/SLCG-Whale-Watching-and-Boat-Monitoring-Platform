@@ -22,13 +22,15 @@ import dashboardIcon from "../../assets/icons/dashboard.svg";
 import crewIcon from "../../assets/icons/crew.svg";
 import tripsIcon from "../../assets/icons/trips.svg";
 import { useOperations } from "../../operations/useOperations";
+import { isExpiredScheduledTrip } from "../../operations/operationsApi";
 
 interface Trip {
   id: string;
   boatName: string;
   registrationNumber: string;
   time: string;
-  status: "approved" | "pending";
+  status: "approved" | "pending" | "reschedule";
+  needsReschedule: boolean;
   image: string;
 }
 
@@ -98,7 +100,8 @@ function BoatOwnerTripsPage() {
   const trips = useMemo<Trip[]>(() => savedTrips.map((trip) => ({
     id: trip.id, boatName: trip.vesselName, registrationNumber: trip.registrationNumber,
     time: new Intl.DateTimeFormat('en-LK', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(trip.scheduledDepartureUtc)),
-    status: trip.shoreApproval === 'Approved' ? 'approved' : 'pending',
+    status: isExpiredScheduledTrip(trip) ? 'reschedule' : trip.shoreApproval === 'Approved' ? 'approved' : 'pending',
+    needsReschedule: isExpiredScheduledTrip(trip),
     image: boats.find((boat) => boat.id === trip.boatId)?.imageUrl || '/OwnerBoat1.png',
   })), [boats, savedTrips]);
 
@@ -566,11 +569,11 @@ function BoatOwnerTripsPage() {
                     <div className="mt-3 flex items-center gap-1">
                       <span
                         aria-hidden="true"
-                        className="h-2 w-2 rounded-full bg-[#20e620]"
+                        className={`h-2 w-2 rounded-full ${trip.needsReschedule ? "bg-amber-500" : "bg-[#20e620]"}`}
                       />
 
-                      <span className="text-[8px] font-medium uppercase text-[#20d820] sm:text-[9px]">
-                        {trip.status}
+                      <span className={`text-[8px] font-medium uppercase sm:text-[9px] ${trip.needsReschedule ? "text-amber-700" : "text-[#20d820]"}`}>
+                        {trip.needsReschedule ? "Reschedule needed" : trip.status}
                       </span>
                     </div>
                   </div>
@@ -614,7 +617,7 @@ function BoatOwnerTripsPage() {
                     sm:min-h-10 sm:text-[13px]
                   "
                 >
-                  <span>Info</span>
+                  <span>{trip.needsReschedule ? "Reschedule" : "Info"}</span>
                   <img
                     src={infoIcon}
                     alt=""

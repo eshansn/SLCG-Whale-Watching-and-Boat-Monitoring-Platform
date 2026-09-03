@@ -64,6 +64,7 @@ import BoatOwnerTripsPage from './screens/BoatOwner/BoatOwnerTripsPage';
 import BoatOwnerTripInfoPage from './screens/BoatOwner/BoatOwnerTripInfoPage';
 import BoatOwnerNewTripPage from './screens/BoatOwner/BoatOwnerNewTripPage';
 import BoatOwnerSettingsPage from './screens/BoatOwner/BoatOwnerSettingsPage';
+import PortalNotificationsPage from './screens/Notifications/PortalNotificationsPage';
 
 const OPS_ROLES = ['OPS'] as const;
 const ADMIN_ROLES = ['Admin'] as const;
@@ -187,6 +188,7 @@ export default function App() {
             <Route path="/admin/boat-crew-info/:crewId" element={<AdminRoute><CrewDetailsPage /></AdminRoute>} />
             <Route path="/admin/trips" element={<AdminRoute><Trips /></AdminRoute>} />
             <Route path="/admin/complaints" element={<AdminRoute><ComplaintsInquiriesPage /></AdminRoute>} />
+            <Route path="/admin/notifications" element={<AdminRoute adminOnly><PortalNotificationsPage portal="admin" /></AdminRoute>} />
             <Route path="/admin/inquiries" element={<Navigate to="/admin/complaints" replace />} />
             <Route path="/admin/complaints-inquiries" element={<Navigate to="/admin/complaints" replace />} />
             <Route path="/admin/settings" element={<Navigate to="/admin" replace />} />
@@ -203,6 +205,7 @@ export default function App() {
             <Route path="/shore/settings" element={<ShoreRoute><ShoreSettings /></ShoreRoute>} />
             <Route path="/shore/trips" element={<ShoreRoute><ShoreTrips /></ShoreRoute>} />
             <Route path="/shore/trips/:tripId" element={<ShoreRoute><ShoreTripInfo /></ShoreRoute>} />
+            <Route path="/shore/notifications" element={<ShoreRoute><PortalNotificationsPage portal="shore" /></ShoreRoute>} />
             <Route path="/owner" element={<OwnerRoute><BoatOwnerDashboard /></OwnerRoute>} />
             <Route path="/owner/profile" element={<OwnerRoute><BoatOwnerProfilePage /></OwnerRoute>} />
             <Route path="/owner/boats" element={<OwnerRoute><BoatOwnerBoatsPage /></OwnerRoute>} />
@@ -218,7 +221,7 @@ export default function App() {
             <Route path="/owner/settings" element={<OwnerRoute><BoatOwnerSettingsPage /></OwnerRoute>} />
             <Route path="/owner/settings/password" element={<Navigate to="/owner/settings" replace />} />
             <Route path="/owner/support" element={<Navigate to="/owner/settings" replace />} />
-            <Route path="/owner/notifications" element={<Navigate to="/owner" replace />} />
+            <Route path="/owner/notifications" element={<OwnerRoute><PortalNotificationsPage portal="owner" /></OwnerRoute>} />
             <Route path="/boat-owner/*" element={<LegacyBoatOwnerRedirect />} />
             <Route path="/crew" element={<CrewRoute><BoatCrewDashboard /></CrewRoute>} />
             <Route path="/crew/profile" element={<CrewRoute><BoatCrewProfile /></CrewRoute>} />
@@ -245,6 +248,7 @@ export default function App() {
             <Route path="/wildlife/trips" element={<WildlifeRoute><Trips /></WildlifeRoute>} />
             <Route path="/wildlife/trip-info/:tripId" element={<WildlifeRoute><TripInfo /></WildlifeRoute>} />
             <Route path="/wildlife/complaints" element={<WildlifeRoute><ComplaintsInquiriesPage /></WildlifeRoute>} />
+            <Route path="/wildlife/notifications" element={<WildlifeRoute><PortalNotificationsPage portal="wildlife" /></WildlifeRoute>} />
             <Route path="/shore-wildlife" element={<ShoreWildlifeRoute><ShoreWildlifeTrips /></ShoreWildlifeRoute>} />
             <Route path="/shore-wildlife/trips/:id" element={<ShoreWildlifeRoute><ShoreWildlifeTripDetails /></ShoreWildlifeRoute>} />
             <Route path="/shore-wildlife/records" element={<ShoreWildlifeRoute><ShoreWildlifeRecords /></ShoreWildlifeRoute>} />

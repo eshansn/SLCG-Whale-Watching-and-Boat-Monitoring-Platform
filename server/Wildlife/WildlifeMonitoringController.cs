@@ -18,7 +18,10 @@ public sealed class WildlifeMonitoringController(WhaleWatchingDbContext db, IHub
 {
     [HttpGet("trips")]
     public async Task<ActionResult<IReadOnlyList<WildlifeTripDto>>> Trips(CancellationToken ct) => Ok(
-        await db.Trips.AsNoTracking().OrderByDescending(x => x.ScheduledDepartureUtc)
+        await db.Trips.AsNoTracking()
+            .Where(x => x.Status != TripStatus.Completed && x.Status != TripStatus.Cancelled &&
+                (x.Status != TripStatus.Scheduled || x.ScheduledDepartureUtc >= DateTimeOffset.UtcNow))
+            .OrderByDescending(x => x.ScheduledDepartureUtc)
             .Select(x => new WildlifeTripDto(x.Id, x.Boat.Name, x.Boat.RegistrationNumber,
                 x.Boat.Owner.DisplayName, x.ScheduledDepartureUtc, x.Route, x.Status.ToString(),
                 x.Passengers.Count, x.ShoreApproval.ToString(), x.WildlifeShoreApproval.ToString(),
@@ -126,10 +129,9 @@ public sealed class WildlifeMonitoringController(WhaleWatchingDbContext db, IHub
                 x.MonitoringOfficer != "" && x.Supervisor != "" && x.MonitoringOfficerSignature != null &&
                 x.SupervisorSignature != null && x.HarbourOfficerSignature != null && x.HarbourOfficerName != null, ct);
             if (!validRecord) return Conflict(new { message = "Complete all monitoring information and obtain all three signatures before approval." });
-            if (trip.Boat.Approval != ApprovalStatus.Approved)
-                return Conflict(new { message = "The boat must receive administrative certification approval first." });
-            if (trip.Boat.WildlifeApproval != ApprovalStatus.Approved)
-                return Conflict(new { message = "The boat must receive Wildlife Authority approval in the main Wildlife portal first." });
+            if (trip.Boat.Approval != ApprovalStatus.Approved &&
+                trip.Boat.WildlifeApproval != ApprovalStatus.Approved)
+                return Conflict(new { message = "The boat must be approved by either an administrator or the Wildlife Authority first." });
         }
         trip.WildlifeShoreApproval = approval; trip.WildlifeShoreNotes = request.Notes?.Trim();
         trip.UpdatedAtUtc = DateTimeOffset.UtcNow; await db.SaveChangesAsync(ct);

@@ -87,8 +87,8 @@ function BoatOwnerBoatsPage() {
     return()=>{active=false;disconnect()};
   },[session,retryVersion]);
 
-  const approvedBoats=boats.filter(boat=>boat.approval==="Approved"&&boat.wildlifeApproval==="Approved");
-  const awaitingApprovalBoats=boats.filter(boat=>boat.approval!=="Approved"||boat.wildlifeApproval!=="Approved");
+  const approvedBoats=boats.filter(boat=>boat.approval==="Approved"||boat.wildlifeApproval==="Approved");
+  const awaitingApprovalBoats=boats.filter(boat=>boat.approval!=="Approved"&&boat.wildlifeApproval!=="Approved");
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
@@ -260,7 +260,7 @@ function BoatOwnerBoatsPage() {
                     />
 
                     <span className="text-[8px] font-medium uppercase text-[#20d820] sm:text-[9px]">
-                      Administrative &amp; wildlife approved
+                      Boat approved
                     </span>
                   </div>
                 </div>
@@ -471,7 +471,7 @@ function BoatOwnerBoatsPage() {
 }
 
 function BoatCard({boat,onOpen}:{boat:Boat;onOpen:()=>void}){
- const declined=boat.approval==="Rejected"||boat.wildlifeApproval==="Rejected";
+ const declined=boat.approval==="Rejected"&&boat.wildlifeApproval==="Rejected";
  return <article className="w-full overflow-hidden rounded-[22px] bg-white p-3 shadow-[0_6px_9px_rgba(0,0,0,0.22)] sm:p-4">
   <div className="grid grid-cols-[minmax(0,0.8fr)_minmax(145px,1.2fr)] items-center gap-3 sm:grid-cols-[minmax(130px,0.8fr)_minmax(210px,1.2fr)] sm:gap-5 lg:grid-cols-[minmax(130px,0.8fr)_minmax(190px,1.2fr)] xl:grid-cols-[minmax(150px,0.8fr)_minmax(230px,1.2fr)]">
    <div className="min-w-0"><p className="text-[16px] font-semibold sm:text-[18px]">Name</p><p className="mt-1 truncate text-[16px] sm:text-[18px]">{boat.name}</p><p className="mt-3 text-[16px] font-semibold sm:text-[18px]">Reg No</p><p className="mt-1 text-[16px] sm:text-[18px]">{boat.registrationNumber}</p><div className="mt-3 flex items-start gap-1"><span className={`mt-1 h-2 w-2 shrink-0 rounded-full ${declined?"bg-red-500":"bg-amber-400"}`} aria-hidden="true"/><span className={`text-[8px] font-medium uppercase leading-4 sm:text-[9px] ${declined?"text-red-500":"text-amber-600"}`}>Admin: {boat.approval}<br/>Wildlife: {boat.wildlifeApproval}</span></div></div>

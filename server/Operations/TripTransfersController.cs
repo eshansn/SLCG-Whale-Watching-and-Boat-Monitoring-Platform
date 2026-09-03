@@ -113,7 +113,9 @@ public sealed class TripTransfersController(WhaleWatchingDbContext db, IHubConte
             if (source is null || destination is null) return NotFound(new { message = "The source or destination trip no longer exists." });
             if (source.Boat.OwnerId != UserId) return Forbid();
             if (!Eligible(source.Status) || !Eligible(destination.Status)) return Conflict(new { message = "Both trips must still be scheduled or boarding." });
-            if (destination.Boat.Approval != ApprovalStatus.Approved) return Conflict(new { message = "The destination boat is not registered and approved." });
+            if (destination.Boat.Approval != ApprovalStatus.Approved &&
+                destination.Boat.WildlifeApproval != ApprovalStatus.Approved)
+                return Conflict(new { message = "The destination boat has not been approved by Administration or the Wildlife Authority." });
             var sourcePassengerCount = await db.TripPassengers.CountAsync(x => x.TripId == source.Id, ct);
             var destinationPassengerCount = await db.TripPassengers.CountAsync(x => x.TripId == destination.Id, ct);
             if (destinationPassengerCount + request.PassengerIds.Count > destination.Boat.MaximumCapacity)

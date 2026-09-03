@@ -7,6 +7,7 @@ import {
 import {
   Bell,
   ArrowRightLeft,
+  CalendarClock,
   Copy,
   Download,
   Menu as MenuIcon,
@@ -32,7 +33,7 @@ import dashboardIcon from "../../assets/icons/dashboard.svg";
 import crewIcon from "../../assets/icons/crew.svg";
 import tripsIcon from "../../assets/icons/trips.svg";
 import { useOperations } from "../../operations/useOperations";
-import { operationsApi, type TripPassenger, type VesselMapRecord } from "../../operations/operationsApi";
+import { isExpiredScheduledTrip, operationsApi, type TripPassenger, type VesselMapRecord } from "../../operations/operationsApi";
 import TripTransferModal from "./TripTransferModal";
 
 interface MenuItem {
@@ -95,12 +96,18 @@ const menuItems: MenuItem[] = [
   },
 ];
 
+const toDateTimeLocalValue = (date: Date): string => {
+  const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
+  return localDate.toISOString().slice(0, 16);
+};
+
 function BoatOwnerTripInfoPage() {
   const navigate = useNavigate();
   const { tripId } =
     useParams<{ tripId: string }>();
   const { trips, loading, error, reload, token } = useOperations();
   const trip = trips.find((item) => item.id === tripId);
+  const needsReschedule = trip ? isExpiredScheduledTrip(trip) : false;
   const invitationUrl = trip?.invitationCode ? `${window.location.origin}/passenger/trip/${trip.invitationCode}` : '';
 
   const [isMenuOpen, setIsMenuOpen] =
@@ -119,6 +126,10 @@ function BoatOwnerTripInfoPage() {
   const [transferStatus,setTransferStatus]=useState("");
   const [startingTrip,setStartingTrip]=useState(false);
   const [startError,setStartError]=useState("");
+  const [rescheduleOpen,setRescheduleOpen]=useState(false);
+  const [rescheduleAt,setRescheduleAt]=useState("");
+  const [rescheduling,setRescheduling]=useState(false);
+  const [rescheduleStatus,setRescheduleStatus]=useState("");
   const [copyStatus, setCopyStatus] = useState("");
   const [isListening, setIsListening] = useState(false);
   const recognitionRef = useRef<OwnerSpeechRecognition | null>(null);
@@ -357,6 +368,35 @@ function BoatOwnerTripInfoPage() {
     }
   };
 
+  const openReschedule = (): void => {
+    const proposedDeparture = new Date(Date.now() + 60 * 60 * 1_000);
+    proposedDeparture.setMinutes(Math.ceil(proposedDeparture.getMinutes() / 5) * 5, 0, 0);
+    setRescheduleAt(toDateTimeLocalValue(proposedDeparture));
+    setRescheduleStatus("");
+    setRescheduleOpen(true);
+  };
+
+  const saveReschedule = async (): Promise<void> => {
+    if (!token || !trip || !rescheduleAt || rescheduling) return;
+    const selectedDeparture = new Date(rescheduleAt);
+    if (Number.isNaN(selectedDeparture.getTime()) || selectedDeparture.getTime() <= Date.now()) {
+      setRescheduleStatus("Choose a future date and time.");
+      return;
+    }
+    setRescheduling(true);
+    setRescheduleStatus("");
+    try {
+      await operationsApi.rescheduleTrip(token, trip.id, selectedDeparture.toISOString());
+      await reload();
+      setRescheduleOpen(false);
+      setRescheduleStatus("Trip rescheduled. The existing QR and passenger registrations are still active.");
+    } catch (reason) {
+      setRescheduleStatus(reason instanceof Error ? reason.message : "Unable to reschedule this trip.");
+    } finally {
+      setRescheduling(false);
+    }
+  };
+
   if (loading) return <main className="grid min-h-dvh place-items-center">Loading trip information...</main>;
   if (error || !trip) return <main className="grid min-h-dvh place-items-center">{error || 'Trip not found.'}</main>;
 
@@ -487,13 +527,25 @@ function BoatOwnerTripInfoPage() {
           </div>
         </section>
 
-        {(trip.status==="Scheduled"||trip.status==="Boarding")&&liveVessel&&<section className="mt-7 rounded-xl border border-slate-200 bg-slate-50/70 p-4"><h2 className="text-sm font-semibold text-[#162d54]">Departure approvals</h2><div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">{[
-          ['Administrative boat',liveVessel.certificationApproval],
-          ['Wildlife Authority boat',liveVessel.wildlifeApproval],
+        {(trip.status==="Scheduled"||trip.status==="Boarding")&&liveVessel&&<section className="mt-7 rounded-xl border border-slate-200 bg-slate-50/70 p-4"><h2 className="text-sm font-semibold text-[#162d54]">Departure approvals</h2><p className="mt-1 text-[11px] text-slate-500">A boat needs approval from either Administration or the Wildlife Authority.</p><div className="mt-3 grid gap-2 sm:grid-cols-3">{[
+          ['Boat authority',liveVessel.certificationApproval==='Approved'||liveVessel.wildlifeApproval==='Approved'?'Approved':liveVessel.certificationApproval==='Rejected'&&liveVessel.wildlifeApproval==='Rejected'?'Rejected':'Pending'],
           ['SLCG Shore trip',liveVessel.shoreApproval],
           ['Wildlife Shore trip',liveVessel.wildlifeShoreApproval],
         ].map(([label,status])=><div key={label} className="rounded-lg bg-white px-3 py-2 shadow-sm"><p className="text-[11px] text-slate-500">{label}</p><p className={`mt-1 text-xs font-semibold ${status==='Approved'?'text-emerald-700':status==='Rejected'?'text-red-700':'text-amber-700'}`}>{status}</p></div>)}</div></section>}
-        {(trip.status==="Scheduled"||trip.status==="Boarding"||trip.status==="Ongoing")&&<div className="mt-7 flex flex-col items-center gap-3 border-t border-slate-100 pt-7"><button type="button" disabled={startingTrip} onClick={()=>void startTrip()} className="flex min-h-11 items-center gap-2 rounded-lg bg-[#162d54] px-6 py-3 text-sm font-semibold text-white hover:bg-[#203d6c] disabled:opacity-50">{trip.status==="Ongoing"?<Square size={18}/>:<Play size={18}/>} {startingTrip?(trip.status==="Ongoing"?"Ending...":"Starting..."):(trip.status==="Ongoing"?"End Trip":"Start Trip")}</button>{trip.status!=="Ongoing"&&<button type="button" onClick={()=>{setTransferStatus("");setTransferOpen(true)}} className="flex min-h-11 items-center gap-2 rounded-lg bg-[#162d54] px-6 py-3 text-sm font-semibold text-white hover:bg-[#203d6c]"><ArrowRightLeft size={18}/>Transfer Passengers / Crew</button>}{startError&&<p role="alert" className="text-center text-sm font-medium text-red-600">{startError}</p>}{transferStatus&&<p role="status" className="text-center text-sm font-medium text-emerald-700">{transferStatus}</p>}</div>}
+        {(trip.status==="Scheduled"||trip.status==="Boarding"||trip.status==="Ongoing")&&<div className="mt-7 flex flex-col items-center gap-3 border-t border-slate-100 pt-7">
+          {needsReschedule ? <>
+            {!rescheduleOpen&&<button type="button" onClick={openReschedule} className="flex min-h-11 items-center gap-2 rounded-lg bg-amber-600 px-6 py-3 text-sm font-semibold text-white hover:bg-amber-700"><CalendarClock size={18}/>Reschedule Trip</button>}
+            {rescheduleOpen&&<div className="w-full max-w-md rounded-xl border border-amber-200 bg-amber-50 p-4">
+              <label className="block text-sm font-semibold text-[#162d54]">New departure date and time
+                <input type="datetime-local" value={rescheduleAt} min={toDateTimeLocalValue(new Date())} onChange={(event)=>{setRescheduleAt(event.target.value);setRescheduleStatus("")}} disabled={rescheduling} className="mt-2 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 font-normal outline-none focus:border-amber-500"/>
+              </label>
+              <p className="mt-2 text-xs text-slate-600">The same trip QR, registered passengers, crew, and approvals will be kept.</p>
+              <div className="mt-4 flex justify-end gap-2"><button type="button" disabled={rescheduling} onClick={()=>setRescheduleOpen(false)} className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-50">Cancel</button><button type="button" disabled={rescheduling||!rescheduleAt} onClick={()=>void saveReschedule()} className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{rescheduling?"Rescheduling...":"Save New Time"}</button></div>
+            </div>}
+          </> : <button type="button" disabled={startingTrip} onClick={()=>void startTrip()} className="flex min-h-11 items-center gap-2 rounded-lg bg-[#162d54] px-6 py-3 text-sm font-semibold text-white hover:bg-[#203d6c] disabled:opacity-50">{trip.status==="Ongoing"?<Square size={18}/>:<Play size={18}/>} {startingTrip?(trip.status==="Ongoing"?"Ending...":"Starting..."):(trip.status==="Ongoing"?"End Trip":"Start Trip")}</button>}
+          {trip.status!=="Ongoing"&&!needsReschedule&&<button type="button" onClick={()=>{setTransferStatus("");setTransferOpen(true)}} className="flex min-h-11 items-center gap-2 rounded-lg bg-[#162d54] px-6 py-3 text-sm font-semibold text-white hover:bg-[#203d6c]"><ArrowRightLeft size={18}/>Transfer Passengers / Crew</button>}
+          {startError&&<p role="alert" className="text-center text-sm font-medium text-red-600">{startError}</p>}{rescheduleStatus&&<p role="status" className={`text-center text-sm font-medium ${rescheduleStatus.startsWith("Trip rescheduled")?"text-emerald-700":"text-red-600"}`}>{rescheduleStatus}</p>}{transferStatus&&<p role="status" className="text-center text-sm font-medium text-emerald-700">{transferStatus}</p>}
+        </div>}
 
         {/* Passenger information */}
         <section className="mt-7 sm:mt-10">

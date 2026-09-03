@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Icon } from "../../components/ui/icon";
-import { formatTripDate, type Trip } from "../../operations/operationsApi";
+import { formatTripDate, isOperationalTripVisible, type Trip } from "../../operations/operationsApi";
 import { useOperations } from "../../operations/useOperations";
 import { Eye } from "lucide-react";
 
@@ -13,6 +13,7 @@ const ShoreTrips = () => {
   const visibleTrips = useMemo(() => {
     const query = search.trim().toLowerCase();
     return shoreTrips
+      .filter((trip) => isOperationalTripVisible(trip))
       .filter((trip) => [trip.vesselName, trip.ownerName, trip.registrationNumber, trip.shoreApproval].some((value) => value.toLowerCase().includes(query)))
       .sort((a, b) => sort === "vessel" ? a.vesselName.localeCompare(b.vesselName) : a.scheduledDepartureUtc.localeCompare(b.scheduledDepartureUtc));
   }, [search, sort, shoreTrips]);

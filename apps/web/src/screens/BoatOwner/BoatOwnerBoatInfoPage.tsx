@@ -242,6 +242,7 @@ function BoatOwnerBoatInfoPage() {
                 </span>
               ))}
             </div>
+            <p className="mt-2 text-[11px] text-slate-500">Approval from either authority is sufficient.</p>
           </div>
 
           {/* Boat image */}

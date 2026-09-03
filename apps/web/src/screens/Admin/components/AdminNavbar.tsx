@@ -50,7 +50,7 @@ const AdminNavbar = () => {
   const { logout, session } = useAuth();
   const isWildlife = session?.roles.includes("Wildlife") ?? false;
   const homePath = isWildlife ? "/wildlife" : "/admin";
-  const notificationsPath = isWildlife ? "/wildlife/complaints" : "/admin/complaints";
+  const notificationsPath = isWildlife ? "/wildlife/notifications" : "/admin/notifications";
   const navigationItems = adminNavigationItems
     .filter((item) => !isWildlife || item.label !== "Staff")
     .map((item) => isWildlife ? { ...item, path: item.path.replace("/admin", "/wildlife") } : item);
@@ -123,6 +123,14 @@ const AdminNavbar = () => {
       {isMenuOpen && (
         <nav className="border-t border-slate-200 bg-white px-4 py-4 shadow-lg lg:hidden" aria-label="Mobile admin navigation">
           <div className="mx-auto grid max-w-7xl gap-1">
+            <Link
+              to={notificationsPath}
+              onClick={() => setIsMenuOpen(false)}
+              aria-label="Notifications"
+              className="flex justify-center rounded-md px-3 py-3 text-slate-600 transition-colors hover:bg-slate-50 hover:text-[#14223d]"
+            >
+              <span className="flex items-center gap-2"><Icon name="notification" size={20} /><span>Notifications</span></span>
+            </Link>
             {navigationItems.map((item) => {
               const isActive = location.pathname === item.path || location.pathname.startsWith(`${item.path}/`);
               return (

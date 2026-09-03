@@ -24,7 +24,7 @@ const ShoreNavbar = () => {
         </Link>
 
         <nav className="hidden items-center gap-7 text-sm lg:flex" aria-label="Shore Officer navigation">
-          <button type="button" aria-label="Notifications" className="text-slate-500 transition hover:text-[#14223d]">
+          <button type="button" onClick={() => navigate('/shore/notifications')} aria-label="Notifications" className="text-slate-500 transition hover:text-[#14223d]">
             <Icon name="notification" size={20} />
           </button>
           <Link aria-label={onTripsPage?"Dashboard":"Trips"} title={onTripsPage?"Dashboard":"Trips"} to={onTripsPage ? "/shore" : "/shore/trips"} className="rounded-full p-2 text-slate-500 transition hover:bg-slate-100 hover:text-[#14223d]">
@@ -41,6 +41,7 @@ const ShoreNavbar = () => {
 
       {open && (
         <nav className="grid gap-1 border-t border-slate-200 bg-white px-4 py-4 shadow-lg lg:hidden">
+          <Link aria-label="Notifications" title="Notifications" onClick={() => setOpen(false)} to="/shore/notifications" className="flex justify-center rounded-md px-3 py-3 hover:bg-slate-50"><Icon name="notification" size={22} /></Link>
           <Link aria-label={onTripsPage?"Dashboard":"Trips"} title={onTripsPage?"Dashboard":"Trips"} onClick={() => setOpen(false)} to={onTripsPage ? "/shore" : "/shore/trips"} className="flex justify-center rounded-md px-3 py-3 hover:bg-slate-50">{onTripsPage ? <House size={22}/> : <Ship size={22}/>}</Link>
           <Link aria-label="Settings" title="Settings" onClick={() => setOpen(false)} to="/shore/settings" className="flex justify-center rounded-md px-3 py-3 hover:bg-slate-50"><Settings size={22}/></Link>
           <button type="button" onClick={signOut} aria-label="Log out" title="Log out" className="mt-2 flex justify-center rounded-md bg-[#14223d] px-4 py-3 text-white"><LogOut size={22}/></button>
