@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Icon } from "../../components/ui/icon";
 import { formatTripDate, isOperationalTripVisible, type Trip } from "../../operations/operationsApi";
 import { useOperations } from "../../operations/useOperations";
+import { useTripStateClock } from "../../operations/useTripStateClock";
 import { Eye } from "lucide-react";
 
 const ShoreTrips = () => {
@@ -10,13 +11,14 @@ const ShoreTrips = () => {
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState("time");
   const { trips: shoreTrips } = useOperations();
+  const tripStateNow = useTripStateClock();
   const visibleTrips = useMemo(() => {
     const query = search.trim().toLowerCase();
     return shoreTrips
-      .filter((trip) => isOperationalTripVisible(trip))
+      .filter((trip) => isOperationalTripVisible(trip, tripStateNow))
       .filter((trip) => [trip.vesselName, trip.ownerName, trip.registrationNumber, trip.shoreApproval].some((value) => value.toLowerCase().includes(query)))
       .sort((a, b) => sort === "vessel" ? a.vesselName.localeCompare(b.vesselName) : a.scheduledDepartureUtc.localeCompare(b.scheduledDepartureUtc));
-  }, [search, sort, shoreTrips]);
+  }, [search, sort, shoreTrips, tripStateNow]);
 
   return (
     <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10">

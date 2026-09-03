@@ -1,6 +1,5 @@
 import {
   ChangeEvent,
-  useEffect,
   useMemo,
   useState,
 } from "react";
@@ -8,14 +7,17 @@ import { useNavigate } from "react-router-dom";
 import { Icon } from "../../components/ui/icon";
 import Navbar from "./components/Navbar";
 import { useOperations } from "../../operations/useOperations";
-import { isOperationalTripVisible, operationsApi, type Trip as OperationTrip } from "../../operations/operationsApi";
+import { useTripStateClock } from "../../operations/useTripStateClock";
+import { getTripDisplayState, operationsApi, type Trip as OperationTrip, type TripDisplayState } from "../../operations/operationsApi";
 type ApprovalStatus = "Approved" | "Pending" | "Not Approved" | "Exempt";
+type StateFilter = "All" | TripDisplayState;
 
 type SortOption =
   | "vessel-asc"
   | "vessel-desc"
   | "registration-asc"
   | "registration-desc"
+  | "state"
   | "approval-approved"
   | "approval-pending"
   | "approval-not-approved";
@@ -24,10 +26,9 @@ interface Trip {
   id: string;
   vesselName: string;
   registrationNumber: string;
-  location: string;
   departureTime: string;
   type: "WhaleWatching" | "Patrol";
-  status: string;
+  state: TripDisplayState;
   approval: ApprovalStatus;
 }
 
@@ -73,21 +74,34 @@ const approvalPriority: Record<ApprovalStatus, number> = {
   "Not Approved": 3,
 };
 
+const statePriority: Record<TripDisplayState, number> = {
+  Ongoing: 1,
+  Late: 2,
+  Scheduled: 3,
+  Expired: 4,
+  Completed: 5,
+  Cancelled: 6,
+};
+
+const tripStates: TripDisplayState[] = ["Scheduled", "Late", "Expired", "Ongoing", "Completed", "Cancelled"];
+
 const OPStrips = () => {
   const navigate = useNavigate();
   const { trips: operationTrips, boats, loading, error, reload, token } = useOperations();
-  const trips = useMemo<Trip[]>(() => operationTrips.filter(isOperationalTripVisible).map((trip:OperationTrip) => {
+  const tripStateNow = useTripStateClock();
+  const trips = useMemo<Trip[]>(() => operationTrips.map((trip:OperationTrip) => {
     const boat=boats.find(item=>item.id===trip.boatId);
     const boatApproved=boat?.approval==='Approved'||boat?.wildlifeApproval==='Approved';
     const fullyApproved=boatApproved&&trip.shoreApproval==='Approved'&&trip.wildlifeShoreApproval==='Approved';
     const rejected=trip.shoreApproval==='Rejected'||trip.wildlifeShoreApproval==='Rejected';
     return {id:trip.id,vesselName:trip.vesselName,registrationNumber:trip.registrationNumber,
-      location:trip.route,departureTime:new Intl.DateTimeFormat('en-LK',{dateStyle:'medium',timeStyle:'short'}).format(new Date(trip.scheduledDepartureUtc)),
-      type:trip.type,status:trip.status,
+      departureTime:new Intl.DateTimeFormat('en-LK',{dateStyle:'medium',timeStyle:'short'}).format(new Date(trip.scheduledDepartureUtc)),
+      type:trip.type,state:getTripDisplayState(trip,tripStateNow),
       approval:trip.type==='Patrol'?'Exempt':fullyApproved?'Approved':rejected?'Not Approved':'Pending'};
-  }),[operationTrips,boats]);
+  }),[operationTrips,boats,tripStateNow]);
   const [searchValue, setSearchValue] = useState<string>("");
   const [sortOption, setSortOption] = useState<SortOption>("vessel-asc");
+  const [stateFilter, setStateFilter] = useState<StateFilter>("All");
 
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [isListening, setIsListening] = useState<boolean>(false);
@@ -101,17 +115,16 @@ const OPStrips = () => {
     .filter((trip) => trip.status === "Ongoing" || trip.status === "Boarding")
     .map((trip) => trip.boatId)), [operationTrips]);
   const availablePatrolBoats = patrolBoats.filter((boat) => !unavailableBoatIds.has(boat.id));
-
-  useEffect(() => {
-    if (!patrolBoatId && availablePatrolBoats.length > 0) setPatrolBoatId(availablePatrolBoats[0].id);
-  }, [availablePatrolBoats, patrolBoatId]);
+  const selectedPatrolBoatId = availablePatrolBoats.some((boat) => boat.id === patrolBoatId)
+    ? patrolBoatId
+    : availablePatrolBoats[0]?.id ?? "";
 
   const startPatrol = async () => {
-    if (!token || !patrolBoatId || patrolSaving) return;
+    if (!token || !selectedPatrolBoatId || patrolSaving) return;
     setPatrolSaving(true);
     setPatrolError("");
     try {
-      const result = await operationsApi.startPatrol(token, patrolBoatId, patrolRoute.trim());
+      const result = await operationsApi.startPatrol(token, selectedPatrolBoatId, patrolRoute.trim());
       await reload();
       navigate(`/ops/trip-info/${result.id}`);
     } catch (reason) {
@@ -125,11 +138,12 @@ const OPStrips = () => {
     const searchTerm = searchValue.trim().toLowerCase();
 
     const filteredTrips = trips.filter((trip) => {
+      if (stateFilter !== "All" && trip.state !== stateFilter) return false;
       return (
         trip.vesselName.toLowerCase().includes(searchTerm) ||
         trip.registrationNumber.toLowerCase().includes(searchTerm) ||
         trip.approval.toLowerCase().includes(searchTerm) ||
-        trip.location.toLowerCase().includes(searchTerm)
+        trip.state.toLowerCase().includes(searchTerm)
       );
     });
 
@@ -141,6 +155,8 @@ const OPStrips = () => {
           return firstTrip.registrationNumber.localeCompare(secondTrip.registrationNumber);
         case "registration-desc":
           return secondTrip.registrationNumber.localeCompare(firstTrip.registrationNumber);
+        case "state":
+          return statePriority[firstTrip.state] - statePriority[secondTrip.state];
         case "approval-approved":
           return approvalPriority[firstTrip.approval] - approvalPriority[secondTrip.approval];
         case "approval-pending": {
@@ -166,20 +182,15 @@ const OPStrips = () => {
           return firstTrip.vesselName.localeCompare(secondTrip.vesselName);
       }
     });
-  }, [trips, searchValue, sortOption]);
+  }, [trips, searchValue, sortOption, stateFilter]);
 
   const totalPages = Math.max(
     1,
     Math.ceil(filteredAndSortedTrips.length / ITEMS_PER_PAGE)
   );
 
-  useEffect(() => {
-    if (currentPage > totalPages) {
-      setCurrentPage(totalPages);
-    }
-  }, [currentPage, totalPages]);
-
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const visiblePage = Math.min(currentPage, totalPages);
+  const startIndex = (visiblePage - 1) * ITEMS_PER_PAGE;
   const visibleTrips = filteredAndSortedTrips.slice(startIndex, startIndex + ITEMS_PER_PAGE);
 
   const handleSearchChange = (event: ChangeEvent<HTMLInputElement>): void => {
@@ -189,6 +200,11 @@ const OPStrips = () => {
 
   const handleSortChange = (event: ChangeEvent<HTMLSelectElement>): void => {
     setSortOption(event.target.value as SortOption);
+    setCurrentPage(1);
+  };
+
+  const handleStateFilterChange = (event: ChangeEvent<HTMLSelectElement>): void => {
+    setStateFilter(event.target.value as StateFilter);
     setCurrentPage(1);
   };
 
@@ -240,17 +256,28 @@ const OPStrips = () => {
     }
   };
 
+  const getStateColour = (state: TripDisplayState): string => {
+    switch (state) {
+      case "Completed": return "bg-emerald-50 text-emerald-700";
+      case "Ongoing": return "bg-blue-50 text-blue-700";
+      case "Late": return "bg-amber-50 text-amber-700";
+      case "Expired": return "bg-amber-50 text-amber-700";
+      case "Cancelled": return "bg-red-50 text-red-700";
+      default: return "bg-slate-100 text-slate-700";
+    }
+  };
+
   const getPaginationItems = (): Array<number | "..."> => {
     if (totalPages <= 5) {
       return Array.from({ length: totalPages }, (_, index) => index + 1);
     }
-    if (currentPage <= 3) {
+    if (visiblePage <= 3) {
       return [1, 2, 3, 4, "...", totalPages];
     }
-    if (currentPage >= totalPages - 2) {
+    if (visiblePage >= totalPages - 2) {
       return [1, "...", totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
     }
-    return [1, "...", currentPage - 1, currentPage, currentPage + 1, "...", totalPages];
+    return [1, "...", visiblePage - 1, visiblePage, visiblePage + 1, "...", totalPages];
   };
 
   return (
@@ -312,9 +339,19 @@ const OPStrips = () => {
                   <option value="vessel-desc">Name: Z–A</option>
                   <option value="registration-asc">Registration: Ascending</option>
                   <option value="registration-desc">Registration: Descending</option>
+                  <option value="state">State</option>
                   <option value="approval-approved">Approval: Approved first</option>
                   <option value="approval-pending">Approval: Pending first</option>
                   <option value="approval-not-approved">Approval: Not Approved first</option>
+                </select>
+              </div>
+
+              {/* State Filter */}
+              <div className="flex h-11 min-w-[190px] items-center rounded-md bg-[#F9FBFF] px-4">
+                <span className="whitespace-nowrap text-xs text-slate-500">State:</span>
+                <select value={stateFilter} onChange={handleStateFilterChange} aria-label="Filter trips by state" className="w-full cursor-pointer border-none bg-[#F9FBFF] pl-2 pr-6 text-xs font-bold text-[#14223d] outline-none">
+                  <option value="All">All states</option>
+                  {tripStates.map((state) => <option key={state} value={state}>{state}</option>)}
                 </select>
               </div>
             </div>
@@ -324,7 +361,7 @@ const OPStrips = () => {
             <div className="mt-5 rounded-lg border border-indigo-100 bg-indigo-50/50 p-4">
               <div className="grid gap-3 md:grid-cols-[minmax(180px,1fr)_minmax(240px,2fr)_auto] md:items-end">
                 <label className="text-xs font-semibold">Patrol vessel
-                  <select value={patrolBoatId} onChange={(event) => setPatrolBoatId(event.target.value)} className="mt-2 h-10 w-full rounded-md border border-slate-200 bg-white px-3 font-normal" disabled={patrolSaving}>
+                  <select value={selectedPatrolBoatId} onChange={(event) => setPatrolBoatId(event.target.value)} className="mt-2 h-10 w-full rounded-md border border-slate-200 bg-white px-3 font-normal" disabled={patrolSaving}>
                     {availablePatrolBoats.length === 0 && <option value="">No vessel available</option>}
                     {availablePatrolBoats.map((boat) => <option key={boat.id} value={boat.id}>{boat.name} · {boat.registrationNumber}</option>)}
                   </select>
@@ -332,7 +369,7 @@ const OPStrips = () => {
                 <label className="text-xs font-semibold">Patrol purpose or area
                   <input value={patrolRoute} onChange={(event) => setPatrolRoute(event.target.value)} maxLength={300} className="mt-2 h-10 w-full rounded-md border border-slate-200 bg-white px-3 font-normal" placeholder="SLCG patrol" disabled={patrolSaving} />
                 </label>
-                <button type="button" onClick={() => void startPatrol()} disabled={!patrolBoatId || patrolSaving} className="h-10 rounded-md bg-indigo-600 px-5 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40">
+                <button type="button" onClick={() => void startPatrol()} disabled={!selectedPatrolBoatId || patrolSaving} className="h-10 rounded-md bg-indigo-600 px-5 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40">
                   {patrolSaving ? "Starting…" : "Confirm Start"}
                 </button>
               </div>
@@ -343,14 +380,14 @@ const OPStrips = () => {
 
           {/* Table */}
           <div className="mt-6 overflow-x-auto">
-            <table className="w-full min-w-[900px] border-collapse text-left">
+            <table className="w-full min-w-[850px] border-collapse text-left">
               <thead>
                 <tr className="border-b border-slate-100 text-[11px] text-slate-500">
                   <th className="px-3 py-3 text-center font-medium">Vessel</th>
                   <th className="px-3 py-3 text-center font-medium">Registration no</th>
-                  <th className="px-3 py-3 text-center font-medium">Location</th>
+                  <th className="px-3 py-3 text-center font-medium">State</th>
                   <th className="px-3 py-3 text-center font-medium">Departure Time</th>
-                  <th className="px-3 py-3 text-center font-medium">Type / Status</th>
+                  <th className="px-3 py-3 text-center font-medium">Type</th>
                   <th className="px-3 py-3 text-center font-medium">Approval</th>
                   <th className="px-3 py-3 text-center"></th> {/* Actions */}
                 </tr>
@@ -370,8 +407,8 @@ const OPStrips = () => {
                       {trip.registrationNumber}
                     </td>
 
-                    <td className="px-3 py-4 text-center text-slate-600">
-                      {trip.location}
+                    <td className="px-3 py-4 text-center">
+                      <span className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-semibold ${getStateColour(trip.state)}`}>{trip.state}</span>
                     </td>
 
                     <td className="px-3 py-4 text-center text-slate-600">
@@ -380,7 +417,6 @@ const OPStrips = () => {
 
                     <td className="px-3 py-4 text-center text-slate-600">
                       <span className="block font-medium text-[#14223d]">{trip.type === "Patrol" ? "Patrol" : "Whale Watching"}</span>
-                      <span className="text-[10px]">{trip.status}</span>
                     </td>
 
                     <td
@@ -426,7 +462,7 @@ const OPStrips = () => {
             <div className="flex items-center justify-end gap-3">
               <button
                 type="button"
-                disabled={currentPage === 1}
+                disabled={visiblePage === 1}
                 onClick={() => setCurrentPage((page) => Math.max(page - 1, 1))}
                 className="flex h-9 w-9 items-center justify-center rounded-md bg-[#F4F5F7] disabled:opacity-40"
               >
@@ -447,7 +483,7 @@ const OPStrips = () => {
                     type="button"
                     onClick={() => setCurrentPage(item as number)}
                     className={`flex h-9 w-9 items-center justify-center rounded-md text-sm ${
-                      currentPage === item
+                      visiblePage === item
                         ? "bg-[#14223d] font-semibold text-white"
                         : "bg-[#F4F5F7] text-slate-600"
                     }`}
@@ -459,7 +495,7 @@ const OPStrips = () => {
 
               <button
                 type="button"
-                disabled={currentPage === totalPages}
+                disabled={visiblePage === totalPages}
                 onClick={() => setCurrentPage((page) => Math.min(page + 1, totalPages))}
                 className="flex h-9 w-9 items-center justify-center rounded-md bg-[#F4F5F7] disabled:opacity-40"
               >

@@ -1,5 +1,4 @@
 import {
-  useEffect,
   useMemo,
   useState,
 } from "react";
@@ -11,14 +10,17 @@ import {
 } from "react-router-dom";
 import { Download } from "lucide-react";
 import { Icon } from "../../components/ui/icon";
-import { operationsApi } from "../../operations/operationsApi";
+import { getTripDisplayState, operationsApi, type TripDisplayState } from "../../operations/operationsApi";
 import { useOperations } from "../../operations/useOperations";
+import { useTripStateClock } from "../../operations/useTripStateClock";
 import TripReportModal from "./components/TripReportModal";
 
 type ApprovalStatus =
   | "Approved"
   | "Not Approved"
   | "Pending";
+
+type StateFilter = "All" | TripDisplayState;
 
 type SortOption =
   | "time-asc"
@@ -27,6 +29,7 @@ type SortOption =
   | "vessel-desc"
   | "owner-asc"
   | "owner-desc"
+  | "state"
   | "approved-first"
   | "pending-first"
   | "not-approved-first";
@@ -37,6 +40,7 @@ interface ScheduledTrip {
   owner: string;
   registrationNumber: string;
   scheduledDateTime: string;
+  state: TripDisplayState;
   approval: ApprovalStatus;
 }
 
@@ -56,8 +60,24 @@ interface SpeechRecognitionEvent {
   results: SpeechRecognitionResultList;
 }
 
+interface SpeechRecognitionInstance {
+  lang: string;
+  continuous: boolean;
+  interimResults: boolean;
+  start: () => void;
+  onstart: (() => void) | null;
+  onend: (() => void) | null;
+  onerror: (() => void) | null;
+  onresult: ((event: SpeechRecognitionEvent) => void) | null;
+}
+
+interface SpeechRecognitionWindow {
+  SpeechRecognition?: new () => SpeechRecognitionInstance;
+  webkitSpeechRecognition?: new () => SpeechRecognitionInstance;
+}
+
 /* Historical sample records removed: this screen is populated by the operations API. */
-const initialTrips: ScheduledTrip[] = [
+const initialTrips: Omit<ScheduledTrip, "state">[] = [
   {
     id: "1",
     vesselName: "FV Mirissa King",
@@ -141,35 +161,44 @@ const initialTrips: ScheduledTrip[] = [
 ];
 
 const ITEMS_PER_PAGE = 4;
+const tripStates: TripDisplayState[] = ["Scheduled", "Late", "Expired", "Ongoing", "Completed", "Cancelled"];
+const statePriority: Record<TripDisplayState, number> = {
+  Ongoing: 1,
+  Late: 2,
+  Scheduled: 3,
+  Expired: 4,
+  Completed: 5,
+  Cancelled: 6,
+};
 
 const Trips = () => {
   void initialTrips;
   const location = useLocation();
   const navigate = useNavigate();
   const { trips: databaseTrips, boats: databaseBoats, loading: operationsLoading, reload, token } = useOperations();
+  const tripStateNow = useTripStateClock();
   const isAdminPortal = location.pathname.startsWith("/admin");
 
-  const [trips, setTrips] =
-    useState<ScheduledTrip[]>([]);
-
-  useEffect(() => {
-    setTrips(databaseTrips.map((trip) => ({
+  const trips = useMemo<ScheduledTrip[]>(() => databaseTrips.map((trip) => ({
       id: trip.id,
       vesselName: trip.vesselName,
       owner: trip.ownerName,
       registrationNumber: trip.registrationNumber,
       scheduledDateTime: trip.scheduledDepartureUtc,
+      state: getTripDisplayState(trip, tripStateNow),
       approval: trip.shoreApproval === "Rejected"
         ? "Not Approved"
         : trip.shoreApproval as ApprovalStatus,
-    })));
-  }, [databaseTrips]);
+    })), [databaseTrips, tripStateNow]);
 
   const [searchValue, setSearchValue] =
     useState("");
 
   const [sortOption, setSortOption] =
     useState<SortOption>("time-asc");
+
+  const [stateFilter, setStateFilter] =
+    useState<StateFilter>("All");
 
   const [currentPage, setCurrentPage] =
     useState(1);
@@ -188,6 +217,7 @@ const Trips = () => {
       searchValue.trim().toLowerCase();
 
     const filteredTrips = trips.filter((trip) => {
+      if (stateFilter !== "All" && trip.state !== stateFilter) return false;
       const formattedTime =
         formatScheduledDateTime(
           trip.scheduledDateTime,
@@ -204,6 +234,9 @@ const Trips = () => {
           .toLowerCase()
           .includes(searchTerm) ||
         trip.approval
+          .toLowerCase()
+          .includes(searchTerm) ||
+        trip.state
           .toLowerCase()
           .includes(searchTerm) ||
         formattedTime.includes(searchTerm)
@@ -242,6 +275,9 @@ const Trips = () => {
             return secondTrip.owner.localeCompare(
               firstTrip.owner,
             );
+
+          case "state":
+            return statePriority[firstTrip.state] - statePriority[secondTrip.state];
 
           case "approved-first":
             return (
@@ -292,7 +328,7 @@ const Trips = () => {
         }
       },
     );
-  }, [trips, searchValue, sortOption]);
+  }, [trips, searchValue, sortOption, stateFilter]);
 
   const totalPages = Math.max(
     1,
@@ -302,14 +338,9 @@ const Trips = () => {
     ),
   );
 
-  useEffect(() => {
-    if (currentPage > totalPages) {
-      setCurrentPage(totalPages);
-    }
-  }, [currentPage, totalPages]);
-
+  const visiblePage = Math.min(currentPage, totalPages);
   const startIndex =
-    (currentPage - 1) * ITEMS_PER_PAGE;
+    (visiblePage - 1) * ITEMS_PER_PAGE;
 
   const visibleTrips =
     filteredAndSortedTrips.slice(
@@ -334,9 +365,10 @@ const Trips = () => {
   };
 
   const handleVoiceSearch = (): void => {
+    const speechWindow = window as unknown as SpeechRecognitionWindow;
     const SpeechRecognitionAPI =
-      (window as any).SpeechRecognition ||
-      (window as any).webkitSpeechRecognition;
+      speechWindow.SpeechRecognition ||
+      speechWindow.webkitSpeechRecognition;
 
     if (!SpeechRecognitionAPI) {
       window.alert(
@@ -390,6 +422,13 @@ const Trips = () => {
     navigate(`${portalPrefix}/trip-info/${tripId}`);
   };
 
+  const handleStateFilterChange = (
+    event: ChangeEvent<HTMLSelectElement>,
+  ): void => {
+    setStateFilter(event.target.value as StateFilter);
+    setCurrentPage(1);
+  };
+
   const handleDeleteTrip = async (
     tripId: string,
   ): Promise<void> => {
@@ -433,7 +472,7 @@ const Trips = () => {
         );
       }
 
-      if (currentPage <= 3) {
+      if (visiblePage <= 3) {
         return [
           1,
           2,
@@ -444,7 +483,7 @@ const Trips = () => {
         ];
       }
 
-      if (currentPage >= totalPages - 2) {
+      if (visiblePage >= totalPages - 2) {
         return [
           1,
           "...",
@@ -458,9 +497,9 @@ const Trips = () => {
       return [
         1,
         "...",
-        currentPage - 1,
-        currentPage,
-        currentPage + 1,
+        visiblePage - 1,
+        visiblePage,
+        visiblePage + 1,
         "...",
         totalPages,
       ];
@@ -568,7 +607,7 @@ const Trips = () => {
           {/* Header */}
           <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
             <h1 className="text-xl font-semibold">
-              Scheduled Trips
+              Trips
             </h1>
 
             <div className="flex w-full flex-col gap-4 sm:flex-row lg:w-auto">
@@ -595,7 +634,7 @@ const Trips = () => {
                   value={searchValue}
                   onChange={handleSearchChange}
                   placeholder="Search"
-                  aria-label="Search scheduled trips"
+                  aria-label="Search trips"
                   className="h-11 w-full rounded-md border border-slate-100 bg-[#F9FBFF] pl-10 pr-12 text-xs text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
                 />
 
@@ -657,6 +696,10 @@ const Trips = () => {
                     Owner Z-A
                   </option>
 
+                  <option value="state">
+                    State
+                  </option>
+
                   <option value="approved-first">
                     Approved first
                   </option>
@@ -668,6 +711,24 @@ const Trips = () => {
                   <option value="not-approved-first">
                     Not Approved first
                   </option>
+                </select>
+              </div>
+
+              {/* State Filter */}
+              <div className="flex h-11 min-w-[190px] items-center rounded-md bg-[#F9FBFF] px-4">
+                <span className="whitespace-nowrap text-xs text-slate-500">
+                  State:
+                </span>
+                <select
+                  value={stateFilter}
+                  onChange={handleStateFilterChange}
+                  aria-label="Filter trips by state"
+                  className="w-full cursor-pointer border-none bg-[#F9FBFF] pl-2 pr-6 text-xs font-semibold text-[#14223D] outline-none"
+                >
+                  <option value="All">All states</option>
+                  {tripStates.map((state) => (
+                    <option key={state} value={state}>{state}</option>
+                  ))}
                 </select>
               </div>
             </div>
@@ -692,6 +753,10 @@ const Trips = () => {
 
                   <th className="px-4 py-4">
                     Scheduled Time
+                  </th>
+
+                  <th className="px-4 py-4">
+                    State
                   </th>
 
                   <th className="px-4 py-4">
@@ -728,6 +793,12 @@ const Trips = () => {
                       {formatScheduledDateTime(
                         trip.scheduledDateTime,
                       )}
+                    </td>
+
+                    <td className="px-4 py-5">
+                      <span className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-semibold ${getStateClassName(trip.state)}`}>
+                        {trip.state}
+                      </span>
                     </td>
 
                     <td
@@ -823,6 +894,15 @@ const Trips = () => {
 
                   <p>
                     <span className="font-medium">
+                      State:{" "}
+                    </span>
+                    <span className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-semibold ${getStateClassName(trip.state)}`}>
+                      {trip.state}
+                    </span>
+                  </p>
+
+                  <p>
+                    <span className="font-medium">
                       Approval:{" "}
                     </span>
 
@@ -883,14 +963,13 @@ const Trips = () => {
               />
 
               <h2 className="mt-4 text-sm font-semibold">
-                No scheduled trips found
+                No trips found
               </h2>
 
               <p className="mt-2 text-xs text-slate-500">
                 Try searching by vessel,
                 owner, registration number,
-                scheduled time, or approval
-                status.
+                scheduled time, state, or approval status.
               </p>
             </div>
           )}
@@ -901,7 +980,7 @@ const Trips = () => {
               <button
                 type="button"
                 disabled={
-                  currentPage === 1
+                  visiblePage === 1
                 }
                 onClick={() =>
                   setCurrentPage(
@@ -938,12 +1017,12 @@ const Trips = () => {
                       }
                       aria-label={`Go to page ${item}`}
                       aria-current={
-                        currentPage === item
+                        visiblePage === item
                           ? "page"
                           : undefined
                       }
                       className={`flex h-8 w-8 items-center justify-center rounded-md text-xs transition-colors ${
-                        currentPage ===
+                        visiblePage ===
                         item
                           ? "bg-[#14223D] font-semibold text-white"
                           : "bg-[#F4F5F7] text-slate-600 hover:bg-slate-200"
@@ -957,7 +1036,7 @@ const Trips = () => {
               <button
                 type="button"
                 disabled={
-                  currentPage ===
+                  visiblePage ===
                   totalPages
                 }
                 onClick={() =>
@@ -1014,6 +1093,17 @@ const getApprovalClassName = (
 
     default:
       return "text-slate-500";
+  }
+};
+
+const getStateClassName = (state: TripDisplayState): string => {
+  switch (state) {
+    case "Completed": return "bg-emerald-50 text-emerald-700";
+    case "Ongoing": return "bg-blue-50 text-blue-700";
+    case "Late": return "bg-amber-50 text-amber-700";
+    case "Expired": return "bg-amber-50 text-amber-700";
+    case "Cancelled": return "bg-red-50 text-red-700";
+    default: return "bg-slate-100 text-slate-700";
   }
 };
 

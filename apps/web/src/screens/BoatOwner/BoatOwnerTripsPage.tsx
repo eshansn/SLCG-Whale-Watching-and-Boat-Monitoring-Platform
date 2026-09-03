@@ -22,14 +22,17 @@ import dashboardIcon from "../../assets/icons/dashboard.svg";
 import crewIcon from "../../assets/icons/crew.svg";
 import tripsIcon from "../../assets/icons/trips.svg";
 import { useOperations } from "../../operations/useOperations";
-import { isExpiredScheduledTrip } from "../../operations/operationsApi";
+import { useTripStateClock } from "../../operations/useTripStateClock";
+import { getTripDisplayState, operationsApi, type TripDisplayState } from "../../operations/operationsApi";
+
+type OwnerTripStateFilter = "All" | TripDisplayState;
 
 interface Trip {
   id: string;
   boatName: string;
   registrationNumber: string;
   time: string;
-  status: "approved" | "pending" | "reschedule";
+  state: TripDisplayState;
   needsReschedule: boolean;
   image: string;
 }
@@ -94,16 +97,30 @@ const menuItems: MenuItem[] = [
   },
 ];
 
+const ownerTripStates: TripDisplayState[] = ["Scheduled", "Late", "Expired", "Ongoing", "Completed", "Cancelled"];
+const ownerTripStateTone: Record<TripDisplayState, { dot: string; text: string }> = {
+  Scheduled: { dot: "bg-slate-500", text: "text-slate-600" },
+  Late: { dot: "bg-amber-400", text: "text-amber-600" },
+  Expired: { dot: "bg-amber-500", text: "text-amber-700" },
+  Ongoing: { dot: "bg-blue-500", text: "text-blue-700" },
+  Completed: { dot: "bg-emerald-500", text: "text-emerald-700" },
+  Cancelled: { dot: "bg-red-500", text: "text-red-700" },
+};
+
 function BoatOwnerTripsPage() {
   const navigate = useNavigate();
-  const { trips: savedTrips, boats } = useOperations();
-  const trips = useMemo<Trip[]>(() => savedTrips.map((trip) => ({
-    id: trip.id, boatName: trip.vesselName, registrationNumber: trip.registrationNumber,
-    time: new Intl.DateTimeFormat('en-LK', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(trip.scheduledDepartureUtc)),
-    status: isExpiredScheduledTrip(trip) ? 'reschedule' : trip.shoreApproval === 'Approved' ? 'approved' : 'pending',
-    needsReschedule: isExpiredScheduledTrip(trip),
-    image: boats.find((boat) => boat.id === trip.boatId)?.imageUrl || '/OwnerBoat1.png',
-  })), [boats, savedTrips]);
+  const { trips: savedTrips, boats, token, reload } = useOperations();
+  const tripStateNow = useTripStateClock();
+  const trips = useMemo<Trip[]>(() => savedTrips.map((trip) => {
+    const state = getTripDisplayState(trip, tripStateNow);
+    return {
+      id: trip.id, boatName: trip.vesselName, registrationNumber: trip.registrationNumber,
+      time: new Intl.DateTimeFormat('en-LK', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(trip.scheduledDepartureUtc)),
+      state,
+      needsReschedule: state === "Expired",
+      image: boats.find((boat) => boat.id === trip.boatId)?.imageUrl || '/OwnerBoat1.png',
+    };
+  }), [boats, savedTrips, tripStateNow]);
 
   const [isMenuOpen, setIsMenuOpen] =
     useState(false);
@@ -114,8 +131,14 @@ function BoatOwnerTripsPage() {
   const [sortOption, setSortOption] =
     useState("name");
 
+  const [stateFilter, setStateFilter] =
+    useState<OwnerTripStateFilter>("All");
+
   const [statusMessage, setStatusMessage] =
     useState("");
+
+  const [cancellingTripId, setCancellingTripId] =
+    useState<string>();
 
   const [isListening, setIsListening] =
     useState(false);
@@ -157,6 +180,7 @@ function BoatOwnerTripsPage() {
       searchText.trim().toLowerCase();
 
     const filteredTrips = trips.filter((trip) => {
+      if (stateFilter !== "All" && trip.state !== stateFilter) return false;
       return (
         trip.boatName
           .toLowerCase()
@@ -165,6 +189,9 @@ function BoatOwnerTripsPage() {
           .toLowerCase()
           .includes(normalizedSearch) ||
         trip.time
+          .toLowerCase()
+          .includes(normalizedSearch) ||
+        trip.state
           .toLowerCase()
           .includes(normalizedSearch)
       );
@@ -179,8 +206,8 @@ function BoatOwnerTripsPage() {
         }
 
         if (sortOption === "status") {
-          return firstTrip.status.localeCompare(
-            secondTrip.status,
+          return firstTrip.state.localeCompare(
+            secondTrip.state,
           );
         }
 
@@ -189,7 +216,7 @@ function BoatOwnerTripsPage() {
         );
       },
     );
-  }, [searchText, sortOption, trips]);
+  }, [searchText, sortOption, stateFilter, trips]);
 
   const handleVoiceSearch = (): void => {
     if (isListening) return;
@@ -243,6 +270,23 @@ function BoatOwnerTripsPage() {
       setStatusMessage(
         "Voice search could not start. Please try again.",
       );
+    }
+  };
+
+  const cancelTrip = async (trip: Trip): Promise<void> => {
+    if (!token || cancellingTripId) return;
+    const confirmed = window.confirm(`Cancel the trip for ${trip.boatName}? Registered passenger records will be retained.`);
+    if (!confirmed) return;
+    setCancellingTripId(trip.id);
+    setStatusMessage("");
+    try {
+      await operationsApi.status(token, trip.id, "Cancelled");
+      await reload();
+      setStatusMessage(`${trip.boatName} trip cancelled.`);
+    } catch (reason) {
+      setStatusMessage(reason instanceof Error ? reason.message : "Unable to cancel this trip.");
+    } finally {
+      setCancellingTripId(undefined);
     }
   };
 
@@ -498,10 +542,23 @@ function BoatOwnerTripsPage() {
               </option>
 
               <option value="status">
-                Sort by: Status
+                Sort by: State
               </option>
             </select>
 
+          </div>
+
+          <div className="relative shrink-0">
+            <label htmlFor="tripStateFilter" className="sr-only">Filter trips by state</label>
+            <select
+              id="tripStateFilter"
+              value={stateFilter}
+              onChange={(event) => setStateFilter(event.target.value as OwnerTripStateFilter)}
+              className="min-h-10 appearance-none rounded-[10px] border-0 bg-[#f8f9fb] py-2 pl-3 pr-8 text-[9px] font-normal text-[#888888] outline-none focus:ring-2 focus:ring-[#162d54] sm:min-w-[145px] sm:pl-4 sm:text-[11px]"
+            >
+              <option value="All">State: All</option>
+              {ownerTripStates.map((state) => <option key={state} value={state}>State: {state}</option>)}
+            </select>
           </div>
         </section>
 
@@ -569,11 +626,11 @@ function BoatOwnerTripsPage() {
                     <div className="mt-3 flex items-center gap-1">
                       <span
                         aria-hidden="true"
-                        className={`h-2 w-2 rounded-full ${trip.needsReschedule ? "bg-amber-500" : "bg-[#20e620]"}`}
+                        className={`h-2 w-2 rounded-full ${ownerTripStateTone[trip.state].dot}`}
                       />
 
-                      <span className={`text-[8px] font-medium uppercase sm:text-[9px] ${trip.needsReschedule ? "text-amber-700" : "text-[#20d820]"}`}>
-                        {trip.needsReschedule ? "Reschedule needed" : trip.status}
+                      <span className={`text-[8px] font-medium uppercase sm:text-[9px] ${ownerTripStateTone[trip.state].text}`}>
+                        {trip.needsReschedule ? "Reschedule needed" : trip.state}
                       </span>
                     </div>
                   </div>
@@ -592,6 +649,7 @@ function BoatOwnerTripsPage() {
                   />
                 </div>
 
+                <div className={`mt-3 grid gap-2 ${trip.state === "Scheduled" || trip.state === "Late" || trip.state === "Expired" ? "grid-cols-2" : "grid-cols-1"}`}>
                 <button
                   type="button"
                   aria-label={`Open ${trip.boatName} trip details`}
@@ -602,7 +660,7 @@ function BoatOwnerTripsPage() {
                     )
                   }
                   className="
-                    mt-3 flex min-h-9 w-full
+                    flex min-h-9 w-full
                     items-center justify-center
                     gap-1 rounded-[9px]
                     bg-[#162d54] px-4 py-2
@@ -625,6 +683,8 @@ function BoatOwnerTripsPage() {
                     className="h-4 w-4 brightness-0 invert"
                   />
                 </button>
+                {(trip.state === "Scheduled" || trip.state === "Late" || trip.state === "Expired")&&<button type="button" disabled={cancellingTripId!==undefined} onClick={()=>void cancelTrip(trip)} className="flex min-h-9 w-full items-center justify-center rounded-[9px] border border-red-300 bg-white px-4 py-2 text-[12px] font-medium text-red-700 hover:bg-red-50 disabled:opacity-50 sm:min-h-10 sm:text-[13px]">{cancellingTripId===trip.id?"Cancelling...":"Cancel"}</button>}
+                </div>
               </article>
             ))}
           </section>

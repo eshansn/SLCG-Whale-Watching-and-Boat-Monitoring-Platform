@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using WhaleWatching.Api.Auth;
 using WhaleWatching.Api.Data;
 using WhaleWatching.Api.Domain;
+using WhaleWatching.Api.Operations;
 using WhaleWatching.Api.Realtime;
 
 namespace WhaleWatching.Api.ShoreWildlife;
@@ -17,15 +18,19 @@ namespace WhaleWatching.Api.ShoreWildlife;
 public sealed class WildlifeMonitoringController(WhaleWatchingDbContext db, IHubContext<OperationsHub> hub) : ControllerBase
 {
     [HttpGet("trips")]
-    public async Task<ActionResult<IReadOnlyList<WildlifeTripDto>>> Trips(CancellationToken ct) => Ok(
-        await db.Trips.AsNoTracking()
+    public async Task<ActionResult<IReadOnlyList<WildlifeTripDto>>> Trips(CancellationToken ct)
+    {
+        var currentSriLankaDayStartUtc = TripWorkflowRules.GetSriLankaDayStartUtc(DateTimeOffset.UtcNow);
+        return Ok(await db.Trips.AsNoTracking()
             .Where(x => x.Status != TripStatus.Completed && x.Status != TripStatus.Cancelled &&
-                (x.Status != TripStatus.Scheduled || x.ScheduledDepartureUtc >= DateTimeOffset.UtcNow))
+                ((x.Status != TripStatus.Scheduled && x.Status != TripStatus.Boarding) ||
+                 x.ScheduledDepartureUtc >= currentSriLankaDayStartUtc))
             .OrderByDescending(x => x.ScheduledDepartureUtc)
             .Select(x => new WildlifeTripDto(x.Id, x.Boat.Name, x.Boat.RegistrationNumber,
                 x.Boat.Owner.DisplayName, x.ScheduledDepartureUtc, x.Route, x.Status.ToString(),
                 x.Passengers.Count, x.ShoreApproval.ToString(), x.WildlifeShoreApproval.ToString(),
                 x.Boat.Approval.ToString(), x.Boat.WildlifeApproval.ToString())).ToListAsync(ct));
+    }
 
     [HttpGet("trips/{tripId:guid}/attendance")]
     public async Task<ActionResult<WildlifeAttendanceDto>> Attendance(Guid tripId, CancellationToken ct)

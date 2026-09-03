@@ -158,7 +158,25 @@ export function connectOperations(token:string,onChange:(change?:OperationsChang
   };
 }
 export const formatTripDate=(value:string)=>new Intl.DateTimeFormat('en-LK',{dateStyle:'medium',timeStyle:'short'}).format(new Date(value));
-export const isExpiredScheduledTrip=(trip:Pick<Trip,'status'|'scheduledDepartureUtc'>,now=Date.now())=>
-  trip.status==='Scheduled'&&new Date(trip.scheduledDepartureUtc).getTime()<now;
+export type TripDisplayState='Scheduled'|'Late'|'Expired'|'Ongoing'|'Completed'|'Cancelled';
+const SRI_LANKA_UTC_OFFSET_MS=330*60*1000;
+const DAY_MS=24*60*60*1000;
+const LATE_AFTER_MS=30*60*1000;
+const isAwaitingDeparture=(status:string)=>status==='Scheduled'||status==='Boarding';
+const sriLankaDay=(timestamp:number)=>Math.floor((timestamp+SRI_LANKA_UTC_OFFSET_MS)/DAY_MS);
+export const isExpiredScheduledTrip=(trip:Pick<Trip,'status'|'scheduledDepartureUtc'>,now=Date.now())=>{
+  const scheduled=new Date(trip.scheduledDepartureUtc).getTime();
+  return isAwaitingDeparture(trip.status)&&Number.isFinite(scheduled)&&sriLankaDay(now)>sriLankaDay(scheduled);
+};
+export const isLateScheduledTrip=(trip:Pick<Trip,'status'|'scheduledDepartureUtc'>,now=Date.now())=>{
+  const scheduled=new Date(trip.scheduledDepartureUtc).getTime();
+  return isAwaitingDeparture(trip.status)&&Number.isFinite(scheduled)&&!isExpiredScheduledTrip(trip,now)&&now>=scheduled+LATE_AFTER_MS;
+};
+export const getTripDisplayState=(trip:Pick<Trip,'status'|'scheduledDepartureUtc'>,now=Date.now()):TripDisplayState=>{
+  if(isExpiredScheduledTrip(trip,now))return'Expired';
+  if(isLateScheduledTrip(trip,now))return'Late';
+  if(isAwaitingDeparture(trip.status))return'Scheduled';
+  return trip.status==='Ongoing'||trip.status==='Completed'||trip.status==='Cancelled'?trip.status:'Scheduled';
+};
 export const isOperationalTripVisible=(trip:Pick<Trip,'status'|'scheduledDepartureUtc'>,now=Date.now())=>
   trip.status!=='Completed'&&trip.status!=='Cancelled'&&!isExpiredScheduledTrip(trip,now);

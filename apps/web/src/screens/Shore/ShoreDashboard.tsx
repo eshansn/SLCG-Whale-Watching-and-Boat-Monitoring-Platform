@@ -3,12 +3,14 @@ import { useAuth } from "../../auth/useAuth";
 import { Icon } from "../../components/ui/icon";
 import { formatTripDate, isOperationalTripVisible } from "../../operations/operationsApi";
 import { useOperations } from "../../operations/useOperations";
+import { useTripStateClock } from "../../operations/useTripStateClock";
 
 const ShoreDashboard = () => {
   const navigate = useNavigate();
   const { session } = useAuth();
   const { trips: shoreTrips } = useOperations();
-  const activeShoreTrips = shoreTrips.filter((trip) => isOperationalTripVisible(trip));
+  const tripStateNow = useTripStateClock();
+  const activeShoreTrips = shoreTrips.filter((trip) => isOperationalTripVisible(trip, tripStateNow));
   const name = session?.email.split("@")[0] ?? "Shore Officer";
   const currentTrips = activeShoreTrips.filter((trip) => trip.shoreApproval === "Pending").length;
 
