@@ -8,7 +8,7 @@ import { useEffect, useState } from 'react';
 import { connectOperations, operationsApi, type Trip } from '../../operations/operationsApi';
 
 export default function OPS() {
-  const { vessels, activeVesselId, setActiveVessel, loadVessels } = useDashboardStore();
+  const { vessels, activeVesselId, setActiveVessel, loadVessels, applyGpsTelemetry } = useDashboardStore();
   const { session } = useAuth();
   const [ongoingTrips, setOngoingTrips] = useState<Trip[]>([]);
   const [emergencyCount, setEmergencyCount] = useState(0);
@@ -39,14 +39,14 @@ export default function OPS() {
     };
 
     load();
-    const disconnect = connectOperations(session.accessToken, load);
+    const disconnect = connectOperations(session.accessToken, load, applyGpsTelemetry);
     const interval = window.setInterval(load, 10000);
     return () => {
       active = false;
       disconnect();
       window.clearInterval(interval);
     };
-  }, [loadVessels, session]);
+  }, [applyGpsTelemetry, loadVessels, session]);
   const activeVessel = vessels.find(v => v.id === activeVesselId);
 
   return (

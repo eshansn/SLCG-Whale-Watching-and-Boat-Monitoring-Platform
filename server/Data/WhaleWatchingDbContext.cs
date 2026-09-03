@@ -184,12 +184,17 @@ public sealed class WhaleWatchingDbContext(DbContextOptions<WhaleWatchingDbConte
             .HasPrecision(9, 6);
         telemetry.Property(item => item.SpeedKnots)
             .HasPrecision(6, 2);
+        telemetry.Property(item => item.HeadingDegrees)
+            .HasPrecision(6, 2);
+        telemetry.Property(item => item.AltitudeMeters)
+            .HasPrecision(9, 2);
         telemetry.Property(item => item.RecordedAtUtc)
             .HasPrecision(3);
         telemetry.Property(item => item.ReceivedAtUtc)
             .HasPrecision(3);
 
         telemetry.HasIndex(item => new { item.DeviceId, item.RecordedAtUtc })
+            .IsUnique()
             .IsDescending(false, true)
             .HasDatabaseName("IX_GpsTelemetry_DeviceId_RecordedAtUtc");
         telemetry.HasIndex(item => item.RecordedAtUtc)

@@ -2,6 +2,7 @@ namespace WhaleWatching.Api.Domain;
 
 public enum ApprovalStatus { Pending, Approved, Rejected }
 public enum TripStatus { Scheduled, Boarding, Ongoing, Completed, Cancelled }
+public enum TripType { WhaleWatching, Patrol }
 
 public sealed class Boat
 {
@@ -18,6 +19,7 @@ public sealed class Boat
     public int MaximumCapacity { get; set; }
     public int LifeJacketCount { get; set; }
     public string? GpsDeviceId { get; set; }
+    public bool IsPatrolBoat { get; set; }
     public ApprovalStatus Approval { get; set; }
     public ApprovalStatus WildlifeApproval { get; set; }
     public bool IsDeleted { get; set; }
@@ -74,6 +76,7 @@ public sealed class Trip
     public int PassengerCount { get; set; }
     public int ChildrenCount { get; set; }
     public int SpecialNeedsCount { get; set; }
+    public TripType Type { get; set; }
     public TripStatus Status { get; set; }
     public ApprovalStatus ShoreApproval { get; set; }
     public ApprovalStatus WildlifeShoreApproval { get; set; }

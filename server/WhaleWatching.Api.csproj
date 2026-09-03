@@ -4,6 +4,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <InvariantGlobalization>false</InvariantGlobalization>
+    <UserSecretsId>WhaleWatching.Api-LocalDevelopment</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>

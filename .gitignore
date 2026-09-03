@@ -4,3 +4,5 @@
 *.user
 *.suo
 .vs/
+server/appsettings.Local.json
+server/secrets.json

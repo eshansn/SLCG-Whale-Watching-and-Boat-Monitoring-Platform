@@ -12,6 +12,7 @@ import {
   type VesselMapRecord,
 } from "../../../operations/operationsApi";
 import TripStatusMap from "./TripStatusMap";
+import TripTrackingPanel from "./TripTrackingPanel";
 import TransferHistoryPanel from "./TransferHistoryPanel";
 
 const Info = ({ label, value }: { label: string; value: string }) => (
@@ -188,7 +189,7 @@ function useTripActions(tripId: string) {
   return { actions, loading, error, retry, reload };
 }
 
-export default function TripOverview({ tripId }: { tripId: string }) {
+export default function TripOverview({ tripId, showTracking = false }: { tripId: string; showTracking?: boolean }) {
   const { session } = useAuth();
   const {
     emergency,
@@ -208,9 +209,12 @@ export default function TripOverview({ tripId }: { tripId: string }) {
   const [actionDetails, setActionDetails] = useState("");
   const [savingAction, setSavingAction] = useState(false);
   const [actionError, setActionError] = useState("");
+  const [endingPatrol, setEndingPatrol] = useState(false);
+  const [patrolError, setPatrolError] = useState("");
   const canAddAction = session?.roles.includes("OPS") ?? false;
   const crew = trip?.crew ?? [];
   const ongoing = trip?.status === "Ongoing";
+  const isPatrol = trip?.type === "Patrol";
   const visible = useMemo(
     () => passengers.filter((passenger) => `${passenger.name} ${passenger.identificationNumber}`.toLowerCase().includes(query.toLowerCase())),
     [passengers, query],
@@ -231,11 +235,28 @@ export default function TripOverview({ tripId }: { tripId: string }) {
     }
   };
 
+  const endPatrol = async () => {
+    if (!session || !trip || endingPatrol) return;
+    setEndingPatrol(true);
+    setPatrolError("");
+    try {
+      await operationsApi.status(session.accessToken, trip.id, "Completed");
+    } catch (reason) {
+      setPatrolError(reason instanceof Error ? reason.message : "Unable to end the patrol.");
+    } finally {
+      setEndingPatrol(false);
+    }
+  };
+
   if (loading) return <main className="mx-auto max-w-[1440px] px-5 py-12 text-center text-sm text-slate-500">Loading trip information…</main>;
   if (error && !trip) return <main className="mx-auto max-w-[1440px] px-5 py-12 text-center text-sm text-red-600">{error}</main>;
   if (!trip) return <main className="mx-auto max-w-[1440px] px-5 py-12 text-center text-sm text-slate-500">Trip not found.</main>;
 
-  const approvals = [
+  const approvals = isPatrol ? [
+    ["Tourist approvals", "Exempt"],
+    ["Passenger verification", "Exempt"],
+    ["Crew assignment", "Exempt"],
+  ] : [
     ["Certifications", boat?.approval ?? vessel?.certificationApproval ?? "Pending"],
     ["Inspection", trip.shoreApproval],
     ["Wildlife", trip.wildlifeShoreApproval],
@@ -243,10 +264,16 @@ export default function TripOverview({ tripId }: { tripId: string }) {
 
   return (
     <main className="mx-auto max-w-[1440px] px-5 py-5">
-      <div className="grid items-start gap-3 xl:grid-cols-[315px_minmax(0,1fr)_300px]">
+      {isPatrol && <section className="mb-3 flex flex-col gap-3 rounded-xl border border-indigo-100 bg-indigo-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div><h2 className="text-sm font-bold text-indigo-950">SLCG patrol mission</h2><p className="mt-1 text-xs text-indigo-700">Passenger, tourist crew, shore and wildlife approvals do not apply. GPS tracking remains active for the mission.</p></div>
+        {ongoing && canAddAction && <button type="button" onClick={() => void endPatrol()} disabled={endingPatrol} className="rounded-md bg-[#14223d] px-5 py-2.5 text-xs font-semibold text-white disabled:opacity-50">{endingPatrol ? "Ending…" : "End Patrol"}</button>}
+        {patrolError && <p role="alert" className="text-xs text-red-600">{patrolError}</p>}
+      </section>}
+      {showTracking && <TripTrackingPanel tripId={tripId} vesselName={trip.vesselName} fallbackLatitude={vessel?.latitude} fallbackLongitude={vessel?.longitude} />}
+      <div className={`grid items-start gap-3 xl:grid-cols-[315px_minmax(0,1fr)_300px] ${showTracking ? "mt-3" : ""}`}>
         <VesselCard trip={trip} boat={boat} vessel={vessel} passengers={passengers} />
         <div className="min-w-0 space-y-3">
-          <Card>
+          {!isPatrol && <Card>
             <div className="flex items-center justify-between gap-3">
               <h2 className="font-bold">Passengers</h2>
               <label className="relative">
@@ -255,11 +282,12 @@ export default function TripOverview({ tripId }: { tripId: string }) {
               </label>
             </div>
             <Table heads={["Name", "NIC or Passport", "Age", "Nationality"]} rows={visible.map((passenger) => [passenger.name, passenger.identificationNumber, formatValue(passenger.ageCategory), formatValue(passenger.passengerType)])} />
-          </Card>
-          <Card>
+          </Card>}
+          {!isPatrol && <Card>
             <div className="flex justify-between"><h2 className="font-bold">Crew</h2><select className="rounded bg-slate-50 px-3 text-[10px]"><option>Sort by: Name</option><option>Sort by: Role</option></select></div>
             <Table heads={["Name", "NIC", "Role", "Certified"]} rows={crew.map((member) => [member.name, member.nicNumber ?? "–", member.position, member.certified ? "Yes" : "No"])} />
-          </Card>
+          </Card>}
+          {isPatrol && <Card><h2 className="font-bold">Patrol details</h2><dl className="mt-4 space-y-2 text-xs"><Info label="Purpose / area" value={trip.route} /><Info label="Status" value={trip.status} /><Info label="Started" value={formatActionTime(trip.actualDepartureUtc ?? trip.scheduledDepartureUtc, "short")} /></dl></Card>}
         </div>
         <div className="space-y-3">
           <Card>
@@ -284,15 +312,16 @@ export default function TripOverview({ tripId }: { tripId: string }) {
               <button type="button" onClick={() => void submitAction()} disabled={!emergency || !actionDetails.trim() || savingAction} className="mt-2 w-full rounded bg-red-500 py-2 text-[10px] font-bold text-white disabled:cursor-not-allowed disabled:opacity-40">{savingAction ? "Saving…" : "Submit"}</button>
             </>}
           </Card>
-          <div className="h-[300px] rounded-xl bg-white p-2 shadow-sm"><TripStatusMap ongoing={ongoing} vesselName={trip.vesselName} latitude={vessel?.latitude} longitude={vessel?.longitude} /></div>
+          {!showTracking && <div className="h-[300px] rounded-xl bg-white p-2 shadow-sm"><TripStatusMap ongoing={ongoing} vesselName={trip.vesselName} latitude={vessel?.latitude} longitude={vessel?.longitude} /></div>}
         </div>
       </div>
-      <TransferHistoryPanel tripId={tripId} />
+      {!isPatrol && <TransferHistoryPanel tripId={tripId} />}
     </main>
   );
 }
 
 function VesselCard({ trip, boat, vessel, passengers }: { trip: Trip; boat?: Boat; vessel?: VesselMapRecord; passengers: TripPassenger[] }) {
+  const isPatrol = trip.type === "Patrol";
   const lifeSavers = trip.crew.filter((member) => member.position.toLowerCase().includes("life saver")).length;
   const divers = trip.crew.filter((member) => member.position.toLowerCase().includes("diver")).length;
   const children = passengers.filter((passenger) => passenger.ageCategory === "child" || passenger.ageCategory === "small").length;
@@ -303,8 +332,10 @@ function VesselCard({ trip, boat, vessel, passengers }: { trip: Trip; boat?: Boa
   const certification = boat?.approval ?? vessel?.certificationApproval ?? "Pending";
   const groups = [
     ["Vessel Information", [["Length", `${boat?.lengthMeters ?? vessel?.lengthMeters ?? 0} M`], ["Beam (Width)", `${boat?.widthMeters ?? vessel?.beamMeters ?? 0} M`], ["Cruising Speed", vessel?.cruisingSpeedKnots == null ? "No GPS reading" : `${vessel.cruisingSpeedKnots} Knots`], ["Maximum Speed", `${boat?.maximumSpeedKnots ?? vessel?.maximumSpeedKnots ?? 0} Knots`], ["Maximum Capacity", `${boat?.maximumCapacity ?? vessel?.maximumCapacity ?? 0} Passengers`], ["Life Jackets", String(boat?.lifeJacketCount ?? vessel?.lifeJacketCount ?? 0)]]],
-    ["Crew Information", [["Life Savers", formatCount(lifeSavers)], ["Divers", formatCount(divers)]]],
-    ["Passenger Information", [["Passengers Onboard", formatCount(trip.passengerCount)], ["Children Onboard", formatCount(children)], ["Special Needs", formatCount(specialNeeds)]]],
+    ...(!isPatrol ? [
+      ["Crew Information", [["Life Savers", formatCount(lifeSavers)], ["Divers", formatCount(divers)]]],
+      ["Passenger Information", [["Passengers Onboard", formatCount(trip.passengerCount)], ["Children Onboard", formatCount(children)], ["Special Needs", formatCount(specialNeeds)]]],
+    ] : []),
   ];
   return <aside className="overflow-hidden rounded-xl bg-white shadow-md"><img src={boat?.imageUrl ?? vessel?.imageUrl ?? "/gallery-2.jpg"} className="h-40 w-full object-cover" alt={`${trip.vesselName} boat`} /><div className="p-4"><h1 className="text-xl font-bold">{trip.vesselName} ⓘ</h1><div className="flex gap-3 text-[10px]"><span>{trip.registrationNumber}</span><span className={approvalTone(certification)}>{certification}</span></div><dl className="mt-4 space-y-1 text-[11px]"><Info label="Coordinates" value={coordinates} /><Info label="Departure" value={formatTripTime(trip.actualDepartureUtc ?? trip.scheduledDepartureUtc)} /><Info label="Arrival" value={trip.actualArrivalUtc ? formatTripTime(trip.actualArrivalUtc) : "TBA"} /></dl>{groups.map(([title, items]) => <section key={title as string} className="mt-4 rounded-lg bg-[#f7f8fa] p-3"><h2 className="mb-2 text-xs font-bold">{title as string}</h2><dl className="space-y-1 text-[10px]">{(items as string[][]).map(([label, value]) => <Info key={label} label={label} value={value} />)}</dl></section>)}</div></aside>;
 }

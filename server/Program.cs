@@ -11,10 +11,17 @@ using Microsoft.IdentityModel.Tokens;
 using WhaleWatching.Api.Auth;
 using WhaleWatching.Api.Data;
 using WhaleWatching.Api.Domain;
+using WhaleWatching.Api.Gps;
 using WhaleWatching.Api.Health;
+using WhaleWatching.Api.Operations;
 using WhaleWatching.Api.Realtime;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// The provider authenticates in the query string. Suppress framework HttpClient URL logging
+// for this client so the credential cannot be written to application logs.
+builder.Logging.AddFilter(
+    "System.Net.Http.HttpClient.TrackMyCarApiClient", LogLevel.None);
 
 var connectionString = builder.Configuration.GetConnectionString("SqlServer")
     ?? throw new InvalidOperationException(
@@ -139,6 +146,7 @@ builder.Services.AddHealthChecks()
 
 builder.Services.AddControllers();
 builder.Services.AddSignalR();
+builder.Services.AddMemoryCache();
 builder.Services.AddCors(options => options.AddPolicy("clients", policy =>
 {
     var origins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ??
@@ -147,6 +155,26 @@ builder.Services.AddCors(options => options.AddPolicy("clients", policy =>
 }));
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddOptions<TrackMyCarOptions>()
+    .Bind(builder.Configuration.GetSection(TrackMyCarOptions.SectionName))
+    .ValidateDataAnnotations()
+    .Validate(options => options.OfflineAfterSeconds > options.StaleAfterSeconds,
+        "TrackMyCar:OfflineAfterSeconds must be greater than StaleAfterSeconds.")
+    .Validate(options => Uri.TryCreate(options.BaseUrl, UriKind.Absolute, out var uri) &&
+        uri.Scheme == Uri.UriSchemeHttps, "TrackMyCar:BaseUrl must be an absolute HTTPS URL.")
+    .ValidateOnStart();
+builder.Services.AddHttpClient<TrackMyCarApiClient>((services, client) =>
+{
+    var options = services.GetRequiredService<Microsoft.Extensions.Options.IOptions<TrackMyCarOptions>>().Value;
+    client.Timeout = TimeSpan.FromSeconds(options.RequestTimeoutSeconds);
+});
+builder.Services.AddSingleton<IGpsProvider, TrackMyCarGpsProvider>();
+builder.Services.AddSingleton<TrackMyCarSyncState>();
+builder.Services.AddSingleton<GpsTrackerStatus>();
+builder.Services.AddScoped<GpsTelemetryIngestor>();
+builder.Services.AddScoped<GpsHistoryService>();
+builder.Services.AddScoped<TripTrackingService>();
+builder.Services.AddHostedService<TrackMyCarSyncWorker>();
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IdentitySeeder>();

@@ -4,14 +4,20 @@ const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, ''
 const INITIAL_CONNECTION_RETRY_DELAYS_MS = [1000, 5000, 10000, 30000] as const;
 
 export interface BoatDocument { id:string; name:string; fileName:string; contentType:string; uploadedAtUtc:string; expirationDate?:string }
-export interface Boat { id:string; ownerId:string; ownerName:string; name:string; registrationNumber:string; registrationDate:string; hullNumber:string; lengthMeters:number; widthMeters:number; maximumSpeedKnots:number; maximumCapacity:number; lifeJacketCount:number; gpsDeviceId?:string; approval:string; wildlifeApproval:string; imageUrl?:string; documents:BoatDocument[] }
+export interface Boat { id:string; ownerId:string; ownerName:string; name:string; registrationNumber:string; registrationDate:string; hullNumber:string; lengthMeters:number; widthMeters:number; maximumSpeedKnots:number; maximumCapacity:number; lifeJacketCount:number; gpsDeviceId?:string; isPatrolBoat:boolean; approval:string; wildlifeApproval:string; imageUrl?:string; documents:BoatDocument[] }
 export interface CreateBoat { name:string; registrationNumber:string; registrationDate:string; hullNumber:string; lengthMeters:number; widthMeters:number; maximumCapacity:number; imageUrl?:string; maximumSpeedKnots:number; lifeJacketCount:number; gpsDeviceId?:string }
 export interface UpdateAdminBoat { ownerId:string; name:string; registrationNumber:string; registrationDate:string; hullNumber:string; lengthMeters:number; widthMeters:number; maximumCapacity:number }
 export interface UpdateAdminOwner { name:string; nic:string; email:string; phone:string; address:string }
 export interface UpdateAdminCrew extends UpdateAdminOwner { role:string; boatId?:string }
 export interface TripCrew { crewUserId:string; name:string; email:string; position:string; nicNumber?:string; certified:boolean }
 export interface TripPassenger { id:string; name:string; identificationNumber:string; phoneNumber:string; ageCategory:string; passengerType:string; gender:string; registeredAtUtc:string }
-export interface Trip { id:string; boatId:string; vesselName:string; registrationNumber:string; ownerName:string; scheduledDepartureUtc:string; actualDepartureUtc?:string; actualArrivalUtc?:string; route:string; passengerCount:number; status:string; shoreApproval:string; wildlifeShoreApproval:string; shoreNotes?:string; updatedAtUtc:string; invitationCode?:string; crew:TripCrew[]; hasActiveSos:boolean }
+export interface Trip { id:string; boatId:string; vesselName:string; registrationNumber:string; ownerName:string; scheduledDepartureUtc:string; actualDepartureUtc?:string; actualArrivalUtc?:string; route:string; passengerCount:number; type:'WhaleWatching'|'Patrol'; status:string; shoreApproval:string; wildlifeShoreApproval:string; shoreNotes?:string; updatedAtUtc:string; invitationCode?:string; crew:TripCrew[]; hasActiveSos:boolean }
+export interface TripRoutePoint { latitude:number; longitude:number; recordedAtUtc:string; speedKnots?:number; headingDegrees?:number }
+export interface TripStop { startedAtUtc:string; endedAtUtc?:string; durationSeconds:number; latitude:number; longitude:number; isOngoing:boolean }
+export interface TripTrackingSummary { tripId:string; boatId:string; status:'NotStarted'|'Active'|'Completed'; startedAtUtc?:string; endedAtUtc?:string; routeLength?:number; routeLengthUnit:string; moveDurationSeconds?:number; stopsDurationSeconds?:number; averageSpeed?:number; speedUnit:string; currentPosition?:TripRoutePoint; route:TripRoutePoint[]; stops:TripStop[] }
+export interface BoatHistoricalTrip { tripId:string; routeName:string; status:string; startedAtUtc:string; endedAtUtc?:string; routeLength?:number; moveDurationSeconds?:number; stopsDurationSeconds?:number; averageSpeed?:number; route:TripRoutePoint[] }
+export interface BoatHistoricalRoute { segmentNumber:number; startedAtUtc:string; endedAtUtc:string; routeLength?:number; moveDurationSeconds?:number; stopsDurationSeconds?:number; averageSpeed?:number; route:TripRoutePoint[] }
+export interface BoatRouteHistory { boatId:string; fromUtc:string; toUtc:string; summary:{ totalDistance:number; distanceUnit:string; totalTrips:number; movingDurationSeconds:number; stopsDurationSeconds:number; averageSpeed?:number; speedUnit:string }; lastKnownPosition?:TripRoutePoint; trips:BoatHistoricalTrip[]; unassignedRoutes:BoatHistoricalRoute[] }
 export interface DirectoryOwner { id:string; displayName:string; email:string; phoneNumber?:string; nicNumber?:string; bio?:string }
 export interface DirectoryCrew { id:string; displayName:string; email:string; phoneNumber?:string; position:string; boatId?:string; ownerId:string; nicNumber?:string; certified:boolean }
 export interface OperationsDirectory { owners:DirectoryOwner[]; crew:DirectoryCrew[] }
@@ -30,7 +36,10 @@ export interface TransferHistory { id:string; sourceTripId:string; sourceBoat:st
 export interface OwnerCrew { assignmentId:string; crewUserId:string; name:string; email:string; phoneNumber?:string; position:string; certified:boolean }
 export interface CreateTripResult { id:string; crewUserIds:string[]; crewAutoAssigned:boolean }
 export interface CrewSuggestion { crewUserId:string; name:string; email:string; position:string }
-export interface VesselMapRecord { id:string; name:string; registrationNumber:string; imageUrl?:string; certificationApproval:string; wildlifeApproval:string; shoreApproval:string; wildlifeShoreApproval:string; fullyApproved:boolean; latitude?:number; longitude?:number; coordinatesRecordedAtUtc?:string; departureUtc?:string; arrivalUtc?:string; lengthMeters:number; beamMeters:number; cruisingSpeedKnots?:number; maximumSpeedKnots:number; maximumCapacity:number; lifeJacketCount:number; passengerCount:number; childrenCount:number; specialNeedsCount:number; lifeSaverCount:number; diverCount:number; coxswainCount:number }
+export interface GpsTelemetryUpdate { boatId:string; latitude:number; longitude:number; speedKnots?:number; headingDegrees?:number; altitudeMeters?:number; recordedAtUtc:string; receivedAtUtc:string; trackerStatus:'Online'|'Stale'|'Offline'; activeTripId?:string; activeTripStartedAtUtc?:string; activeTripStatus?:'Active'; stops?:TripStop[] }
+export interface OperationsChange { entity?:string; id?:string; deleted?:boolean }
+export interface VesselMapRecord { id:string; name:string; registrationNumber:string; imageUrl?:string; isPatrolBoat:boolean; activeTripId?:string; certificationApproval:string; wildlifeApproval:string; shoreApproval:string; wildlifeShoreApproval:string; fullyApproved:boolean; latitude?:number; longitude?:number; coordinatesRecordedAtUtc?:string; coordinatesReceivedAtUtc?:string; trackerStatus:'Online'|'Stale'|'Offline'; headingDegrees?:number; altitudeMeters?:number; departureUtc?:string; arrivalUtc?:string; lengthMeters:number; beamMeters:number; cruisingSpeedKnots?:number; maximumSpeedKnots:number; maximumCapacity:number; lifeJacketCount:number; passengerCount:number; childrenCount:number; specialNeedsCount:number; lifeSaverCount:number; diverCount:number; coxswainCount:number }
+export interface StartPatrolResult { id:string; boatId:string; startedAtUtc:string }
 
 async function request<T>(path:string, token:string, init?:RequestInit):Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, { ...init, headers:{'Content-Type':'application/json', Authorization:`Bearer ${token}`, ...init?.headers} });
@@ -57,8 +66,12 @@ export const operationsApi = {
     return URL.createObjectURL(await response.blob());
   },
   trips:(token:string)=>request<Trip[]>('/api/operations/trips',token),
+  tripTrackingSummary:(token:string,tripId:string)=>request<TripTrackingSummary>(`/api/operations/trips/${tripId}/tracking-summary?updated=${Date.now()}`,token,{cache:'no-store'}),
+  boatRouteHistory:(token:string,boatId:string,from:string,to:string)=>request<BoatRouteHistory>(`/api/operations/boats/${boatId}/route-history?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,token,{cache:'no-store'}),
   tripPassengers:(token:string,tripId:string)=>request<TripPassenger[]>(`/api/operations/trips/${tripId}/passengers?updated=${Date.now()}`,token,{cache:'no-store'}),
   createTrip:(token:string,boatId:string,scheduledDepartureUtc:string,crewUserIds:string[])=>request<CreateTripResult>('/api/operations/trips',token,{method:'POST',body:JSON.stringify({boatId,scheduledDepartureUtc,route:'To be confirmed',passengerCount:0,crewUserIds})}),
+  rescheduleTrip:(token:string,id:string,scheduledDepartureUtc:string)=>request<void>(`/api/operations/trips/${id}/reschedule`,token,{method:'PATCH',body:JSON.stringify({scheduledDepartureUtc})}),
+  startPatrol:(token:string,boatId:string,route:string)=>request<StartPatrolResult>('/api/operations/patrol-trips/start',token,{method:'POST',body:JSON.stringify({boatId,route})}),
   deleteTrip:(token:string,id:string)=>request<void>(`/api/operations/trips/${id}`,token,{method:'DELETE'}),
   directory:(token:string)=>request<OperationsDirectory>('/api/operations/directory',token),
   adminCrew:(token:string)=>request<AdminCrew[]>('/api/admin/crew',token),
@@ -87,17 +100,17 @@ export const operationsApi = {
   transferPeople:(token:string,details:TransferRequest)=>request<TransferResult>('/api/operations/transfers',token,{method:'POST',body:JSON.stringify(details)}),
   transferHistory:(token:string)=>request<TransferHistory[]>('/api/operations/transfers/history',token),
 };
-export function connectOperations(token:string,onChange:()=>void) {
+export function connectOperations(token:string,onChange:(change?:OperationsChange)=>void,onGpsTelemetry?:(update:GpsTelemetryUpdate)=>void) {
   const connection = new HubConnectionBuilder().withUrl(`${API_BASE_URL}/hubs/operations`,{accessTokenFactory:()=>token}).withAutomaticReconnect().configureLogging(LogLevel.Warning).build();
   let disposed = false;
   let refreshAfterStart = false;
   let retryAttempt = 0;
   let retryTimer: number | undefined;
 
-  const notifyChange = () => {
+  const notifyChange = (change?:OperationsChange) => {
     if (disposed) return;
     try {
-      onChange();
+      onChange(change);
     } catch (error) {
       console.error('Unable to refresh operations after reconnecting.', error);
     }
@@ -130,8 +143,11 @@ export function connectOperations(token:string,onChange:()=>void) {
     refreshAfterStart = false;
   };
 
-  connection.on('operationsChanged', notifyChange);
-  connection.onreconnected(notifyChange);
+  connection.on('operationsChanged', (change:OperationsChange) => notifyChange(change));
+  connection.on('gpsTelemetryUpdated', (update:GpsTelemetryUpdate) => {
+    if (!disposed) onGpsTelemetry?.(update);
+  });
+  connection.onreconnected(() => notifyChange());
   connection.onclose(scheduleRetry);
   void start();
 
@@ -142,3 +158,7 @@ export function connectOperations(token:string,onChange:()=>void) {
   };
 }
 export const formatTripDate=(value:string)=>new Intl.DateTimeFormat('en-LK',{dateStyle:'medium',timeStyle:'short'}).format(new Date(value));
+export const isExpiredScheduledTrip=(trip:Pick<Trip,'status'|'scheduledDepartureUtc'>,now=Date.now())=>
+  trip.status==='Scheduled'&&new Date(trip.scheduledDepartureUtc).getTime()<now;
+export const isOperationalTripVisible=(trip:Pick<Trip,'status'|'scheduledDepartureUtc'>,now=Date.now())=>
+  trip.status!=='Completed'&&trip.status!=='Cancelled'&&!isExpiredScheduledTrip(trip,now);

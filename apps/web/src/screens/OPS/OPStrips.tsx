@@ -8,8 +8,8 @@ import { useNavigate } from "react-router-dom";
 import { Icon } from "../../components/ui/icon";
 import Navbar from "./components/Navbar";
 import { useOperations } from "../../operations/useOperations";
-import type { Trip as OperationTrip } from "../../operations/operationsApi";
-type ApprovalStatus = "Approved" | "Pending" | "Not Approved";
+import { isOperationalTripVisible, operationsApi, type Trip as OperationTrip } from "../../operations/operationsApi";
+type ApprovalStatus = "Approved" | "Pending" | "Not Approved" | "Exempt";
 
 type SortOption =
   | "vessel-asc"
@@ -26,6 +26,8 @@ interface Trip {
   registrationNumber: string;
   location: string;
   departureTime: string;
+  type: "WhaleWatching" | "Patrol";
+  status: string;
   approval: ApprovalStatus;
 }
 
@@ -66,27 +68,58 @@ const ITEMS_PER_PAGE = 4;
 
 const approvalPriority: Record<ApprovalStatus, number> = {
   Approved: 1,
+  Exempt: 1,
   Pending: 2,
   "Not Approved": 3,
 };
 
 const OPStrips = () => {
   const navigate = useNavigate();
-  const { trips: operationTrips, boats, loading, error } = useOperations();
-  const trips = useMemo<Trip[]>(() => operationTrips.map((trip:OperationTrip) => {
+  const { trips: operationTrips, boats, loading, error, reload, token } = useOperations();
+  const trips = useMemo<Trip[]>(() => operationTrips.filter(isOperationalTripVisible).map((trip:OperationTrip) => {
     const boat=boats.find(item=>item.id===trip.boatId);
     const boatApproved=boat?.approval==='Approved'||boat?.wildlifeApproval==='Approved';
     const fullyApproved=boatApproved&&trip.shoreApproval==='Approved'&&trip.wildlifeShoreApproval==='Approved';
     const rejected=trip.shoreApproval==='Rejected'||trip.wildlifeShoreApproval==='Rejected';
     return {id:trip.id,vesselName:trip.vesselName,registrationNumber:trip.registrationNumber,
       location:trip.route,departureTime:new Intl.DateTimeFormat('en-LK',{dateStyle:'medium',timeStyle:'short'}).format(new Date(trip.scheduledDepartureUtc)),
-      approval:fullyApproved?'Approved':rejected?'Not Approved':'Pending'};
+      type:trip.type,status:trip.status,
+      approval:trip.type==='Patrol'?'Exempt':fullyApproved?'Approved':rejected?'Not Approved':'Pending'};
   }),[operationTrips,boats]);
   const [searchValue, setSearchValue] = useState<string>("");
   const [sortOption, setSortOption] = useState<SortOption>("vessel-asc");
 
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [isListening, setIsListening] = useState<boolean>(false);
+  const [showPatrolForm, setShowPatrolForm] = useState(false);
+  const [patrolBoatId, setPatrolBoatId] = useState("");
+  const [patrolRoute, setPatrolRoute] = useState("SLCG patrol");
+  const [patrolSaving, setPatrolSaving] = useState(false);
+  const [patrolError, setPatrolError] = useState("");
+  const patrolBoats = useMemo(() => boats.filter((boat) => boat.isPatrolBoat), [boats]);
+  const unavailableBoatIds = useMemo(() => new Set(operationTrips
+    .filter((trip) => trip.status === "Ongoing" || trip.status === "Boarding")
+    .map((trip) => trip.boatId)), [operationTrips]);
+  const availablePatrolBoats = patrolBoats.filter((boat) => !unavailableBoatIds.has(boat.id));
+
+  useEffect(() => {
+    if (!patrolBoatId && availablePatrolBoats.length > 0) setPatrolBoatId(availablePatrolBoats[0].id);
+  }, [availablePatrolBoats, patrolBoatId]);
+
+  const startPatrol = async () => {
+    if (!token || !patrolBoatId || patrolSaving) return;
+    setPatrolSaving(true);
+    setPatrolError("");
+    try {
+      const result = await operationsApi.startPatrol(token, patrolBoatId, patrolRoute.trim());
+      await reload();
+      navigate(`/ops/trip-info/${result.id}`);
+    } catch (reason) {
+      setPatrolError(reason instanceof Error ? reason.message : "Unable to start the patrol.");
+    } finally {
+      setPatrolSaving(false);
+    }
+  };
 
   const filteredAndSortedTrips = useMemo(() => {
     const searchTerm = searchValue.trim().toLowerCase();
@@ -113,7 +146,8 @@ const OPStrips = () => {
         case "approval-pending": {
           const pendingPriority: Record<ApprovalStatus, number> = {
             Pending: 1,
-            Approved: 2,
+          Approved: 2,
+            Exempt: 2,
             "Not Approved": 3,
           };
           return pendingPriority[firstTrip.approval] - pendingPriority[secondTrip.approval];
@@ -123,6 +157,7 @@ const OPStrips = () => {
             "Not Approved": 1,
             Pending: 2,
             Approved: 3,
+            Exempt: 3,
           };
           return notApprovedPriority[firstTrip.approval] - notApprovedPriority[secondTrip.approval];
         }
@@ -198,6 +233,8 @@ const OPStrips = () => {
         return "text-[#FF0000]"; // Red
       case "Pending":
         return "text-slate-600"; // Slate/Dark
+      case "Exempt":
+        return "text-indigo-600";
       default:
         return "text-slate-500";
     }
@@ -224,9 +261,15 @@ const OPStrips = () => {
           
           {/* Header */}
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <h1 className="text-xl font-semibold">Ongoing Trips</h1>
+            <div>
+              <h1 className="text-xl font-semibold">Trips &amp; Patrols</h1>
+              <p className="mt-1 text-xs text-slate-500">OPS can start SLCG patrol vessels without tourist-trip approvals.</p>
+            </div>
 
             <div className="flex w-full flex-col gap-4 sm:flex-row lg:w-auto">
+              <button type="button" onClick={() => setShowPatrolForm((current) => !current)} className="h-11 whitespace-nowrap rounded-md bg-[#14223d] px-5 text-xs font-semibold text-white">
+                {showPatrolForm ? "Close" : "Start Patrol"}
+              </button>
               
               {/* Search */}
               <div className="relative w-full sm:w-[320px]">
@@ -277,6 +320,27 @@ const OPStrips = () => {
             </div>
           </div>
 
+          {showPatrolForm && (
+            <div className="mt-5 rounded-lg border border-indigo-100 bg-indigo-50/50 p-4">
+              <div className="grid gap-3 md:grid-cols-[minmax(180px,1fr)_minmax(240px,2fr)_auto] md:items-end">
+                <label className="text-xs font-semibold">Patrol vessel
+                  <select value={patrolBoatId} onChange={(event) => setPatrolBoatId(event.target.value)} className="mt-2 h-10 w-full rounded-md border border-slate-200 bg-white px-3 font-normal" disabled={patrolSaving}>
+                    {availablePatrolBoats.length === 0 && <option value="">No vessel available</option>}
+                    {availablePatrolBoats.map((boat) => <option key={boat.id} value={boat.id}>{boat.name} · {boat.registrationNumber}</option>)}
+                  </select>
+                </label>
+                <label className="text-xs font-semibold">Patrol purpose or area
+                  <input value={patrolRoute} onChange={(event) => setPatrolRoute(event.target.value)} maxLength={300} className="mt-2 h-10 w-full rounded-md border border-slate-200 bg-white px-3 font-normal" placeholder="SLCG patrol" disabled={patrolSaving} />
+                </label>
+                <button type="button" onClick={() => void startPatrol()} disabled={!patrolBoatId || patrolSaving} className="h-10 rounded-md bg-indigo-600 px-5 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40">
+                  {patrolSaving ? "Starting…" : "Confirm Start"}
+                </button>
+              </div>
+              {patrolError && <p role="alert" className="mt-3 text-xs text-red-600">{patrolError}</p>}
+              {patrolBoats.length > 0 && availablePatrolBoats.length === 0 && <p className="mt-3 text-xs text-amber-700">All SLCG patrol vessels currently have an active trip or patrol.</p>}
+            </div>
+          )}
+
           {/* Table */}
           <div className="mt-6 overflow-x-auto">
             <table className="w-full min-w-[900px] border-collapse text-left">
@@ -286,6 +350,7 @@ const OPStrips = () => {
                   <th className="px-3 py-3 text-center font-medium">Registration no</th>
                   <th className="px-3 py-3 text-center font-medium">Location</th>
                   <th className="px-3 py-3 text-center font-medium">Departure Time</th>
+                  <th className="px-3 py-3 text-center font-medium">Type / Status</th>
                   <th className="px-3 py-3 text-center font-medium">Approval</th>
                   <th className="px-3 py-3 text-center"></th> {/* Actions */}
                 </tr>
@@ -311,6 +376,11 @@ const OPStrips = () => {
 
                     <td className="px-3 py-4 text-center text-slate-600">
                       {trip.departureTime}
+                    </td>
+
+                    <td className="px-3 py-4 text-center text-slate-600">
+                      <span className="block font-medium text-[#14223d]">{trip.type === "Patrol" ? "Patrol" : "Whale Watching"}</span>
+                      <span className="text-[10px]">{trip.status}</span>
                     </td>
 
                     <td

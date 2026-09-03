@@ -7,6 +7,8 @@ public sealed class GpsTelemetry
     public decimal Latitude { get; set; }
     public decimal Longitude { get; set; }
     public decimal? SpeedKnots { get; set; }
+    public decimal? HeadingDegrees { get; set; }
+    public decimal? AltitudeMeters { get; set; }
     public DateTimeOffset RecordedAtUtc { get; set; }
     public DateTimeOffset ReceivedAtUtc { get; set; }
 }
