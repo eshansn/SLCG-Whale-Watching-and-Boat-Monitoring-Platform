@@ -74,7 +74,8 @@ public sealed class TrackMyCarSyncWorker(
                         durationSeconds = stop.DurationSeconds,
                         latitude = stop.Latitude,
                         longitude = stop.Longitude,
-                        isOngoing = stop.IsOngoing
+                        isOngoing = stop.IsOngoing,
+                        speedKnots = stop.SpeedKnots
                     }).ToList()
                 }, cancellationToken);
             }

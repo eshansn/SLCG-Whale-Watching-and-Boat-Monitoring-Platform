@@ -300,19 +300,22 @@ public sealed class OperationsController(WhaleWatchingDbContext db, IHubContext<
             var tripEnd = trip.EndedAtUtc ?? to.Value;
             var segmentEnd = tripEnd > to.Value ? to.Value : tripEnd;
             var metrics = tripTracking.CalculateMetrics(segmentStart, segmentEnd, points);
+            var stops = tripTracking.DetectStops(points);
             return new BoatHistoricalTripDto(trip.Id, trip.Route, trip.Status, trip.StartedAtUtc,
                 trip.EndedAtUtc, metrics?.RouteLengthKilometers, metrics?.MoveDurationSeconds,
                 metrics?.StopsDurationSeconds, metrics?.AverageSpeedKnots,
-                points.Select(ToRoutePoint).ToList());
+                points.Select(ToRoutePoint).ToList(), stops.Select(ToStopDto).ToList());
         }).ToList();
 
         var unassignedRoutes = unassignedPointGroups.Select((points, index) =>
         {
             var metrics = tripTracking.CalculateMetrics(points[0].RecordedAtUtc,
                 points[^1].RecordedAtUtc, points);
+            var stops = tripTracking.DetectStops(points);
             return new BoatHistoricalRouteDto(index + 1, points[0].RecordedAtUtc, points[^1].RecordedAtUtc,
                 metrics?.RouteLengthKilometers, metrics?.MoveDurationSeconds, metrics?.StopsDurationSeconds,
-                metrics?.AverageSpeedKnots, points.Select(ToRoutePoint).ToList());
+                metrics?.AverageSpeedKnots, points.Select(ToRoutePoint).ToList(),
+                stops.Select(ToStopDto).ToList());
         }).ToList();
 
         var allMetrics = tripRoutes.Select(x => new { x.RouteLength, x.MoveDurationSeconds, x.StopsDurationSeconds })
@@ -335,7 +338,8 @@ public sealed class OperationsController(WhaleWatchingDbContext db, IHubContext<
         new(point.Latitude, point.Longitude, point.RecordedAtUtc, point.SpeedKnots, point.HeadingDegrees);
 
     private static TripStopDto ToStopDto(TrackingStop stop) => new(stop.StartedAtUtc,
-        stop.EndedAtUtc, stop.DurationSeconds, stop.Latitude, stop.Longitude, stop.IsOngoing);
+        stop.EndedAtUtc, stop.DurationSeconds, stop.Latitude, stop.Longitude, stop.IsOngoing,
+        stop.SpeedKnots);
 
     [HttpGet("sos")]
     [Authorize(Roles = $"{PortalRoles.Admin},{PortalRoles.Wildlife},{PortalRoles.Ops},{PortalRoles.ShoreCrew},{PortalRoles.BoatOwner},{PortalRoles.BoatCrew}")]
@@ -810,38 +814,9 @@ public sealed class OperationsController(WhaleWatchingDbContext db, IHubContext<
         if (trip.Status == status) return NoContent();
         if (status == TripStatus.Ongoing && TripWorkflowRules.RequiresTouristClearance(trip.Type))
         {
-            if (trip.PassengerVerificationFinalizedAtUtc is null)
-            {
-                var totalPassengers = await db.TripPassengers.CountAsync(x => x.TripId == id, ct);
-                var checkedPassengers = await db.TripPassengerAttendances.CountAsync(x =>
-                    x.TripPassenger.TripId == id && x.Status != PassengerAttendanceStatus.NotChecked, ct);
-                var lastAttendanceCheck = totalPassengers > 0 && checkedPassengers == totalPassengers
-                    ? await db.TripPassengerAttendances
-                        .Where(x => x.TripPassenger.TripId == id &&
-                            x.Status != PassengerAttendanceStatus.NotChecked && x.CheckedByUserId != null)
-                        .OrderByDescending(x => x.UpdatedAtUtc)
-                        .Select(x => new { x.UpdatedAtUtc, x.CheckedByUserId })
-                        .FirstOrDefaultAsync(ct)
-                    : null;
-
-                if (lastAttendanceCheck is null)
-                    return Conflict(new
-                    {
-                        message = "Passenger verification must be finalized by shore crew before starting the trip."
-                    });
-
-                // Backfill trips whose full attendance was saved before automatic finalization was introduced.
-                trip.PassengerVerificationFinalizedAtUtc = lastAttendanceCheck.UpdatedAtUtc;
-                trip.PassengerVerificationFinalizedByUserId = lastAttendanceCheck.CheckedByUserId!.Value;
-            }
-
-            var incompleteApprovals = new List<string>();
-            if (trip.Boat.Approval != ApprovalStatus.Approved &&
-                trip.Boat.WildlifeApproval != ApprovalStatus.Approved)
-                incompleteApprovals.Add("boat approval from either Administration or the Wildlife Authority");
-            if (trip.ShoreApproval != ApprovalStatus.Approved) incompleteApprovals.Add("SLCG shore approval");
-            if (trip.WildlifeShoreApproval != ApprovalStatus.Approved)
-                incompleteApprovals.Add("wildlife shore approval");
+            var incompleteApprovals = TripWorkflowRules.GetIncompleteTouristApprovals(
+                trip.Boat.Approval, trip.Boat.WildlifeApproval,
+                trip.ShoreApproval, trip.WildlifeShoreApproval);
             if (incompleteApprovals.Count > 0)
                 return Conflict(new
                 {
@@ -908,7 +883,7 @@ public sealed record TripTrackingSummaryDto(Guid TripId, Guid BoatId, string Sta
 public sealed record TripRoutePointDto(decimal Latitude, decimal Longitude, DateTimeOffset RecordedAtUtc,
     decimal? SpeedKnots, decimal? HeadingDegrees);
 public sealed record TripStopDto(DateTimeOffset StartedAtUtc, DateTimeOffset? EndedAtUtc,
-    long DurationSeconds, decimal Latitude, decimal Longitude, bool IsOngoing);
+    long DurationSeconds, decimal Latitude, decimal Longitude, bool IsOngoing, decimal? SpeedKnots);
 public sealed record BoatRouteHistoryDto(Guid BoatId, DateTimeOffset FromUtc, DateTimeOffset ToUtc,
     BoatRouteHistorySummaryDto Summary, TripRoutePointDto? LastKnownPosition,
     IReadOnlyList<BoatHistoricalTripDto> Trips, IReadOnlyList<BoatHistoricalRouteDto> UnassignedRoutes);
@@ -917,10 +892,11 @@ public sealed record BoatRouteHistorySummaryDto(double TotalDistance, string Dis
 public sealed record BoatHistoricalTripDto(Guid TripId, string RouteName, string Status,
     DateTimeOffset StartedAtUtc, DateTimeOffset? EndedAtUtc, double? RouteLength,
     long? MoveDurationSeconds, long? StopsDurationSeconds, decimal? AverageSpeed,
-    IReadOnlyList<TripRoutePointDto> Route);
+    IReadOnlyList<TripRoutePointDto> Route, IReadOnlyList<TripStopDto> Stops);
 public sealed record BoatHistoricalRouteDto(int SegmentNumber, DateTimeOffset StartedAtUtc,
     DateTimeOffset EndedAtUtc, double? RouteLength, long? MoveDurationSeconds,
-    long? StopsDurationSeconds, decimal? AverageSpeed, IReadOnlyList<TripRoutePointDto> Route);
+    long? StopsDurationSeconds, decimal? AverageSpeed, IReadOnlyList<TripRoutePointDto> Route,
+    IReadOnlyList<TripStopDto> Stops);
 internal sealed record HistoricalTripRecord(Guid Id, string Route, DateTimeOffset StartedAtUtc,
     DateTimeOffset? EndedAtUtc, string Status);
 public sealed record TripCrewDto(Guid CrewUserId, string Name, string Email, string Position,

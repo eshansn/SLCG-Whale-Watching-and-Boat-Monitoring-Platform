@@ -13,7 +13,7 @@ public sealed class TripTrackingService(
     TimeProvider timeProvider)
 {
     private readonly TrackingStopSettings _stopSettings = new(options.Value.StopSpeedThresholdKnots,
-        TimeSpan.FromMinutes(options.Value.RouteMinimumStopMinutes));
+        TimeSpan.FromMinutes(options.Value.RouteMinimumStopMinutes), options.Value.StopRadiusMeters);
 
     internal async Task<TripTrackingSnapshot?> GetAsync(Guid tripId, bool synchronizeProviderHistory,
         CancellationToken cancellationToken)
@@ -76,6 +76,9 @@ public sealed class TripTrackingService(
     internal TrackingMetrics? CalculateMetrics(DateTimeOffset startedAtUtc, DateTimeOffset endedAtUtc,
         IReadOnlyList<TrackingTelemetryPoint> telemetry) =>
         TripTrackingCalculator.Calculate(startedAtUtc, endedAtUtc, telemetry, _stopSettings);
+
+    internal IReadOnlyList<TrackingStop> DetectStops(IReadOnlyList<TrackingTelemetryPoint> telemetry,
+        bool tripIsOngoing = false) => TripTrackingCalculator.DetectStops(telemetry, _stopSettings, tripIsOngoing);
 }
 
 internal sealed record TripTrackingSnapshot(Guid TripId, Guid BoatId, string Status,

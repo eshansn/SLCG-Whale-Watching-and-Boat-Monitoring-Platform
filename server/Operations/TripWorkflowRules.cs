@@ -9,6 +9,21 @@ internal static class TripWorkflowRules
 
     internal static bool RequiresTouristClearance(TripType type) => type == TripType.WhaleWatching;
 
+    internal static IReadOnlyList<string> GetIncompleteTouristApprovals(
+        ApprovalStatus administrativeBoatApproval, ApprovalStatus wildlifeBoatApproval,
+        ApprovalStatus shoreApproval, ApprovalStatus wildlifeShoreApproval)
+    {
+        var incompleteApprovals = new List<string>();
+        if (administrativeBoatApproval != ApprovalStatus.Approved &&
+            wildlifeBoatApproval != ApprovalStatus.Approved)
+            incompleteApprovals.Add("boat approval from either Administration or the Wildlife Authority");
+        if (shoreApproval != ApprovalStatus.Approved)
+            incompleteApprovals.Add("SLCG shore approval");
+        if (wildlifeShoreApproval != ApprovalStatus.Approved)
+            incompleteApprovals.Add("wildlife shore approval");
+        return incompleteApprovals;
+    }
+
     internal static bool IsExpiredScheduledTrip(TripStatus status, DateTimeOffset scheduledDepartureUtc,
         DateTimeOffset nowUtc) => IsAwaitingDeparture(status) &&
             scheduledDepartureUtc < GetSriLankaDayStartUtc(nowUtc);

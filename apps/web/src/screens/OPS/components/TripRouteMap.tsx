@@ -1,7 +1,9 @@
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Map, { Layer, Marker, Source, type MapRef } from "react-map-gl/maplibre";
 import "maplibre-gl/dist/maplibre-gl.css";
 import type { TripTrackingSummary } from "../../../operations/operationsApi";
+import StopPointMarker from "./StopPointMarker";
+import { createStopMarkerOffsets } from "./stopMarkerLayout";
 
 const routeLayer = {
   id: "trip-travelled-route",
@@ -26,7 +28,12 @@ export default function TripRouteMap({
   fallbackLongitude,
 }: TripRouteMapProps) {
   const mapRef = useRef<MapRef>(null);
+  const [selectedStopKey, setSelectedStopKey] = useState<string | null>(null);
   const route = summary.route;
+  const stops = useMemo(() => [...(summary.stops ?? [])]
+    .sort((first, second) => new Date(first.startedAtUtc).getTime() - new Date(second.startedAtUtc).getTime()),
+  [summary.stops]);
+  const stopMarkerOffsets = useMemo(() => createStopMarkerOffsets(stops), [stops]);
   const line = useMemo(() => ({
     type: "Feature" as const,
     properties: {},
@@ -74,11 +81,16 @@ export default function TripRouteMap({
         initialViewState={{ longitude: fallbackLongitude ?? 80.425, latitude: fallbackLatitude ?? 5.935, zoom: fallbackLatitude == null ? 11.7 : 13.5 }}
         mapStyle="https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json"
         onLoad={fitRoute}
+        onClick={() => setSelectedStopKey(null)}
         reuseMaps
       >
         {route.length >= 2 && <Source id="trip-route" type="geojson" data={line}><Layer {...routeLayer} /></Source>}
         {showStart && <Marker longitude={start.longitude} latitude={start.latitude} anchor="center"><MapDot color="#16a34a" label="Start" /></Marker>}
         {summary.status === "Completed" && last && <Marker longitude={last.longitude} latitude={last.latitude} anchor="center"><MapDot color="#dc2626" label="End" /></Marker>}
+        {stops.map((stop, index) => {
+          const markerKey = `${stop.startedAtUtc}:${index}`;
+          return <StopPointMarker key={markerKey} markerKey={markerKey} stop={stop} number={index + 1} selected={selectedStopKey === markerKey} onSelect={setSelectedStopKey} onClose={() => setSelectedStopKey(null)} offset={stopMarkerOffsets[index] ?? (stop.isOngoing ? [18, 14] : undefined)} />;
+        })}
         {activePosition && <Marker longitude={activePosition.longitude} latitude={activePosition.latitude} anchor="center"><BoatMarker vesselName={vesselName} /></Marker>}
         {showFallback && <Marker longitude={fallbackLongitude} latitude={fallbackLatitude} anchor="center"><BoatMarker vesselName={vesselName} muted /></Marker>}
       </Map>

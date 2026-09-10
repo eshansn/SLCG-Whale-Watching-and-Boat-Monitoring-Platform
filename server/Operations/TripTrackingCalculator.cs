@@ -24,8 +24,8 @@ internal static class TripTrackingCalculator
             var measuredSpeed = previous.SpeedKnots ?? current.SpeedKnots;
             var derivedSpeedKnots = segmentKilometers / KilometersPerNauticalMile /
                 (segmentSeconds / 3600d);
-            if (measuredSpeed >= stopSettings.SpeedThresholdKnots ||
-                (measuredSpeed is null && derivedSpeedKnots >= (double)stopSettings.SpeedThresholdKnots))
+            if ((measuredSpeed is not null && Math.Abs(measuredSpeed.Value) > stopSettings.SpeedThresholdKnots) ||
+                (measuredSpeed is null && derivedSpeedKnots > (double)stopSettings.SpeedThresholdKnots))
                 moveSeconds += segmentSeconds;
         }
 
@@ -48,28 +48,69 @@ internal static class TripTrackingCalculator
 
         var stops = new List<TrackingStop>();
         var candidateStartIndex = -1;
+        var candidatePointCount = 0;
+        decimal candidateLatitudeSum = 0;
+        decimal candidateLongitudeSum = 0;
+
+        void StartCandidate(int index)
+        {
+            candidateStartIndex = index;
+            candidatePointCount = 1;
+            candidateLatitudeSum = telemetry[index].Latitude;
+            candidateLongitudeSum = telemetry[index].Longitude;
+        }
+
+        void ExtendCandidate(int index)
+        {
+            candidatePointCount++;
+            candidateLatitudeSum += telemetry[index].Latitude;
+            candidateLongitudeSum += telemetry[index].Longitude;
+        }
+
+        void FinishCandidate(int lastStationaryIndex, DateTimeOffset? endedAtUtc, bool isOngoing)
+        {
+            AddStop(stops, telemetry, candidateStartIndex, lastStationaryIndex, candidatePointCount,
+                endedAtUtc, isOngoing, settings.MinimumDuration);
+            candidateStartIndex = -1;
+            candidatePointCount = 0;
+            candidateLatitudeSum = 0;
+            candidateLongitudeSum = 0;
+        }
+
         for (var index = 0; index < telemetry.Count; index++)
         {
-            if (IsStationary(telemetry, index, settings.SpeedThresholdKnots))
+            if (!IsStationary(telemetry, index, settings.SpeedThresholdKnots))
             {
-                if (candidateStartIndex < 0) candidateStartIndex = index;
+                if (candidateStartIndex >= 0)
+                    FinishCandidate(index - 1, telemetry[index].RecordedAtUtc, false);
                 continue;
             }
 
-            if (candidateStartIndex >= 0)
+            if (candidateStartIndex < 0)
             {
-                AddStop(stops, telemetry, candidateStartIndex, index - 1,
-                    telemetry[index].RecordedAtUtc, false, settings.MinimumDuration);
-                candidateStartIndex = -1;
+                StartCandidate(index);
+                continue;
+            }
+
+            var centerLatitude = candidateLatitudeSum / candidatePointCount;
+            var centerLongitude = candidateLongitudeSum / candidatePointCount;
+            var distanceFromCenterMeters = HaversineKilometers(centerLatitude, centerLongitude,
+                telemetry[index].Latitude, telemetry[index].Longitude) * 1000d;
+            if (distanceFromCenterMeters <= settings.RadiusMeters)
+                ExtendCandidate(index);
+            else
+            {
+                FinishCandidate(index - 1, telemetry[index].RecordedAtUtc, false);
+                StartCandidate(index);
             }
         }
 
         if (candidateStartIndex >= 0)
         {
             var lastIndex = telemetry.Count - 1;
-            AddStop(stops, telemetry, candidateStartIndex, lastIndex,
+            FinishCandidate(lastIndex,
                 tripIsOngoing ? null : telemetry[lastIndex].RecordedAtUtc,
-                tripIsOngoing, settings.MinimumDuration);
+                tripIsOngoing);
         }
 
         return stops;
@@ -79,7 +120,7 @@ internal static class TripTrackingCalculator
         decimal speedThresholdKnots)
     {
         var current = telemetry[index];
-        if (current.SpeedKnots is not null) return Math.Abs(current.SpeedKnots.Value) < speedThresholdKnots;
+        if (current.SpeedKnots is not null) return Math.Abs(current.SpeedKnots.Value) <= speedThresholdKnots;
         if (index == 0) return false;
 
         var previous = telemetry[index - 1];
@@ -88,22 +129,30 @@ internal static class TripTrackingCalculator
         var distance = HaversineKilometers(previous.Latitude, previous.Longitude,
             current.Latitude, current.Longitude);
         var derivedSpeedKnots = distance / KilometersPerNauticalMile / (seconds / 3600d);
-        return derivedSpeedKnots < (double)speedThresholdKnots;
+        return derivedSpeedKnots <= (double)speedThresholdKnots;
     }
 
     private static void AddStop(ICollection<TrackingStop> stops,
         IReadOnlyList<TrackingTelemetryPoint> telemetry, int startIndex, int lastStationaryIndex,
+        int stationaryPointCount,
         DateTimeOffset? endedAtUtc, bool isOngoing, TimeSpan minimumDuration)
     {
+        // At least two readings are required so a single transient zero-speed update never becomes a stop.
+        if (stationaryPointCount < 2) return;
         var startedAtUtc = telemetry[startIndex].RecordedAtUtc;
         var durationEnd = endedAtUtc ?? telemetry[lastStationaryIndex].RecordedAtUtc;
         var durationSeconds = Math.Max(0, (long)Math.Round((durationEnd - startedAtUtc).TotalSeconds));
         if (durationSeconds < minimumDuration.TotalSeconds) return;
 
         var stationaryPoints = telemetry.Skip(startIndex).Take(lastStationaryIndex - startIndex + 1).ToArray();
+        var measuredSpeeds = stationaryPoints.Where(point => point.SpeedKnots is not null)
+            .Select(point => Math.Abs(point.SpeedKnots!.Value)).ToArray();
+        var averageSpeedKnots = measuredSpeeds.Length > 0
+            ? Math.Round(measuredSpeeds.Average(), 2)
+            : (decimal?)null;
         stops.Add(new TrackingStop(startedAtUtc, endedAtUtc, durationSeconds,
             stationaryPoints.Average(point => point.Latitude),
-            stationaryPoints.Average(point => point.Longitude), isOngoing));
+            stationaryPoints.Average(point => point.Longitude), isOngoing, averageSpeedKnots));
     }
 
     private static double HaversineKilometers(decimal latitude1, decimal longitude1,
@@ -128,7 +177,8 @@ internal sealed record TrackingMetrics(double RouteLengthKilometers, long MoveDu
 internal sealed record TrackingTelemetryPoint(decimal Latitude, decimal Longitude,
     DateTimeOffset RecordedAtUtc, decimal? SpeedKnots, decimal? HeadingDegrees = null);
 
-internal sealed record TrackingStopSettings(decimal SpeedThresholdKnots, TimeSpan MinimumDuration);
+internal sealed record TrackingStopSettings(decimal SpeedThresholdKnots, TimeSpan MinimumDuration,
+    double RadiusMeters);
 
 internal sealed record TrackingStop(DateTimeOffset StartedAtUtc, DateTimeOffset? EndedAtUtc,
-    long DurationSeconds, decimal Latitude, decimal Longitude, bool IsOngoing);
+    long DurationSeconds, decimal Latitude, decimal Longitude, bool IsOngoing, decimal? SpeedKnots);

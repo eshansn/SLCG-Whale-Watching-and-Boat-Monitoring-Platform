@@ -549,8 +549,8 @@ function BoatOwnerTripInfoPage() {
 
         {(trip.status==="Scheduled"||trip.status==="Boarding")&&liveVessel&&<section className="mt-7 rounded-xl border border-slate-200 bg-slate-50/70 p-4"><h2 className="text-sm font-semibold text-[#162d54]">Departure approvals</h2><p className="mt-1 text-[11px] text-slate-500">A boat needs approval from either Administration or the Wildlife Authority.</p><div className="mt-3 grid gap-2 sm:grid-cols-3">{[
           ['Boat authority',liveVessel.certificationApproval==='Approved'||liveVessel.wildlifeApproval==='Approved'?'Approved':liveVessel.certificationApproval==='Rejected'&&liveVessel.wildlifeApproval==='Rejected'?'Rejected':'Pending'],
-          ['SLCG Shore trip',liveVessel.shoreApproval],
-          ['Wildlife Shore trip',liveVessel.wildlifeShoreApproval],
+          ['SLCG Shore trip',trip.shoreApproval],
+          ['Wildlife Shore trip',trip.wildlifeShoreApproval],
         ].map(([label,status])=><div key={label} className="rounded-lg bg-white px-3 py-2 shadow-sm"><p className="text-[11px] text-slate-500">{label}</p><p className={`mt-1 text-xs font-semibold ${status==='Approved'?'text-emerald-700':status==='Rejected'?'text-red-700':'text-amber-700'}`}>{status}</p></div>)}</div></section>}
         {(trip.status==="Scheduled"||trip.status==="Boarding"||trip.status==="Ongoing")&&<div className="mt-7 flex flex-col items-center gap-3 border-t border-slate-100 pt-7">
           {needsReschedule ? <>

@@ -13,6 +13,27 @@ public sealed class TripWorkflowRulesTests
     public void PatrolTrip_DoesNotRequireTouristClearance() =>
         Assert.False(TripWorkflowRules.RequiresTouristClearance(TripType.Patrol));
 
+    [Theory]
+    [InlineData(ApprovalStatus.Approved, ApprovalStatus.Pending)]
+    [InlineData(ApprovalStatus.Pending, ApprovalStatus.Approved)]
+    public void ThreeDepartureApprovals_AreComplete_WhenEitherBoatAuthorityApproved(
+        ApprovalStatus administrativeBoatApproval, ApprovalStatus wildlifeBoatApproval) =>
+        Assert.Empty(TripWorkflowRules.GetIncompleteTouristApprovals(
+            administrativeBoatApproval, wildlifeBoatApproval,
+            ApprovalStatus.Approved, ApprovalStatus.Approved));
+
+    [Fact]
+    public void MissingDepartureApproval_IsReported()
+    {
+        var incomplete = TripWorkflowRules.GetIncompleteTouristApprovals(
+            ApprovalStatus.Pending, ApprovalStatus.Pending,
+            ApprovalStatus.Approved, ApprovalStatus.Pending);
+
+        Assert.Equal(2, incomplete.Count);
+        Assert.Contains("boat approval from either Administration or the Wildlife Authority", incomplete);
+        Assert.Contains("wildlife shore approval", incomplete);
+    }
+
     [Fact]
     public void ScheduledTripBeforeNow_IsExpired() =>
         Assert.True(TripWorkflowRules.IsExpiredScheduledTrip(TripStatus.Scheduled,

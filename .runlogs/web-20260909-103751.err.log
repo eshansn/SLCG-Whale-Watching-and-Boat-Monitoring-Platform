@@ -1,0 +1,545 @@
+npm notice run web@0.0.0 dev
+npm notice run vite --host 127.0.0.1 --port 5173
+10:53:03 AM [vite] (client) [console.error] [2026-09-09T05:23:03.007Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+10:53:23 AM [vite] (client) [console.error] [2026-09-09T05:23:21.798Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+10:53:32 AM [vite] (client) [console.error] [2026-09-09T05:23:31.843Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+10:53:39 AM [vite] (client) [console.error] [2026-09-09T05:23:39.593Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+10:53:42 AM [vite] (client) [console.error] [2026-09-09T05:23:42.346Z] Error: Failed to start the HttpConnection before stop() was called.
+10:53:44 AM [vite] (client) [console.error] [2026-09-09T05:23:43.793Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+10:53:46 AM [vite] (client) [console.error] [2026-09-09T05:23:46.308Z] Error: Failed to start the HttpConnection before stop() was called.
+10:53:47 AM [vite] (client) [console.error] [2026-09-09T05:23:47.058Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+10:54:25 AM [vite] (client) [console.error] [2026-09-09T05:24:24.935Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+11:39:11 AM [vite] (client) [console.error] [2026-09-09T06:09:11.505Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+11:39:19 AM [vite] (client) [console.error] [2026-09-09T06:09:19.691Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+11:39:45 AM [vite] (client) [console.error] [2026-09-09T06:09:44.983Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+11:39:53 AM [vite] (client) [console.error] [2026-09-09T06:09:53.381Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+11:40:04 AM [vite] (client) [console.error] [2026-09-09T06:10:04.342Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+11:40:13 AM [vite] (client) [console.error] [2026-09-09T06:10:12.948Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+11:47:18 AM [vite] (client) [console.error] [2026-09-09T06:17:17.492Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+11:51:04 AM [vite] (client) [console.error] [2026-09-09T06:21:02.908Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+11:51:30 AM [vite] (client) [console.error] In HTML, whitespace text nodes cannot be a child of <tr>. Make sure you don't have any extra whitespace between tags on each line of your source code.
+This will cause a hydration error.
+
+  ...
+    <AdminRecordsProvider>
+      <div className="min-h-scre...">
+        <Routes>
+          <RenderedRoute match={{params:{}, ...}} routeContext={{outlet:null, ...}}>
+            <OpsRoute>
+              <ProtectedRoute allowedRoles={[...]}>
+                <OPStrips>
+                  <div className="min-h-scre...">
+                    <Navbar>
+                    <main className="mx-auto ma...">
+                      <section className="rounded-md...">
+                        <div>
+                        <div className="mt-6 overf...">
+                          <table className="w-full min...">
+                            <thead>
+>                             <tr className="border-b border-slate-100 text-[11px] text-slate-500">
+                                <th>
+                                <th>
+                                <th>
+                                <th>
+                                <th>
+                                <th>
+                                <th>
+>                               {" "}
+                            ...
+                        ...
+
+11:51:31 AM [vite] (client) [console.error] [2026-09-09T06:21:30.169Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+11:53:19 AM [vite] (client) [console.error] [2026-09-09T06:23:17.533Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+11:58:28 AM [vite] (client) [console.error] [2026-09-09T06:28:26.637Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+11:58:28 AM [vite] (client) [console.error] [2026-09-09T06:28:26.644Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+11:58:29 AM [vite] (client) [console.error] [2026-09-09T06:28:27.839Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+11:58:53 AM [vite] (client) [console.error] [2026-09-09T06:28:52.499Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+11:58:53 AM [vite] (client) [console.error] [2026-09-09T06:28:52.509Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+11:59:25 AM [vite] (client) [console.error] [2026-09-09T06:29:24.581Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+11:59:25 AM [vite] (client) [console.error] [2026-09-09T06:29:24.587Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+11:59:34 AM [vite] (client) [console.error] [2026-09-09T06:29:32.794Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+11:59:34 AM [vite] (client) [console.error] [2026-09-09T06:29:32.796Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+11:59:50 AM [vite] (client) [console.error] [2026-09-09T06:29:48.766Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+11:59:52 AM [vite] (client) [console.error] [2026-09-09T06:29:51.360Z] Error: Failed to start the transport 'WebSockets': Error: WebSocket failed to connect. The connection could not be found on the server, either the endpoint may not be a SignalR endpoint, the connection ID is not present on the server, or there is a proxy blocking WebSockets. If you have multiple servers check that sticky sessions are enabled.
+12:00:28 PM [vite] (client) [console.error] [2026-09-09T06:30:27.057Z] Error: Connection disconnected with error 'Error: Server timeout elapsed without receiving a message from the server.'.
+12:00:28 PM [vite] (client) [console.error] Unable to connect to live operations. Retrying in 1 seconds. Error: Server timeout elapsed without receiving a message from the server.
+    at HubConnection.serverTimeout (https://myers-clouds-levitra-tom.trycloudflare.com/node_modules/.vite/deps/@microsoft_signalr.js?v=42bf586e:1162:40)
+    at https://myers-clouds-levitra-tom.trycloudflare.com/node_modules/.vite/deps/@microsoft_signalr.js?v=42bf586e:1147:48
+12:01:04 PM [vite] (client) [console.error] [2026-09-09T06:31:03.448Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+12:01:19 PM [vite] (client) [console.error] [2026-09-09T06:31:17.718Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+12:01:19 PM [vite] (client) [console.error] [2026-09-09T06:31:17.724Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+12:02:56 PM [vite] (client) [console.error] [2026-09-09T06:32:54.590Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+12:03:22 PM [vite] (client) [console.error] [2026-09-09T06:33:21.484Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+12:04:01 PM [vite] (client) [console.error] [2026-09-09T06:33:59.971Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+12:06:07 PM [vite] (client) [console.error] [2026-09-09T06:36:05.990Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+12:07:18 PM [vite] (client) [console.warn] [2026-09-09T06:37:17.400Z] Warning: The page is being frozen, this will likely lead to the connection being closed and messages being lost. For more information see the docs at https://learn.microsoft.com/aspnet/core/signalr/javascript-client#bsleep
+12:09:08 PM [vite] (client) [console.error] [2026-09-09T06:39:08.232Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+12:09:40 PM [vite] (client) [console.error] [2026-09-09T06:39:39.693Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+12:09:59 PM [vite] (client) [console.error] `value` prop on `input` should not be null. Consider using an empty string to clear the component or `undefined` for uncontrolled components.
+12:09:59 PM [vite] (client) [console.error] A component is changing a controlled input to be uncontrolled. This is likely caused by the value changing from a defined to undefined, which should not happen. Decide between using a controlled or uncontrolled input element for the lifetime of the component. More info: https://react.dev/link/controlled-components
+12:10:02 PM [vite] (client) [console.error] [2026-09-09T06:40:01.867Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+12:10:09 PM [vite] (client) [console.error] [2026-09-09T06:40:09.152Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+12:10:24 PM [vite] (client) [console.error] [2026-09-09T06:40:23.040Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+12:12:03 PM [vite] (client) [console.error] [2026-09-09T06:42:03.717Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+12:12:36 PM [vite] (client) [console.error] [2026-09-09T06:42:35.614Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+12:12:37 PM [vite] (client) [console.error] [2026-09-09T06:42:37.768Z] Error: Failed to start the HttpConnection before stop() was called.
+12:12:38 PM [vite] (client) [console.error] [2026-09-09T06:42:38.536Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+12:13:39 PM [vite] (client) [console.error] [2026-09-09T06:43:38.836Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+12:13:54 PM [vite] (client) [console.error] [2026-09-09T06:43:54.081Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+12:14:13 PM [vite] (client) [console.error] [2026-09-09T06:44:13.217Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+12:14:29 PM [vite] (client) [console.error] [2026-09-09T06:44:29.772Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+12:15:54 PM [vite] (client) [console.error] [2026-09-09T06:45:54.744Z] Error: Connection disconnected with error 'Error: Server timeout elapsed without receiving a message from the server.'.
+12:16:00 PM [vite] (client) [console.error] [2026-09-09T06:45:59.301Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+12:16:23 PM [vite] (client) [console.error] [2026-09-09T06:46:22.915Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+12:16:43 PM [vite] (client) [console.error] In HTML, whitespace text nodes cannot be a child of <tr>. Make sure you don't have any extra whitespace between tags on each line of your source code.
+This will cause a hydration error.
+
+  ...
+    <AdminRecordsProvider>
+      <div className="min-h-scre...">
+        <Routes>
+          <RenderedRoute match={{params:{}, ...}} routeContext={{outlet:null, ...}}>
+            <OpsRoute>
+              <ProtectedRoute allowedRoles={[...]}>
+                <OPStrips>
+                  <div className="min-h-scre...">
+                    <Navbar>
+                    <main className="mx-auto ma...">
+                      <section className="rounded-md...">
+                        <div>
+                        <div className="mt-6 overf...">
+                          <table className="w-full min...">
+                            <thead>
+>                             <tr className="border-b border-slate-100 text-[11px] text-slate-500">
+                                <th>
+                                <th>
+                                <th>
+                                <th>
+                                <th>
+                                <th>
+                                <th>
+>                               {" "}
+                            ...
+                        ...
+
+12:16:44 PM [vite] (client) [console.error] [2026-09-09T06:46:42.673Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+12:17:29 PM [vite] (client) [console.error] [2026-09-09T06:47:29.173Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+12:17:40 PM [vite] (client) [console.error] [2026-09-09T06:47:39.621Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+12:18:31 PM [vite] (client) [console.error] [2026-09-09T06:48:30.985Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+12:19:58 PM [vite] (client) [console.error] [2026-09-09T06:49:58.213Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+12:20:44 PM [vite] (client) [console.error] [2026-09-09T06:50:43.872Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+12:20:53 PM [vite] (client) [console.error] [2026-09-09T06:50:53.157Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+12:20:58 PM [vite] (client) [console.error] [2026-09-09T06:50:58.063Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+12:21:15 PM [vite] (client) [console.error] [2026-09-09T06:51:15.238Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+12:21:41 PM [vite] (client) [console.error] [2026-09-09T06:51:41.488Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+12:21:44 PM [vite] (client) [console.error] [2026-09-09T06:51:44.449Z] Error: Failed to start the HttpConnection before stop() was called.
+12:21:46 PM [vite] (client) [console.error] [2026-09-09T06:51:45.838Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+12:22:06 PM [vite] (client) [console.error] [2026-09-09T06:52:06.232Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+12:25:34 PM [vite] (client) [console.error] [2026-09-09T06:55:34.016Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+12:25:47 PM [vite] (client) [console.error] [2026-09-09T06:55:47.584Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+12:28:15 PM [vite] (client) [console.error] [2026-09-09T06:58:15.657Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+12:31:54 PM [vite] (client) [console.error] [2026-09-09T07:01:54.428Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+12:36:02 PM [vite] (client) [console.error] [2026-09-09T07:06:02.342Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+12:36:21 PM [vite] (client) [console.error] [2026-09-09T07:06:21.516Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+12:36:23 PM [vite] (client) [console.error] [2026-09-09T07:06:23.403Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+12:36:23 PM [vite] (client) [console.error] [2026-09-09T07:06:23.680Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+12:36:39 PM [vite] (client) [console.error] [2026-09-09T07:06:39.206Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+12:37:15 PM [vite] (client) [console.error] In HTML, whitespace text nodes cannot be a child of <tr>. Make sure you don't have any extra whitespace between tags on each line of your source code.
+This will cause a hydration error.
+
+  ...
+    <AdminRecordsProvider>
+      <div className="min-h-scre...">
+        <Routes>
+          <RenderedRoute match={{params:{}, ...}} routeContext={{outlet:null, ...}}>
+            <OpsRoute>
+              <ProtectedRoute allowedRoles={[...]}>
+                <OPStrips>
+                  <div className="min-h-scre...">
+                    <Navbar>
+                    <main className="mx-auto ma...">
+                      <section className="rounded-md...">
+                        <div>
+                        <div className="mt-6 overf...">
+                          <table className="w-full min...">
+                            <thead>
+>                             <tr className="border-b border-slate-100 text-[11px] text-slate-500">
+                                <th>
+                                <th>
+                                <th>
+                                <th>
+                                <th>
+                                <th>
+                                <th>
+>                               {" "}
+                            ...
+                        ...
+
+12:37:17 PM [vite] (client) [console.error] [2026-09-09T07:07:17.797Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+12:38:18 PM [vite] (client) [console.error] [2026-09-09T07:08:18.541Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+12:38:20 PM [vite] (client) [console.error] [2026-09-09T07:08:20.455Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+12:38:20 PM [vite] (client) [console.error] [2026-09-09T07:08:20.455Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+12:38:37 PM [vite] (client) [console.error] [2026-09-09T07:08:37.585Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+12:38:50 PM [vite] (client) [console.error] [2026-09-09T07:08:50.212Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+12:38:53 PM [vite] (client) [console.error] [2026-09-09T07:08:53.475Z] Error: Failed to start the HttpConnection before stop() was called.
+12:38:55 PM [vite] (client) [console.error] [2026-09-09T07:08:55.195Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+12:39:03 PM [vite] (client) [console.error] [2026-09-09T07:09:02.901Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+12:39:03 PM [vite] (client) [console.error] [2026-09-09T07:09:02.904Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+12:39:03 PM [vite] (client) [console.error] [2026-09-09T07:09:02.912Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+12:39:21 PM [vite] (client) [console.error] [2026-09-09T07:09:20.800Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+12:41:43 PM [vite] (client) [console.error] [2026-09-09T07:11:43.500Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+12:45:06 PM [vite] (client) [console.error] [2026-09-09T07:15:06.557Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+12:46:25 PM [vite] (client) [console.error] In HTML, whitespace text nodes cannot be a child of <tr>. Make sure you don't have any extra whitespace between tags on each line of your source code.
+This will cause a hydration error.
+
+  ...
+    <AdminRecordsProvider>
+      <div className="min-h-scre...">
+        <Routes>
+          <RenderedRoute match={{params:{}, ...}} routeContext={{outlet:null, ...}}>
+            <OpsRoute>
+              <ProtectedRoute allowedRoles={[...]}>
+                <OPStrips>
+                  <div className="min-h-scre...">
+                    <Navbar>
+                    <main className="mx-auto ma...">
+                      <section className="rounded-md...">
+                        <div>
+                        <div className="mt-6 overf...">
+                          <table className="w-full min...">
+                            <thead>
+>                             <tr className="border-b border-slate-100 text-[11px] text-slate-500">
+                                <th>
+                                <th>
+                                <th>
+                                <th>
+                                <th>
+                                <th>
+                                <th>
+>                               {" "}
+                            ...
+                        ...
+
+12:46:28 PM [vite] (client) [console.error] [2026-09-09T07:16:28.136Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+12:47:04 PM [vite] (client) [console.error] [2026-09-09T07:17:04.165Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+12:47:07 PM [vite] (client) [console.error] [2026-09-09T07:17:07.174Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+12:47:07 PM [vite] (client) [console.error] [2026-09-09T07:17:07.176Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+12:49:33 PM [vite] (client) [console.error] [2026-09-09T07:19:33.092Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+12:49:37 PM [vite] (client) [console.error] [2026-09-09T07:19:36.955Z] Error: Failed to start the HttpConnection before stop() was called.
+12:49:38 PM [vite] (client) [console.error] [2026-09-09T07:19:38.424Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+12:49:38 PM [vite] (client) [console.error] [2026-09-09T07:19:38.485Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+12:49:41 PM [vite] (client) [console.error] [2026-09-09T07:19:41.321Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+12:49:53 PM [vite] (client) [console.error] [2026-09-09T07:19:53.200Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+12:51:00 PM [vite] (client) [console.error] [2026-09-09T07:20:59.904Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+12:51:00 PM [vite] (client) [console.error] [2026-09-09T07:20:59.905Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+12:51:00 PM [vite] (client) [console.error] [2026-09-09T07:20:59.906Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+12:59:42 PM [vite] (client) [console.error] [2026-09-09T07:29:42.744Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+1:00:01 PM [vite] (client) [console.error] In HTML, whitespace text nodes cannot be a child of <tr>. Make sure you don't have any extra whitespace between tags on each line of your source code.
+This will cause a hydration error.
+
+  ...
+    <AdminRecordsProvider>
+      <div className="min-h-scre...">
+        <Routes>
+          <RenderedRoute match={{params:{}, ...}} routeContext={{outlet:null, ...}}>
+            <OpsRoute>
+              <ProtectedRoute allowedRoles={[...]}>
+                <OPStrips>
+                  <div className="min-h-scre...">
+                    <Navbar>
+                    <main className="mx-auto ma...">
+                      <section className="rounded-md...">
+                        <div>
+                        <div className="mt-6 overf...">
+                          <table className="w-full min...">
+                            <thead>
+>                             <tr className="border-b border-slate-100 text-[11px] text-slate-500">
+                                <th>
+                                <th>
+                                <th>
+                                <th>
+                                <th>
+                                <th>
+                                <th>
+>                               {" "}
+                            ...
+                        ...
+
+1:00:02 PM [vite] (client) [console.error] [2026-09-09T07:30:02.138Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+1:00:20 PM [vite] (client) [console.error] [2026-09-09T07:30:20.748Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+1:00:23 PM [vite] (client) [console.error] [2026-09-09T07:30:22.767Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+1:00:23 PM [vite] (client) [console.error] [2026-09-09T07:30:22.985Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+1:03:40 PM [vite] (client) [console.error] [2026-09-09T07:33:39.971Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+1:18:28 PM [vite] (client) [console.error] [2026-09-09T07:48:28.604Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+1:18:39 PM [vite] (client) [console.error] [2026-09-09T07:48:39.388Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+1:18:42 PM [vite] (client) [console.error] [2026-09-09T07:48:42.163Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+1:18:42 PM [vite] (client) [console.error] [2026-09-09T07:48:42.258Z] Error: Failed to start the HttpConnection before stop() was called.
+1:18:42 PM [vite] (client) [console.error] [2026-09-09T07:48:42.342Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+1:18:42 PM [vite] (client) [console.error] [2026-09-09T07:48:42.655Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+1:20:12 PM [vite] (client) [console.error] [2026-09-09T07:50:12.469Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+1:20:16 PM [vite] (client) [console.error] [2026-09-09T07:50:16.059Z] Error: Failed to start the HttpConnection before stop() was called.
+1:20:16 PM [vite] (client) [console.error] [2026-09-09T07:50:16.062Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+1:20:24 PM [vite] (client) [console.error] [2026-09-09T07:50:24.010Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+1:20:24 PM [vite] (client) [console.error] [2026-09-09T07:50:24.011Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+1:20:25 PM [vite] (client) [console.error] [2026-09-09T07:50:25.688Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+1:20:25 PM [vite] (client) [console.error] [2026-09-09T07:50:25.690Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+1:20:26 PM [vite] (client) [console.error] [2026-09-09T07:50:26.826Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+1:20:27 PM [vite] (client) [console.error] [2026-09-09T07:50:26.873Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+1:20:27 PM [vite] (client) [console.error] [2026-09-09T07:50:26.875Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+1:20:33 PM [vite] (client) [console.error] [2026-09-09T07:50:33.259Z] Error: Failed to start the HttpConnection before stop() was called.
+1:20:34 PM [vite] (client) [console.error] [2026-09-09T07:50:34.080Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+1:20:38 PM [vite] (client) [console.error] [2026-09-09T07:50:37.969Z] Error: Failed to start the HttpConnection before stop() was called.
+1:20:38 PM [vite] (client) [console.error] [2026-09-09T07:50:38.470Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+1:20:38 PM [vite] (client) [console.error] [2026-09-09T07:50:38.474Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+1:36:12 PM [vite] (client) [console.error] [2026-09-09T08:06:12.179Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+1:37:38 PM [vite] (client) [console.error] [2026-09-09T08:07:37.880Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+1:38:10 PM [vite] (client) [console.error] [2026-09-09T08:08:10.181Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+1:40:42 PM [vite] (client) [console.warn] [2026-09-09T08:10:42.300Z] Warning: The page is being frozen, this will likely lead to the connection being closed and messages being lost. For more information see the docs at https://learn.microsoft.com/aspnet/core/signalr/javascript-client#bsleep
+1:40:42 PM [vite] (client) [console.warn] [2026-09-09T08:10:42.301Z] Warning: The page is being frozen, this will likely lead to the connection being closed and messages being lost. For more information see the docs at https://learn.microsoft.com/aspnet/core/signalr/javascript-client#bsleep
+2:05:35 PM [vite] (client) [console.error] [2026-09-09T08:35:35.246Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+3:45:30 PM [vite] (client) [console.error] [2026-09-09T10:15:30.273Z] Error: Connection disconnected with error 'Error: WebSocket closed with status code: 1006 (no reason given).'.
+3:45:30 PM [vite] http proxy error: /hubs/operations/negotiate?negotiateVersion=1
+Error: socket hang up
+    at Socket.socketOnEnd (node:_http_client:617:25)
+    at Socket.emit (node:events:521:24)
+    at endReadableNT (node:internal/streams/readable:1729:12)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+3:45:30 PM [vite] (client) [console.error] [2026-09-09T10:15:30.734Z] Error: Failed to complete negotiation with the server: Error: <!DOCTYPE html>
+<!--[if lt IE 7]> <html class="no-js ie6 oldie" lang="en-US"> <![endif]-->
+<!--[if IE 7]>    <html class="no-js ie7 oldie" lang="en-US"> <![endif]-->
+<!--[if IE 8]>    <html class="no-js ie8 oldie" lang="en-US"> <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en-US"> <!--<![endif]-->
+<head>
+
+<title>trycloudflare.com | 502: Bad gateway</title>
+<meta charset="UTF-8" />
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+<meta name="robots" content="noindex, nofollow" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<link rel="stylesheet" id="cf_styles-css" href="/cdn-cgi/styles/main.css" />
+</head>
+<body>
+<div id="cf-wrapper">
+    <div id="cf-error-details" class="p-0">
+        <header class="mx-auto pt-10 lg:pt-6 lg:px-8 w-240 lg:w-full mb-8">
+            <h1 class="inline-block sm:block sm:mb-2 font-light text-60 lg:text-4xl text-black-dark leading-tight mr-2">
+                <span class="inline-block">Bad gateway</span>
+                <span class="code-label">Error code 502</span>
+            </h1>
+            <div>
+                Visit <a href="https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_502&utm_campaign=myers-clouds-levitra-tom.trycloudflare.com" target="_blank" rel="noopener noreferrer">cloudflare.com</a> for more information.
+            </div>
+            <div class="mt-3">2026-09-09 10:15:30 UTC</div>
+        </header>
+        <div class="my-8 bg-gradient-gray">
+            <div class="w-240 lg:w-full mx-auto">
+                <div class="clearfix md:px-8">
+                    <div id="cf-browser-status" class=" relative w-1/3 md:w-full py-15 md:p-0 md:py-8 md:text-left md:border-solid md:border-0 md:border-b md:border-gray-400 overflow-hidden float-left md:float-none text-center">
+  <div class="relative mb-10 md:m-0">
+    
+    <span class="cf-icon-browser block md:hidden h-20 bg-center bg-no-repeat"></span>
+    <span class="cf-icon-ok w-12 h-12 absolute left-1/2 md:left-auto md:right-0 md:top-0 -ml-6 -bottom-4"></span>
+    
+  </div>
+  <span class="md:block w-full truncate">You</span>
+  <h3 class="md:inline-block mt-3 md:mt-0 text-2xl text-gray-600 font-light leading-1.3">
+  
+    Browser
+  
+  </h3>
+  
+  <span class="leading-1.3 text-2xl text-green-success">Working</span>
+  
+</div>
+                    <div id="cf-cloudflare-status" class=" relative w-1/3 md:w-full py-15 md:p-0 md:py-8 md:text-left md:border-solid md:border-0 md:border-b md:border-gray-400 overflow-hidden float-left md:float-none text-center">
+  <div class="relative mb-10 md:m-0">
+    <a href="https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_502&#38;utm_campaign=myers-clouds-levitra-tom.trycloudflare.com" target="_blank" rel="noopener noreferrer">
+    <span class="cf-icon-cloud block md:hidden h-20 bg-center bg-no-repeat"></span>
+    <span class="cf-icon-ok w-12 h-12 absolute left-1/2 md:left-auto md:right-0 md:top-0 -ml-6 -bottom-4"></span>
+    </a>
+  </div>
+  <span class="md:block w-full truncate">Colombo</span>
+  <h3 class="md:inline-block mt-3 md:mt-0 text-2xl text-gray-600 font-light leading-1.3">
+  <a href="https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_502&utm_campaign=myers-clouds-levitra-tom.trycloudflare.com" target="_blank" rel="noopener noreferrer">
+    Cloudflare
+  </a>
+  </h3>
+  
+  <span class="leading-1.3 text-2xl text-green-success">Working</span>
+  
+</div>
+                    <div id="cf-host-status" class="cf-error-source relative w-1/3 md:w-full py-15 md:p-0 md:py-8 md:text-left md:border-solid md:border-0 md:border-b md:border-gray-400 overflow-hidden float-left md:float-none text-center">
+  <div class="relative mb-10 md:m-0">
+    
+    <span class="cf-icon-server block md:hidden h-20 bg-center bg-no-repeat"></span>
+    <span class="cf-icon-error w-12 h-12 absolute left-1/2 md:left-auto md:right-0 md:top-0 -ml-6 -bottom-4"></span>
+    
+  </div>
+  <span class="md:block w-full truncate">myers-clouds-levitra-tom.trycloudflare.com</span>
+  <h3 class="md:inline-block mt-3 md:mt-0 text-2xl text-gray-600 font-light leading-1.3">
+  
+    Host
+  
+  </h3>
+  
+  <span class="leading-1.3 text-2xl text-red-error">Error</span>
+  
+</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="w-240 lg:w-full mx-auto mb-8 lg:px-8">
+            <div class="clearfix">
+                <div class="w-1/2 md:w-full float-left pr-6 md:pb-10 md:pr-0 leading-relaxed">
+                    <h2 class="text-3xl font-normal leading-1.3 mb-4">What happened?</h2>
+                    <p>The web server reported a bad gateway error.</p>
+                </div>
+                <div class="w-1/2 md:w-full float-left leading-relaxed">
+                    <h2 class="text-3xl font-normal leading-1.3 mb-4">What can I do?</h2>
+                    <p class="mb-6">Please try again in a few minutes.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="cf-error-footer cf-wrapper w-240 lg:w-full py-10 sm:py-4 sm:px-8 mx-auto text-center sm:text-left border-solid border-0 border-t border-gray-300">
+    <p class="text-13">
+      <span class="cf-footer-item sm:block sm:mb-1">Cloudflare Ray ID: <strong class="font-semibold">a3856e9efe8f351b</strong></span>
+      <span class="cf-footer-separator sm:hidden">&bull;</span>
+      <span id="cf-footer-item-ip" class="cf-footer-item hidden sm:block sm:mb-1">
+        Your IP:
+        <button type="button" id="cf-footer-ip-reveal" class="cf-footer-ip-reveal-btn">Click to reveal</button>
+        <span class="hidden" id="cf-footer-ip">2402:4000:2301:5747:d1e9:9b4f:4980:24c2</span>
+        <span class="cf-footer-separator sm:hidden">&bull;</span>
+      </span>
+      <span class="cf-footer-item sm:block sm:mb-1"><span>Performance &amp; security by</span> <a rel="noopener noreferrer" href="https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_502&#38;utm_campaign=myers-clouds-levitra-tom.trycloudflare.com" id="brand_link" target="_blank">Cloudflare</a></span>
+      
+    </p>
+    <script>(function(){function d(){var b=a.getElementById("cf-footer-item-ip"),c=a.getElementById("cf-footer-ip-reveal");b&&"classList"in b&&(b.classList.remove("hidden"),c.addEventListener("click",function(){c.classList.add("hidden");a.getElementById("cf-footer-ip").classList.remove("hidden")}))}var a=document;document.addEventListener&&a.addEventListener("DOMContentLoaded",d)})();</script>
+  </div><!-- /.error-footer -->
+
+    </div>
+</div>
+</body>
+</html>: Status code '502'
+3:45:31 PM [vite] (client) [console.error] [2026-09-09T10:15:30.734Z] Error: Failed to start the connection: Error: Failed to complete negotiation with the server: Error: <!DOCTYPE html>
+<!--[if lt IE 7]> <html class="no-js ie6 oldie" lang="en-US"> <![endif]-->
+<!--[if IE 7]>    <html class="no-js ie7 oldie" lang="en-US"> <![endif]-->
+<!--[if IE 8]>    <html class="no-js ie8 oldie" lang="en-US"> <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en-US"> <!--<![endif]-->
+<head>
+
+<title>trycloudflare.com | 502: Bad gateway</title>
+<meta charset="UTF-8" />
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+<meta name="robots" content="noindex, nofollow" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<link rel="stylesheet" id="cf_styles-css" href="/cdn-cgi/styles/main.css" />
+</head>
+<body>
+<div id="cf-wrapper">
+    <div id="cf-error-details" class="p-0">
+        <header class="mx-auto pt-10 lg:pt-6 lg:px-8 w-240 lg:w-full mb-8">
+            <h1 class="inline-block sm:block sm:mb-2 font-light text-60 lg:text-4xl text-black-dark leading-tight mr-2">
+                <span class="inline-block">Bad gateway</span>
+                <span class="code-label">Error code 502</span>
+            </h1>
+            <div>
+                Visit <a href="https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_502&utm_campaign=myers-clouds-levitra-tom.trycloudflare.com" target="_blank" rel="noopener noreferrer">cloudflare.com</a> for more information.
+            </div>
+            <div class="mt-3">2026-09-09 10:15:30 UTC</div>
+        </header>
+        <div class="my-8 bg-gradient-gray">
+            <div class="w-240 lg:w-full mx-auto">
+                <div class="clearfix md:px-8">
+                    <div id="cf-browser-status" class=" relative w-1/3 md:w-full py-15 md:p-0 md:py-8 md:text-left md:border-solid md:border-0 md:border-b md:border-gray-400 overflow-hidden float-left md:float-none text-center">
+  <div class="relative mb-10 md:m-0">
+    
+    <span class="cf-icon-browser block md:hidden h-20 bg-center bg-no-repeat"></span>
+    <span class="cf-icon-ok w-12 h-12 absolute left-1/2 md:left-auto md:right-0 md:top-0 -ml-6 -bottom-4"></span>
+    
+  </div>
+  <span class="md:block w-full truncate">You</span>
+  <h3 class="md:inline-block mt-3 md:mt-0 text-2xl text-gray-600 font-light leading-1.3">
+  
+    Browser
+  
+  </h3>
+  
+  <span class="leading-1.3 text-2xl text-green-success">Working</span>
+  
+</div>
+                    <div id="cf-cloudflare-status" class=" relative w-1/3 md:w-full py-15 md:p-0 md:py-8 md:text-left md:border-solid md:border-0 md:border-b md:border-gray-400 overflow-hidden float-left md:float-none text-center">
+  <div class="relative mb-10 md:m-0">
+    <a href="https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_502&#38;utm_campaign=myers-clouds-levitra-tom.trycloudflare.com" target="_blank" rel="noopener noreferrer">
+    <span class="cf-icon-cloud block md:hidden h-20 bg-center bg-no-repeat"></span>
+    <span class="cf-icon-ok w-12 h-12 absolute left-1/2 md:left-auto md:right-0 md:top-0 -ml-6 -bottom-4"></span>
+    </a>
+  </div>
+  <span class="md:block w-full truncate">Colombo</span>
+  <h3 class="md:inline-block mt-3 md:mt-0 text-2xl text-gray-600 font-light leading-1.3">
+  <a href="https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_502&utm_campaign=myers-clouds-levitra-tom.trycloudflare.com" target="_blank" rel="noopener noreferrer">
+    Cloudflare
+  </a>
+  </h3>
+  
+  <span class="leading-1.3 text-2xl text-green-success">Working</span>
+  
+</div>
+                    <div id="cf-host-status" class="cf-error-source relative w-1/3 md:w-full py-15 md:p-0 md:py-8 md:text-left md:border-solid md:border-0 md:border-b md:border-gray-400 overflow-hidden float-left md:float-none text-center">
+  <div class="relative mb-10 md:m-0">
+    
+    <span class="cf-icon-server block md:hidden h-20 bg-center bg-no-repeat"></span>
+    <span class="cf-icon-error w-12 h-12 absolute left-1/2 md:left-auto md:right-0 md:top-0 -ml-6 -bottom-4"></span>
+    
+  </div>
+  <span class="md:block w-full truncate">myers-clouds-levitra-tom.trycloudflare.com</span>
+  <h3 class="md:inline-block mt-3 md:mt-0 text-2xl text-gray-600 font-light leading-1.3">
+  
+    Host
+  
+  </h3>
+  
+  <span class="leading-1.3 text-2xl text-red-error">Error</span>
+  
+</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="w-240 lg:w-full mx-auto mb-8 lg:px-8">
+            <div class="clearfix">
+                <div class="w-1/2 md:w-full float-left pr-6 md:pb-10 md:pr-0 leading-relaxed">
+                    <h2 class="text-3xl font-normal leading-1.3 mb-4">What happened?</h2>
+                    <p>The web server reported a bad gateway error.</p>
+                </div>
+                <div class="w-1/2 md:w-full float-left leading-relaxed">
+                    <h2 class="text-3xl font-normal leading-1.3 mb-4">What can I do?</h2>
+                    <p class="mb-6">Please try again in a few minutes.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="cf-error-footer cf-wrapper w-240 lg:w-full py-10 sm:py-4 sm:px-8 mx-auto text-center sm:text-left border-solid border-0 border-t border-gray-300">
+    <p class="text-13">
+      <span class="cf-footer-item sm:block sm:mb-1">Cloudflare Ray ID: <strong class="font-semibold">a3856e9efe8f351b</strong></span>
+      <span class="cf-footer-separator sm:hidden">&bull;</span>
+      <span id="cf-footer-item-ip" class="cf-footer-item hidden sm:block sm:mb-1">
+        Your IP:
+        <button type="button" id="cf-footer-ip-reveal" class="cf-footer-ip-reveal-btn">Click to reveal</button>
+        <span class="hidden" id="cf-footer-ip">2402:4000:2301:5747:d1e9:9b4f:4980:24c2</span>
+        <span class="cf-footer-separator sm:hidden">&bull;</span>
+      </span>
+      <span class="cf-footer-item sm:block sm:mb-1"><span>Performance &amp; security by</span> <a rel="noopener noreferrer" href="https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_502&#38;utm_campaign=myers-clouds-levitra-tom.trycloudflare.com" id="brand_link" target="_blank">Cloudflare</a></span>
+      
+    </p>
+    <script>(function(){function d(){var b=a.getElementById("cf-footer-item-ip"),c=a.getElementById("cf-footer-ip-reveal");b&&"classList"in b&&(b.classList.remove("hidden"),c.addEventListener("click",function(){c.classList.add("hidden");a.getElementById("cf-footer-ip").classList.remove("hidden")}))}var a=document;document.addEventListener&&a.addEventListener("DOMContentLoaded",d)})();</script>
+  </div><!-- /.error-footer -->
+
+    </div>
+</div>
+</body>
+</html>: Status code '502'
+3:46:16 PM [vite] (client) [console.error] [2026-09-09T10:16:15.809Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.

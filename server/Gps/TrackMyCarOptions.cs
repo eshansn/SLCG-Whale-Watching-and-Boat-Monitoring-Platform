@@ -27,8 +27,11 @@ public sealed class TrackMyCarOptions
     public int OfflineAfterSeconds { get; set; } = 300;
 
     [Range(1, 300)]
-    public int RouteMinimumStopMinutes { get; set; } = 10;
+    public int RouteMinimumStopMinutes { get; set; } = 2;
 
     [Range(typeof(decimal), "0.01", "100")]
     public decimal StopSpeedThresholdKnots { get; set; } = 0.5m;
+
+    [Range(5, 500)]
+    public double StopRadiusMeters { get; set; } = 30;
 }

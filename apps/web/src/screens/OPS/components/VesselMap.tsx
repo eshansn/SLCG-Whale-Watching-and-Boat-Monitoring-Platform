@@ -1,7 +1,9 @@
-import React, { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Map, { Layer, Marker, Source, type MapRef } from 'react-map-gl/maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { useDashboardStore } from '../store/useDashboardStore';
+import StopPointMarker from './StopPointMarker';
+import { createStopMarkerOffsets } from './stopMarkerLayout';
 
 export default function VesselMap() {
   const {
@@ -16,10 +18,11 @@ export default function VesselMap() {
   } = useDashboardStore();
   const mapRef = useRef<MapRef>(null);
   const lastFittedOverlayRef = useRef<string | null>(null);
+  const [selectedStopKey, setSelectedStopKey] = useState<string | null>(null);
   const selectedTracking = activeTripTrackingBoatId === activeVesselId ? activeTripTracking : null;
-  const { historyPoints, tripRouteLines, unassignedRouteLines } = useMemo(() => {
+  const { historyPoints, tripRouteLines, unassignedRouteLines, historyStops } = useMemo(() => {
     if (selectedTracking || routeHistoryBoatId !== activeVesselId || !routeHistory)
-      return { historyPoints: [], tripRouteLines: [], unassignedRouteLines: [] };
+      return { historyPoints: [], tripRouteLines: [], unassignedRouteLines: [], historyStops: [] };
     return {
       historyPoints: [...routeHistory.trips.flatMap((trip) => trip.route), ...routeHistory.unassignedRoutes.flatMap((route) => route.route)],
       tripRouteLines: routeHistory.trips.filter((trip) => trip.route.length >= 2).map((trip) => ({
@@ -32,6 +35,10 @@ export default function VesselMap() {
         properties: { segmentNumber: route.segmentNumber },
         geometry: { type: 'LineString' as const, coordinates: route.route.map((point) => [point.longitude, point.latitude]) },
       })),
+      historyStops: [
+        ...routeHistory.trips.flatMap((trip) => (trip.stops ?? []).map((stop) => ({ key: `trip:${trip.tripId}:${stop.startedAtUtc}`, stop }))),
+        ...routeHistory.unassignedRoutes.flatMap((route) => (route.stops ?? []).map((stop) => ({ key: `unassigned:${route.segmentNumber}:${stop.startedAtUtc}`, stop }))),
+      ].sort((left, right) => new Date(left.stop.startedAtUtc).getTime() - new Date(right.stop.startedAtUtc).getTime()),
     };
   }, [activeVesselId, routeHistory, routeHistoryBoatId, selectedTracking]);
   const activeRoute = useMemo(() => selectedTracking?.route ?? [], [selectedTracking?.route]);
@@ -41,6 +48,12 @@ export default function VesselMap() {
     geometry: { type: 'LineString' as const, coordinates: activeRoute.map((point) => [point.longitude, point.latitude]) },
   } : null, [activeRoute, selectedTracking?.tripId]);
   const detailedPoints = selectedTracking ? activeRoute : historyPoints;
+  const displayedStops = useMemo(() => selectedTracking
+    ? [...(selectedTracking.stops ?? [])]
+        .sort((left, right) => new Date(left.startedAtUtc).getTime() - new Date(right.startedAtUtc).getTime())
+        .map((stop) => ({ key: `active:${selectedTracking.tripId}:${stop.startedAtUtc}`, stop }))
+    : historyStops, [historyStops, selectedTracking]);
+  const stopMarkerOffsets = useMemo(() => createStopMarkerOffsets(displayedStops.map(({ stop }) => stop)), [displayedStops]);
   const overlayKey = selectedTracking
     ? `active:${selectedTracking.tripId}`
     : routeHistoryBoatId === activeVesselId && routeHistory
@@ -93,7 +106,10 @@ export default function VesselMap() {
         }}
         // Using Carto's free Voyager style (No API key required!)
         mapStyle="https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json"
-        onClick={() => setActiveVessel(null)} // Click empty ocean to deselect
+        onClick={() => {
+          setSelectedStopKey(null);
+          setActiveVessel(null);
+        }} // Click empty ocean to deselect
         interactiveLayerIds={[]} 
       >
         {activeRouteLine && (
@@ -116,16 +132,18 @@ export default function VesselMap() {
             <div title="Trip start" aria-label="Trip start" className="h-4 w-4 rounded-full border-[3px] border-white bg-emerald-600 shadow-lg" />
           </Marker>
         )}
-        {selectedTracking?.stops.map((stop) => {
-          const details = formatStopDetails(stop.startedAtUtc, stop.endedAtUtc, stop.durationSeconds, stop.isOngoing);
-          return (
-            <Marker key={stop.startedAtUtc} longitude={stop.longitude} latitude={stop.latitude} anchor="center" onClick={(event) => event.originalEvent.stopPropagation()}>
-              <button type="button" title={details} aria-label={details} className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-amber-500 shadow-lg">
-                <span className="h-2.5 w-2.5 rounded-sm bg-white" />
-              </button>
-            </Marker>
-          );
-        })}
+        {displayedStops.map(({ key, stop }, index) => (
+          <StopPointMarker
+            key={key}
+            markerKey={key}
+            stop={stop}
+            number={index + 1}
+            selected={selectedStopKey === key}
+            offset={stopMarkerOffsets[index] ?? (stop.isOngoing && selectedTracking ? [18, 14] : undefined)}
+            onSelect={setSelectedStopKey}
+            onClose={() => setSelectedStopKey(null)}
+          />
+        ))}
         {/* Render our custom SVG Markers on the real map */}
         {vessels.map((vessel) => {
           const isSelected = activeVesselId === vessel.id;
@@ -138,6 +156,7 @@ export default function VesselMap() {
               anchor="center"
               onClick={(e) => {
                 e.originalEvent.stopPropagation();
+                setSelectedStopKey(null);
                 setActiveVessel(vessel.id);
               }}
             >
@@ -179,12 +198,4 @@ export default function VesselMap() {
       {selectedTracking && activeRoute.length === 0 && <div className="pointer-events-none absolute left-4 top-4 rounded-lg bg-white/95 px-3 py-2 text-xs font-semibold text-slate-600 shadow">Waiting for GPS data</div>}
     </div>
   );
-}
-
-function formatStopDetails(startedAtUtc: string, endedAtUtc: string | undefined, durationSeconds: number, isOngoing: boolean) {
-  const time = (value: string) => new Intl.DateTimeFormat('en-LK', { hour: '2-digit', minute: '2-digit' }).format(new Date(value));
-  const minutes = Math.max(1, Math.round(durationSeconds / 60));
-  return isOngoing
-    ? `Stop · Started ${time(startedAtUtc)} · ${minutes} min · Ongoing`
-    : `Stop · ${time(startedAtUtc)}–${endedAtUtc ? time(endedAtUtc) : 'TBA'} · ${minutes} min`;
 }
