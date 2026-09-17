@@ -201,12 +201,16 @@ class _ShoreWildlifeTripScreenState extends State<ShoreWildlifeTripScreen> {
     }, success: 'All signatures were saved.');
   }
 
-  Future<void> _approve(String approval) async {
+  Future<void> _finalizeRecord(bool confirm) async {
     await _run(() async {
-      final updated = await _api.approveShoreWildlifeTrip(_tripId, approval);
-      _trip = {...?_trip, ...updated};
-      _attendance = {...?_attendance, ...updated};
-    }, success: 'Trip ${approval.toLowerCase()}.');
+      final id = _record!['id'].toString();
+      _record = confirm
+          ? await _api.confirmShoreWildlifeRecord(id)
+          : await _api.discardShoreWildlifeRecord(id);
+    },
+        success: confirm
+            ? 'Monitoring record confirmed.'
+            : 'Monitoring record discarded.');
   }
 
   Future<void> _run(Future<void> Function() action,
@@ -355,33 +359,9 @@ class _ShoreWildlifeTripScreenState extends State<ShoreWildlifeTripScreen> {
               );
             }),
             const SizedBox(height: 20),
-            LayoutBuilder(builder: (context, constraints) {
-              final width = (constraints.maxWidth - 16) / 3;
-              return Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SizedBox(
-                    width: width,
-                    child: _approval(
-                        'Boat approval', wildlifeBoatApproval(attendance)),
-                  ),
-                  const SizedBox(width: 8),
-                  SizedBox(
-                    width: width,
-                    child: _approval('SLCG Shore',
-                        attendance['shoreApproval']?.toString() ?? 'Pending'),
-                  ),
-                  const SizedBox(width: 8),
-                  SizedBox(
-                    width: width,
-                    child: _approval(
-                        'Wildlife Shore',
-                        attendance['wildlifeShoreApproval']?.toString() ??
-                            'Pending'),
-                  ),
-                ],
-              );
-            }),
+            const Text(
+                'Wildlife monitoring is independent of trip start authorization.',
+                style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
           ],
         ),
       );
@@ -537,10 +517,12 @@ class _ShoreWildlifeTripScreenState extends State<ShoreWildlifeTripScreen> {
               SizedBox(
                 width: double.infinity,
                 child: FilledButton(
-                  onPressed:
-                      _busy || _recordComplete || !_monitoringFieldsComplete
-                          ? null
-                          : _requestSignatures,
+                  onPressed: _busy ||
+                          _recordComplete ||
+                          _allSignatures ||
+                          !_monitoringFieldsComplete
+                      ? null
+                      : _requestSignatures,
                   style: FilledButton.styleFrom(
                     backgroundColor: wildlifeForest,
                     shape: RoundedRectangleBorder(
@@ -554,9 +536,11 @@ class _ShoreWildlifeTripScreenState extends State<ShoreWildlifeTripScreen> {
                           : 'Request Signatures'),
                 ),
               ),
-            if (_recordComplete && _allSignatures) ...[
+            if (!_recordComplete &&
+                _record?['status'] != 'Discarded' &&
+                _allSignatures) ...[
               const Divider(height: 38),
-              const Text('Wildlife Shore Approval',
+              const Text('Finalize Monitoring Record',
                   style: TextStyle(fontWeight: FontWeight.w600)),
               const SizedBox(height: 4),
               const Text(
@@ -567,7 +551,7 @@ class _ShoreWildlifeTripScreenState extends State<ShoreWildlifeTripScreen> {
               Row(children: [
                 Expanded(
                   child: OutlinedButton(
-                    onPressed: _busy ? null : () => _approve('Rejected'),
+                    onPressed: _busy ? null : () => _finalizeRecord(false),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: const Color(0xFFB91C1C),
                       side: const BorderSide(color: Color(0xFFFCA5A5)),
@@ -575,24 +559,21 @@ class _ShoreWildlifeTripScreenState extends State<ShoreWildlifeTripScreen> {
                           borderRadius: BorderRadius.circular(8)),
                       padding: const EdgeInsets.symmetric(vertical: 13),
                     ),
-                    child: const Text('Reject',
+                    child: const Text('Discard',
                         style: TextStyle(fontWeight: FontWeight.w600)),
                   ),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: FilledButton(
-                    onPressed: _busy ||
-                            attendance['wildlifeShoreApproval'] == 'Approved'
-                        ? null
-                        : () => _approve('Approved'),
+                    onPressed: _busy ? null : () => _finalizeRecord(true),
                     style: FilledButton.styleFrom(
                       backgroundColor: wildlifeGreen,
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10)),
                       padding: const EdgeInsets.symmetric(vertical: 13),
                     ),
-                    child: const Text('Approve Trip',
+                    child: const Text('Confirm',
                         style: TextStyle(fontWeight: FontWeight.w600)),
                   ),
                 ),
@@ -654,15 +635,6 @@ class _ShoreWildlifeTripScreenState extends State<ShoreWildlifeTripScreen> {
           Text(value,
               style: const TextStyle(fontWeight: FontWeight.w600),
               overflow: TextOverflow.visible),
-        ],
-      );
-
-  Widget _approval(String label, String value) => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: const TextStyle(fontSize: 12, color: shoreInk)),
-          const SizedBox(height: 7),
-          WildlifeStatusBadge(value),
         ],
       );
 

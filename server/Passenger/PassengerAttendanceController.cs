@@ -35,7 +35,7 @@ public sealed class PassengerAttendanceController(WhaleWatchingDbContext db,
     {
         var trip = await db.Trips.AsNoTracking().SingleOrDefaultAsync(x => x.Id == tripId, ct);
         if (trip is null) return NotFound(new { message = "The selected trip was not found." });
-        if (trip.Status is not (TripStatus.Scheduled or TripStatus.Boarding))
+        if (trip.Status is not (TripStatus.Scheduled or TripStatus.Boarding or TripStatus.NeedsReschedule))
             return Conflict(new { message = "Passenger boarding is not available for this trip." });
         var token = ParseQrValue(request.QrValue);
         if (token is null) return BadRequest(new { message = "Invalid passenger QR code. Please ask the passenger to present a valid registration QR code." });
@@ -106,7 +106,7 @@ public sealed class PassengerAttendanceController(WhaleWatchingDbContext db,
             if (trip is null) return NotFound();
             if (trip.PassengerVerificationFinalizedAtUtc is not null)
                 return Conflict(new { message = "Passenger verification has been finalized for this trip." });
-            if (trip.Status is not (TripStatus.Scheduled or TripStatus.Boarding))
+            if (trip.Status is not (TripStatus.Scheduled or TripStatus.Boarding or TripStatus.NeedsReschedule))
                 return Conflict(new { message = "Passenger boarding is not available for this trip." });
             var registrations = await db.TripPassengers.Include(x => x.Attendance).Where(x =>
                 x.TripId == tripId && x.PrimaryPassengerId == primaryPassengerId).ToListAsync(ct);
@@ -175,7 +175,7 @@ public sealed class PassengerAttendanceController(WhaleWatchingDbContext db,
             if (trip is null) return NotFound();
             if (trip.PassengerVerificationFinalizedAtUtc is not null)
                 return Conflict(new { message = "Passenger verification has already been finalized." });
-            if (trip.Status is not (TripStatus.Scheduled or TripStatus.Boarding))
+            if (trip.Status is not (TripStatus.Scheduled or TripStatus.Boarding or TripStatus.NeedsReschedule))
                 return Conflict(new { message = "Passenger verification cannot be finalized for this trip." });
             var total = await db.TripPassengers.CountAsync(x => x.TripId == tripId, ct);
             var checkedCount = await db.TripPassengerAttendances.CountAsync(x =>

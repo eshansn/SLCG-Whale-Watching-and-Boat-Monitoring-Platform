@@ -2,13 +2,13 @@ import { useState, type ReactNode } from 'react';
 import { ArrowLeft, Download, Eye, Pencil, Ship, Trash2 } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../../auth/useAuth';
-import { operationsApi } from '../../operations/operationsApi';
 import { useAdminRecords } from './AdminRecordsContext';
 import ApprovalControls from './components/ApprovalControls';
 import BoatReportModal from './components/BoatReportModal';
 import EditRecordModal from './components/EditRecordModal';
 import { RecordUnavailable, RecordsErrorNotice } from './components/RecordsLoadState';
 import TripHistory from './components/TripHistory';
+import BoatDocumentsPanel from './components/BoatDocumentsPanel';
 
 export default function BoatDetailsPage() {
   const { id, fleetId, boatId } = useParams();
@@ -37,18 +37,6 @@ export default function BoatDetailsPage() {
       alert(reason instanceof Error ? reason.message : 'The boat could not be deleted.');
       setDeleting(false);
     }
-  };
-
-  const openDocument = async (documentId: string, download = false) => {
-    if (!session || !boat.apiId) return;
-    const url = await operationsApi.downloadBoatDocument(session.accessToken, boat.apiId, documentId);
-    if (download) {
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = boat.documents?.find(item => item.id === documentId)?.fileName ?? 'certificate';
-      link.click();
-    } else window.open(url, '_blank', 'noopener,noreferrer');
-    window.setTimeout(() => URL.revokeObjectURL(url), 60000);
   };
 
   return <main className="mx-auto max-w-7xl px-6 py-10">
@@ -80,7 +68,7 @@ export default function BoatDetailsPage() {
       <div className="space-y-6">
         <Card title="Owner">{owner && <Link aria-label={`View ${owner.name}`} title="View owner" to={`${prefix}/owners/${owner.id}`} className="mt-4 flex justify-between rounded-xl border p-4"><b>{owner.name}</b><Eye size={19} className="text-indigo-700"/></Link>}</Card>
         <Card title={`Owner's crew (${ownerCrew.length})`}><div className="mt-4 grid gap-3 sm:grid-cols-2">{ownerCrew.map(member => <Link key={member.id} aria-label={`View ${member.name}`} title="View crew member" to={`${prefix}/crew/${member.id}`} className="flex justify-between rounded-xl border p-4"><span><b className="block">{member.name}</b><span className="text-xs text-slate-500">{member.role}</span></span><Eye size={18} className="text-indigo-700"/></Link>)}</div></Card>
-        <Card title="Certifications"><div className="mt-4 grid gap-3 sm:grid-cols-2">{boat.documents?.map(item => <article key={item.id} className="rounded-lg bg-slate-50 p-4"><p className="font-semibold">{item.name}</p><p className="truncate text-xs text-slate-500">{item.fileName}</p>{item.expirationDate&&<p className="mt-1 text-xs font-medium text-amber-700">Expires {new Intl.DateTimeFormat('en-LK',{dateStyle:'medium',timeZone:'UTC'}).format(new Date(`${item.expirationDate}T00:00:00Z`))}</p>}<div className="mt-3 flex gap-2"><button onClick={() => void openDocument(item.id)} aria-label={`View ${item.name}`} title="View" className="rounded-full p-2 text-indigo-700"><Eye size={18}/></button><button onClick={() => void openDocument(item.id, true)} aria-label={`Download ${item.name}`} title="Download" className="rounded-full p-2 text-indigo-700"><Download size={18}/></button></div></article>)}</div></Card>
+        {session && boat.apiId && <BoatDocumentsPanel boatId={boat.apiId} requirementsVersion={boat.documentRequirementsVersion} documents={boat.documents ?? []} token={session.accessToken} canReview={session.roles.includes('Wildlife') || session.roles.includes('Admin')} onChanged={records.reload}/>}
         <TripHistory tripIds={boat.tripIds}/>
       </div>
     </div>

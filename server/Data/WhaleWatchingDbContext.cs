@@ -21,6 +21,7 @@ public sealed class WhaleWatchingDbContext(DbContextOptions<WhaleWatchingDbConte
     public DbSet<TripPassengerAttendance> TripPassengerAttendances => Set<TripPassengerAttendance>();
     public DbSet<PassengerAttendanceAudit> PassengerAttendanceAudits => Set<PassengerAttendanceAudit>();
     public DbSet<WildlifeMonitoringRecord> WildlifeMonitoringRecords => Set<WildlifeMonitoringRecord>();
+    public DbSet<WildlifeSignatureRequest> WildlifeSignatureRequests => Set<WildlifeSignatureRequest>();
     public DbSet<PassengerComplaint> PassengerComplaints => Set<PassengerComplaint>();
     public DbSet<ComplaintImage> ComplaintImages => Set<ComplaintImage>();
     public DbSet<Trip> Trips => Set<Trip>();
@@ -66,6 +67,8 @@ public sealed class WhaleWatchingDbContext(DbContextOptions<WhaleWatchingDbConte
         membership.HasOne(x => x.CrewUser).WithMany(x => x.CrewMemberships).HasForeignKey(x => x.CrewUserId).OnDelete(DeleteBehavior.Restrict);
 
         var tripCrew = modelBuilder.Entity<TripCrewAssignment>();
+        tripCrew.Property(x => x.Position).HasMaxLength(100).IsRequired();
+        tripCrew.Property(x => x.Source).HasMaxLength(32).IsRequired();
         tripCrew.HasIndex(x => new { x.TripId, x.CrewUserId }).IsUnique();
         tripCrew.HasOne(x => x.Trip).WithMany(x => x.CrewAssignments).HasForeignKey(x => x.TripId).OnDelete(DeleteBehavior.Cascade);
         tripCrew.HasOne(x => x.CrewUser).WithMany(x => x.TripAssignments).HasForeignKey(x => x.CrewUserId).OnDelete(DeleteBehavior.Restrict);
@@ -77,6 +80,7 @@ public sealed class WhaleWatchingDbContext(DbContextOptions<WhaleWatchingDbConte
         passenger.Property(x => x.PhoneNumber).HasMaxLength(32).IsRequired();
         passenger.Property(x => x.NormalizedPhoneNumber).HasMaxLength(32).IsRequired();
         passenger.Property(x => x.PassengerType).HasMaxLength(16).IsRequired();
+        passenger.Property(x => x.CountryCode).HasMaxLength(2).IsFixedLength();
         passenger.Property(x => x.Gender).HasMaxLength(16).IsRequired();
         passenger.Property(x => x.AgeCategory).HasMaxLength(16).IsRequired();
         passenger.Property(x => x.SpecialNeedType).HasMaxLength(80);
@@ -115,6 +119,21 @@ public sealed class WhaleWatchingDbContext(DbContextOptions<WhaleWatchingDbConte
         wildlifeRecord.HasOne(x => x.Trip).WithMany().HasForeignKey(x => x.TripId).OnDelete(DeleteBehavior.Restrict);
         wildlifeRecord.HasOne(x => x.CreatedByUser).WithMany().HasForeignKey(x => x.CreatedByUserId).OnDelete(DeleteBehavior.Restrict);
 
+        var signatureRequest = modelBuilder.Entity<WildlifeSignatureRequest>();
+        signatureRequest.Property(x => x.SignatureData).HasMaxLength(500000);
+        signatureRequest.Property(x => x.SignedByName).HasMaxLength(160);
+        signatureRequest.Property(x => x.DeclineReason).HasMaxLength(1000);
+        signatureRequest.HasIndex(x => new { x.WildlifeMonitoringRecordId, x.SignatureType, x.RequestedAtUtc });
+        signatureRequest.HasIndex(x => new { x.WildlifeMonitoringRecordId, x.SignatureType })
+            .IsUnique().HasFilter("[Status] = 0");
+        signatureRequest.HasIndex(x => new { x.RequestedUserId, x.Status, x.RequestedAtUtc });
+        signatureRequest.HasOne(x => x.WildlifeMonitoringRecord).WithMany(x => x.SignatureRequests)
+            .HasForeignKey(x => x.WildlifeMonitoringRecordId).OnDelete(DeleteBehavior.Cascade);
+        signatureRequest.HasOne(x => x.RequestedUser).WithMany()
+            .HasForeignKey(x => x.RequestedUserId).OnDelete(DeleteBehavior.Restrict);
+        signatureRequest.HasOne(x => x.RequestedByUser).WithMany()
+            .HasForeignKey(x => x.RequestedByUserId).OnDelete(DeleteBehavior.Restrict);
+
         var passengerSession = modelBuilder.Entity<PassengerSession>();
         passengerSession.Property(x => x.TokenHash).HasMaxLength(64).IsFixedLength().IsRequired();
         passengerSession.HasIndex(x => x.TokenHash).IsUnique();
@@ -134,22 +153,48 @@ public sealed class WhaleWatchingDbContext(DbContextOptions<WhaleWatchingDbConte
         complaintImage.Property(x => x.Content).IsRequired();
         complaintImage.HasOne(x => x.Complaint).WithMany(x => x.Images).HasForeignKey(x => x.ComplaintId).OnDelete(DeleteBehavior.Cascade);
 
-        modelBuilder.Entity<BoatDocument>().Property(x => x.Name).HasMaxLength(160).IsRequired();
-        modelBuilder.Entity<BoatDocument>().Property(x => x.FileUrl).HasMaxLength(1000);
-        modelBuilder.Entity<BoatDocument>().Property(x => x.FileName).HasMaxLength(255).IsRequired();
-        modelBuilder.Entity<BoatDocument>().Property(x => x.ContentType).HasMaxLength(128).IsRequired();
+        var boatDocument = modelBuilder.Entity<BoatDocument>();
+        boatDocument.Property(x => x.Name).HasMaxLength(160).IsRequired();
+        boatDocument.Property(x => x.DocumentType).HasMaxLength(80).IsRequired();
+        boatDocument.Property(x => x.FileUrl).HasMaxLength(1000);
+        boatDocument.Property(x => x.FileName).HasMaxLength(255).IsRequired();
+        boatDocument.Property(x => x.StoredFileName).HasMaxLength(255).IsRequired();
+        boatDocument.Property(x => x.ContentType).HasMaxLength(128).IsRequired();
+        boatDocument.Property(x => x.RejectionReason).HasMaxLength(1000);
+        boatDocument.HasIndex(x => x.BoatId);
+        boatDocument.HasIndex(x => new { x.BoatId, x.DocumentType, x.IsCurrent })
+            .IsUnique().HasFilter("[IsCurrent] = 1");
+        boatDocument.HasIndex(x => x.ExpirationDate);
+        boatDocument.HasIndex(x => x.Status);
+        boatDocument.HasOne(x => x.UploadedByUser).WithMany()
+            .HasForeignKey(x => x.UploadedByUserId).OnDelete(DeleteBehavior.Restrict);
+        boatDocument.HasOne(x => x.VerifiedByUser).WithMany()
+            .HasForeignKey(x => x.VerifiedByUserId).OnDelete(DeleteBehavior.Restrict);
+        boatDocument.HasOne(x => x.ReplacesDocument).WithMany()
+            .HasForeignKey(x => x.ReplacesDocumentId).OnDelete(DeleteBehavior.Restrict);
         modelBuilder.Entity<Trip>().Property(x => x.Route).HasMaxLength(300).IsRequired();
         modelBuilder.Entity<Trip>().Property(x => x.ShoreNotes).HasMaxLength(1000);
         modelBuilder.Entity<Trip>().Property(x => x.WildlifeShoreNotes).HasMaxLength(1000);
         modelBuilder.Entity<Trip>().Property(x => x.InvitationCode).HasMaxLength(64);
+        modelBuilder.Entity<Trip>().Property(x => x.StartedByRole).HasMaxLength(64);
+        modelBuilder.Entity<Trip>().Property(x => x.DeclineReason).HasMaxLength(1000);
+        modelBuilder.Entity<Trip>().Property(x => x.RescheduleOverrideReason).HasMaxLength(1000);
         modelBuilder.Entity<Trip>().HasIndex(x => x.InvitationCode).IsUnique().HasFilter("[InvitationCode] IS NOT NULL");
         modelBuilder.Entity<Trip>().HasOne(x => x.PassengerVerificationFinalizedByUser).WithMany()
             .HasForeignKey(x => x.PassengerVerificationFinalizedByUserId).OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<Trip>().HasOne(x => x.StartedByUser).WithMany()
+            .HasForeignKey(x => x.StartedByUserId).OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<Trip>().HasOne(x => x.DeclinedByUser).WithMany()
+            .HasForeignKey(x => x.DeclinedByUserId).OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<Trip>().HasOne(x => x.RescheduleOverrideByUser).WithMany()
+            .HasForeignKey(x => x.RescheduleOverrideByUserId).OnDelete(DeleteBehavior.Restrict);
         var sosEvent = modelBuilder.Entity<SosEvent>();
         sosEvent.Property(x => x.Message).HasMaxLength(1000).IsRequired();
         sosEvent.HasIndex(x => new { x.TripId, x.RaisedByUserId }).IsUnique()
             .HasFilter("[ResolvedAtUtc] IS NULL");
         var sosAction = modelBuilder.Entity<SosAction>();
+        sosAction.Property(x => x.ResponderName).HasMaxLength(160).IsRequired();
+        sosAction.Property(x => x.ResponderIdNumber).HasMaxLength(32).IsRequired();
         sosAction.Property(x => x.Details).HasMaxLength(1000).IsRequired();
         sosAction.HasIndex(x => new { x.SosEventId, x.TakenAtUtc });
         sosAction.HasOne(x => x.SosEvent).WithMany(x => x.Actions)

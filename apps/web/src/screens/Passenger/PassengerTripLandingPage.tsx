@@ -29,7 +29,7 @@ export default function PassengerTripLandingPage() {
           <Detail icon={<CalendarDays/>} label="Scheduled date" value={new Intl.DateTimeFormat('en-LK',{dateStyle:'full'}).format(scheduled)}/>
           <Detail icon={<Clock3/>} label="Scheduled time" value={new Intl.DateTimeFormat('en-LK',{timeStyle:'short'}).format(scheduled)}/>
           <Detail icon={<Anchor/>} label="Trip status" value={trip.status}/>
-          <Detail icon={<IdCard/>} label="Shore approval" value={trip.shoreApproval}/>
+          <Detail icon={<IdCard/>} label="Trip status" value={trip.status}/>
         </dl>
         {!trip.acceptingPassengers ? <p className="mt-7 rounded-xl bg-amber-50 p-4 text-sm font-medium text-amber-800">This trip is no longer accepting passenger registrations.</p> : <div className="mt-8"><h2 className="text-xl font-semibold">Continue to passenger portal</h2><p className="mt-1 text-sm text-slate-500">Register for the first time or identify yourself using your existing passenger record.</p><div className="mt-5 grid gap-3 sm:grid-cols-2"><button onClick={() => navigate(`/passenger/register?trip=${encodeURIComponent(invitationCode)}`)} className="flex min-h-14 items-center justify-center gap-2 rounded-xl bg-[#162d54] px-5 font-semibold text-white"><UserPlus size={19}/>New passenger</button><button onClick={() => navigate(`/passenger/verification?trip=${encodeURIComponent(invitationCode)}`)} className="flex min-h-14 items-center justify-center gap-2 rounded-xl border border-[#162d54] px-5 font-semibold text-[#162d54]"><LogIn size={19}/>Returning passenger</button></div></div>}
       </div>

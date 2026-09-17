@@ -1,0 +1,5 @@
+npm notice run web@0.0.0 dev
+npm notice run vite --host 127.0.0.1 --port 5174 --strictPort
+4:39:51 PM [vite] (client) [console.error] [2026-09-16T11:09:51.566Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+4:41:50 PM [vite] (client) [console.error] [2026-09-16T11:11:50.745Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+4:42:20 PM [vite] (client) [console.error] [2026-09-16T11:12:20.724Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.

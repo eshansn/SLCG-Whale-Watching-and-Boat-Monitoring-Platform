@@ -53,7 +53,7 @@ class _State extends State<TripsListScreen> {
               t['vesselName'],
               t['ownerName'],
               t['registrationNumber'],
-              t['shoreApproval']
+              t['status']
             ].any((v) => v?.toString().toLowerCase().contains(q) ?? false))
         .toList();
     result.sort((a, b) => sort == 'vessel'
@@ -69,7 +69,7 @@ class _State extends State<TripsListScreen> {
         'owner': t['ownerName'],
         'reg': t['registrationNumber'],
         'time': formatShoreDate(t['scheduledDepartureUtc']),
-        'status': t['shoreApproval'],
+        'status': t['status'],
         'crew': t['crew'] ?? const [],
         'raw': t
       };
@@ -228,7 +228,7 @@ class _State extends State<TripsListScreen> {
                             DataCell(Text(
                                 formatShoreDate(t['scheduledDepartureUtc']))),
                             DataCell(_status(
-                                t['shoreApproval']?.toString() ?? 'Pending')),
+                                t['status']?.toString() ?? 'Scheduled')),
                             DataCell(IconButton.outlined(
                                 onPressed: () => Navigator.pushNamed(
                                     context, '/trip_details',
@@ -267,7 +267,7 @@ class _State extends State<TripsListScreen> {
                                           fontWeight: FontWeight.bold,
                                           color: shoreInk))),
                               _status(
-                                  t['shoreApproval']?.toString() ?? 'Pending')
+                                  t['status']?.toString() ?? 'Scheduled')
                             ]),
                         const SizedBox(height: 8),
                         Text('${t['registrationNumber']} · ${t['ownerName']}',

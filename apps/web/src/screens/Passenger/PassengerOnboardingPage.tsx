@@ -10,8 +10,11 @@ import { useNavigate } from "react-router-dom";
 import { setActivePassengerTripInvitation } from "./store/passengerStorage";
 import type { PassengerData } from "./store/passenger";
 import PassengerSOSButton from "./components/PassengerSOSButton";
+import CountryCombobox from "./components/CountryCombobox";
+import PassengerBoatLocation from "./components/PassengerBoatLocation";
 import { getActivePassengerTrip, getPassengerParty, getPassengerPersonalQr, registerTravelCompanion, type PassengerPersonalQr, type PassengerTripPreview } from "./passengerTripApi";
 import { submitComplaint } from "./complaintsApi";
+import { PassengerCountryDisplay } from "../../components/CountryFlag";
 
 const whaleBackground = "/Hero.png";
 const slcgLogo = "/SLCGicon.png";
@@ -23,6 +26,7 @@ const EMPTY_FAMILY_FORM: FamilyFormData = {
   identificationNumber: "",
   phoneNumber: "",
   passengerType: "local",
+  countryCode: "",
   gender: "male",
   ageCategory: "adult",
   specialNeedType: "",
@@ -57,7 +61,7 @@ function PassengerInformation({
 
       <div className="grid grid-cols-[85px_minmax(0,1fr)] gap-x-2 max-[374px]:grid-cols-[78px_minmax(0,1fr)] min-[1200px]:grid-cols-[120px_minmax(0,1fr)]">
         <dt className="font-medium text-white">Nationality</dt>
-        <dd className="m-0 min-w-0 wrap-anywhere text-[#d0d0d0]">{formatValue(passenger.passengerType)}</dd>
+        <dd className="m-0 min-w-0 wrap-anywhere text-[#d0d0d0]"><PassengerCountryDisplay passengerType={passenger.passengerType} countryCode={passenger.countryCode} /></dd>
       </div>
 
       <div className="grid grid-cols-[85px_minmax(0,1fr)] gap-x-2 max-[374px]:grid-cols-[78px_minmax(0,1fr)] min-[1200px]:grid-cols-[120px_minmax(0,1fr)]">
@@ -198,6 +202,11 @@ function PassengerOnboardingPage() {
       return;
     }
 
+    if (familyForm.passengerType === "foreign" && !familyForm.countryCode) {
+      setFamilyError("Please select a country for this passenger.");
+      return;
+    }
+
     if (specialNeedsSelected && (!familyForm.specialNeedType?.trim() || !familyForm.selfCareConfirmed)) {
       setFamilyError("Please specify the special need and confirm self-care responsibility.");
       return;
@@ -208,6 +217,7 @@ function PassengerOnboardingPage() {
       identificationNumber: cleanIdentification,
       phoneNumber: cleanPhoneNumber,
       passengerType: familyForm.passengerType,
+      countryCode: familyForm.passengerType === "foreign" ? familyForm.countryCode : undefined,
       gender: familyForm.gender,
       ageCategory: familyForm.ageCategory,
       specialNeedType: specialNeedsSelected ? familyForm.specialNeedType?.trim() : undefined,
@@ -218,7 +228,7 @@ function PassengerOnboardingPage() {
       setSavingFamily(true);
       setFamilyError("");
       const registered = await registerTravelCompanion(companion);
-      setPassengers((current) => [...current, { ...companion, id: registered.id }]);
+      setPassengers((current) => [...current, { ...companion, countryCode: registered.countryCode, id: registered.id }]);
       setFamilyForm(EMPTY_FAMILY_FORM);
       setShowFamilyModal(false);
     } catch (companionError) {
@@ -318,6 +328,8 @@ function PassengerOnboardingPage() {
               </div>
             </div>
           </header>
+
+          <PassengerBoatLocation />
 
           <section className="mt-4">
             <h2 className="m-0 font-montserrat text-[16px] leading-[150%] font-bold text-white min-[1200px]:text-[clamp(22px,1.4vw,30px)]">Your Details</h2>
@@ -619,15 +631,16 @@ function PassengerOnboardingPage() {
                   <select
                     className="h-11 w-full cursor-pointer rounded-xl border border-slate-200 bg-slate-50 px-3 font-poppins text-sm font-normal text-slate-900 outline-none focus:border-black focus:bg-white focus:ring-4 focus:ring-black/10"
                     id="familyPassengerType"
-                    value={familyForm.passengerType}
-                    onChange={(event) =>
-                      updateFamilyField(
-                        "passengerType",
-                        event.target.value as
-                          | "local"
-                          | "foreign",
-                      )
-                    }
+                  value={familyForm.passengerType}
+                    onChange={(event) => {
+                      const passengerType = event.target.value as "local" | "foreign";
+                      setFamilyForm((currentForm) => ({
+                        ...currentForm,
+                        passengerType,
+                        countryCode: passengerType === "local" ? "" : currentForm.countryCode,
+                      }));
+                      setFamilyError("");
+                    }}
                   >
                     <option value="local">Local</option>
                     <option value="foreign">
@@ -636,6 +649,14 @@ function PassengerOnboardingPage() {
                   </select>
                 </div>
               </div>
+
+              {familyForm.passengerType === "foreign" && (
+                <CountryCombobox
+                  id="familyCountry"
+                  value={familyForm.countryCode}
+                  onChange={(countryCode) => updateFamilyField("countryCode", countryCode)}
+                />
+              )}
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="min-w-0">

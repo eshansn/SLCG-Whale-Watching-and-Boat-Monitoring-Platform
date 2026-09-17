@@ -4,6 +4,8 @@ export const PORTAL_ROLES = [
   'ShoreCrew',
   'Wildlife',
   'ShoreWildlife',
+  'Supervisor',
+  'HarbourOfficer',
   'Passenger',
   'BoatOwner',
   'BoatCrew',

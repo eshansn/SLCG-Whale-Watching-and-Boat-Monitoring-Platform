@@ -71,7 +71,7 @@ export default function PortalNotificationsPage({ portal }: { portal: Notificati
                   </span>
                   <Status value={trip.status} />
                 </span>
-                <span className="mt-2 block text-xs leading-5 text-slate-500">Shore approval: {trip.shoreApproval} · Wildlife approval: {trip.wildlifeShoreApproval}</span>
+                <span className="mt-2 block text-xs leading-5 text-slate-500">Trip lifecycle: {trip.status}{trip.rescheduleOverride?' · Started with Shore override':''}</span>
                 <time className="mt-2 block text-[10px] text-slate-400">Updated {formatTripDate(trip.updatedAtUtc)}</time>
               </span>
             </button>

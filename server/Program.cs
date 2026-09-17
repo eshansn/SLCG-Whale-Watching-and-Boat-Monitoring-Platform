@@ -1,10 +1,12 @@
 using System.Security.Claims;
+using System.Net;
 using System.Text;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -119,6 +121,10 @@ builder.Services.AddAuthorizationBuilder()
         policy => policy.RequireRole(PortalRoles.Wildlife))
     .AddPolicy(PortalPolicies.ShoreWildlife,
         policy => policy.RequireRole(PortalRoles.ShoreWildlife))
+    .AddPolicy(PortalPolicies.Supervisor,
+        policy => policy.RequireRole(PortalRoles.Supervisor))
+    .AddPolicy(PortalPolicies.HarbourOfficer,
+        policy => policy.RequireRole(PortalRoles.HarbourOfficer))
     .AddPolicy(PortalPolicies.Passenger,
         policy => policy.RequireRole(PortalRoles.Passenger))
     .AddPolicy(PortalPolicies.BoatOwner,
@@ -147,11 +153,20 @@ builder.Services.AddHealthChecks()
 builder.Services.AddControllers();
 builder.Services.AddSignalR();
 builder.Services.AddMemoryCache();
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.ForwardLimit = builder.Configuration.GetValue<int?>("ReverseProxy:ForwardLimit") ?? 1;
+    foreach (var value in builder.Configuration.GetSection("ReverseProxy:KnownProxies").Get<string[]>() ?? [])
+        if (IPAddress.TryParse(value, out var address) && !options.KnownProxies.Contains(address))
+            options.KnownProxies.Add(address);
+});
 builder.Services.AddCors(options => options.AddPolicy("clients", policy =>
 {
     var origins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ??
         ["http://localhost:5173", "http://127.0.0.1:5173"];
-    policy.WithOrigins(origins).AllowAnyHeader().AllowAnyMethod().AllowCredentials();
+    policy.WithOrigins(origins.Where(origin => Uri.TryCreate(origin, UriKind.Absolute, out _)).ToArray())
+        .AllowAnyHeader().AllowAnyMethod().AllowCredentials();
 }));
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSingleton(TimeProvider.System);
@@ -174,6 +189,8 @@ builder.Services.AddSingleton<GpsTrackerStatus>();
 builder.Services.AddScoped<GpsTelemetryIngestor>();
 builder.Services.AddScoped<GpsHistoryService>();
 builder.Services.AddScoped<TripTrackingService>();
+builder.Services.AddScoped<BoatDocumentService>();
+builder.Services.AddHostedService<TripLifecycleMonitor>();
 builder.Services.AddHostedService<TrackMyCarSyncWorker>();
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
@@ -183,6 +200,7 @@ var app = builder.Build();
 
 await ApplyDatabaseMigrationsAsync(app.Services);
 
+app.UseForwardedHeaders();
 app.UseRateLimiter();
 app.UseCors("clients");
 app.UseAuthentication();

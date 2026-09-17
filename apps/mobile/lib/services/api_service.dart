@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:async';
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
@@ -120,6 +119,10 @@ class ApiService extends ChangeNotifier {
       _sendMap('POST', '/api/operations/owner/crew', {'email': email});
   Future<void> removeOwnerCrew(String assignmentId) async =>
       _send('DELETE', '/api/operations/owner/crew/$assignmentId', const {});
+  Future<Map<String, dynamic>> assignCrewBoat(
+          String crewUserId, String? boatId) =>
+      _sendMap('PUT', '/api/operations/owner/crew/$crewUserId/boat',
+          {'boatId': boatId});
   Future<void> changePassword(String currentPassword, String newPassword) =>
       _send('POST', '/api/auth/change-password', {
         'currentPassword': currentPassword,
@@ -204,33 +207,35 @@ class ApiService extends ChangeNotifier {
   Future<Map<String, dynamic>> signShoreWildlifeRecord(
           String id, Map<String, dynamic> body) =>
       _sendMap('POST', '/api/shore-wildlife/records/$id/sign', body);
-  Future<Map<String, dynamic>> approveShoreWildlifeTrip(
-          String tripId, String approval) =>
-      _sendMap('PATCH', '/api/shore-wildlife/trips/$tripId/approval',
-          {'approval': approval});
+  Future<Map<String, dynamic>> confirmShoreWildlifeRecord(String id) =>
+      _sendMap('POST', '/api/shore-wildlife/records/$id/confirm', const {});
+  Future<Map<String, dynamic>> discardShoreWildlifeRecord(String id) =>
+      _sendMap('POST', '/api/shore-wildlife/records/$id/discard', const {});
   Future<List<Map<String, dynamic>>> tripPassengers(String tripId) async =>
       (await _get('/api/operations/trips/$tripId/passengers?updated=${DateTime.now().millisecondsSinceEpoch}')
               as List)
           .cast<Map<String, dynamic>>();
   Future<Map<String, dynamic>> createOwnerBoat(Map<String, dynamic> details) =>
       _sendMap('POST', '/api/operations/boats', details);
-  Future<Map<String, dynamic>> uploadBoatDocument(String boatId, String name,
-      Uint8List bytes, String fileName, String contentType,
-      {DateTime? expirationDate}) async {
+  Future<Map<String, dynamic>> uploadBoatDocument(
+      String boatId,
+      String documentType,
+      Uint8List bytes,
+      String fileName,
+      String contentType) async {
     final request = http.MultipartRequest(
         'POST', Uri.parse('$baseUrl/api/operations/boats/$boatId/documents'))
       ..headers['Authorization'] = 'Bearer ${session!.accessToken}'
-      ..fields['name'] = name
+      ..fields['documentType'] = documentType
       ..files.add(http.MultipartFile.fromBytes('file', bytes,
           filename: fileName, contentType: _mediaType(contentType)));
-    if (expirationDate != null) {
-      request.fields['expirationDate'] =
-          expirationDate.toIso8601String().substring(0, 10);
-    }
     final response = await http.Response.fromStream(
         await request.send().timeout(const Duration(seconds: 30)));
     return (_decode(response) as Map).cast<String, dynamic>();
   }
+
+  Future<void> submitOwnerBoatRegistration(String boatId) =>
+      _send('POST', '/api/operations/boats/$boatId/submit', const {});
 
   Future<DownloadedFile> downloadBoatDocument(String boatId, String documentId,
       String fileName, String contentType) async {
@@ -275,8 +280,16 @@ class ApiService extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> approve(String id, String approval) async => _send('PATCH',
-      '/api/operations/trips/$id/shore-approval', {'approval': approval});
+  Future<void> startTrip(String id,
+          {bool confirmRescheduleOverride = false, String? overrideReason}) =>
+      _send('POST', '/api/operations/trips/$id/start', {
+        'confirmRescheduleOverride': confirmRescheduleOverride,
+        'overrideReason': overrideReason,
+      });
+  Future<void> declineTrip(String id, {String? reason}) =>
+      _send('POST', '/api/operations/trips/$id/decline', {'reason': reason});
+  Future<void> endTrip(String id) =>
+      _send('POST', '/api/operations/trips/$id/end', const {});
   Future<void> updateStatus(String id, String status) async =>
       _send('PATCH', '/api/operations/trips/$id/status', {'status': status});
   Future<void> createTrip(String boatId, DateTime departure,
@@ -377,8 +390,9 @@ class ApiService extends ChangeNotifier {
       String method, String path, Object body) async {
     final response = await _sendResponse(method, path, body);
     final decoded = _decode(response);
-    if (decoded is! Map)
+    if (decoded is! Map) {
       throw Exception('The server returned an invalid response.');
+    }
     return decoded.cast<String, dynamic>();
   }
 

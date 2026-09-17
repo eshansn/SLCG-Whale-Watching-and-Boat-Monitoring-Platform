@@ -12,7 +12,7 @@ const ShoreDashboard = () => {
   const tripStateNow = useTripStateClock();
   const activeShoreTrips = shoreTrips.filter((trip) => isOperationalTripVisible(trip, tripStateNow));
   const name = session?.email.split("@")[0] ?? "Shore Officer";
-  const currentTrips = activeShoreTrips.filter((trip) => trip.shoreApproval === "Pending").length;
+  const currentTrips = activeShoreTrips.filter((trip) => ["Scheduled","Boarding","NeedsReschedule"].includes(trip.status)).length;
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-12 lg:px-8">

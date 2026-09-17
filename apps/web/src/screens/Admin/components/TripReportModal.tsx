@@ -4,7 +4,7 @@ import { jsPDF } from 'jspdf';
 import type { Boat, Trip } from '../../../operations/operationsApi';
 
 type Period = 'today' | '7' | '30' | '60' | '90' | 'lifetime' | 'custom';
-type ApprovalFilter = 'all' | 'approved' | 'not-approved';
+type ApprovalFilter = 'all' | 'active' | 'closed';
 
 interface TripReportModalProps {
   boats: Boat[];
@@ -25,8 +25,8 @@ const periods: Array<[Period, string]> = [
 
 const approvalOptions: Array<[ApprovalFilter, string]> = [
   ['all', 'All'],
-  ['approved', 'Approved'],
-  ['not-approved', 'Not Approved'],
+  ['active', 'Scheduled / Ongoing'],
+  ['closed', 'Declined / Completed'],
 ];
 
 function localDateValue(date: Date) {
@@ -101,7 +101,7 @@ async function createTripReportPdf({
       pdf.setFont('helvetica', 'normal');
       pdf.setFontSize(9);
       pdf.text(`Period: ${periodLabel}`, margin, 21);
-      pdf.text(`Approval: ${approvalLabel}`, margin, 27);
+      pdf.text(`Lifecycle: ${approvalLabel}`, margin, 27);
       try {
         const logo = await loadImageAsDataUrl('/SLCG.png');
         pdf.addImage(logo, 'PNG', 139, 5, 55, 24, undefined, 'FAST');
@@ -146,15 +146,15 @@ async function createTripReportPdf({
     y += height;
   };
 
-  const approvedCount = trips.filter((trip) => trip.shoreApproval === 'Approved').length;
+  const ongoingCount = trips.filter((trip) => trip.status === 'Ongoing').length;
   await section('Report summary');
   await field('Generated', formatDateTime(new Date().toISOString()));
   await field('Time period', periodLabel);
-  await field('Approval filter', approvalLabel);
+  await field('Lifecycle filter', approvalLabel);
   await field('Boat filter', boatLabel);
   await field('Trips included', trips.length);
-  await field('Approved trips', approvedCount);
-  await field('Not approved trips', trips.length - approvedCount);
+  await field('Ongoing trips', ongoingCount);
+  await field('Other lifecycle states', trips.length - ongoingCount);
 
   await section(`Trip records (${trips.length})`);
   if (!trips.length) await field('Trips', 'No trips match the selected report filters.');
@@ -178,8 +178,10 @@ async function createTripReportPdf({
     await field('Passengers', trip.passengerCount);
     await field('Maximum capacity', boat?.maximumCapacity);
     await field('Trip status', trip.status);
-    await field('Shore approval', trip.shoreApproval);
-    await field('Wildlife Shore approval', trip.wildlifeShoreApproval);
+    await field('Passenger confirmation', trip.passengerVerificationFinalizedAtUtc ? 'Finalized' : 'Pending');
+    await field('Started by role', trip.startedByRole);
+    await field('Decline reason', trip.declineReason);
+    await field('Reschedule override', trip.rescheduleOverride ? 'Yes' : 'No');
     await field('Boat approval', boat?.approval);
     await field('Wildlife boat approval', boat?.wildlifeApproval);
     await field('Shore notes', trip.shoreNotes);
@@ -225,7 +227,8 @@ export default function TripReportModal({ boats, trips, loading, onClose }: Trip
     return trips.filter((trip) => {
       const scheduled = new Date(trip.scheduledDepartureUtc);
       const inPeriod = !bounds || (scheduled >= bounds.start && scheduled <= bounds.end);
-      const hasApproval = approval === 'all' || (approval === 'approved' ? trip.shoreApproval === 'Approved' : trip.shoreApproval !== 'Approved');
+      const active = ['Scheduled','Boarding','NeedsReschedule','Ongoing'].includes(trip.status);
+      const hasApproval = approval === 'all' || (approval === 'active' ? active : !active);
       const hasBoat = !selectedBoatIds.length || selectedBoatIds.includes(trip.boatId);
       return inPeriod && hasApproval && hasBoat;
     }).sort((a, b) => new Date(b.scheduledDepartureUtc).getTime() - new Date(a.scheduledDepartureUtc).getTime());
@@ -268,7 +271,7 @@ export default function TripReportModal({ boats, trips, loading, onClose }: Trip
 
           {period === 'custom' && <div className="grid gap-4 rounded-xl bg-slate-50 p-4 sm:grid-cols-2"><label className="text-xs font-semibold text-slate-600">From<input type="date" value={from} max={to || undefined} onChange={(event) => setFrom(event.target.value)} className="mt-2 block h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none focus:border-indigo-400"/></label><label className="text-xs font-semibold text-slate-600">To<input type="date" value={to} min={from || undefined} onChange={(event) => setTo(event.target.value)} className="mt-2 block h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none focus:border-indigo-400"/></label></div>}
 
-          <fieldset><legend className="text-sm font-semibold text-[#14223d]">Approval</legend><p className="mt-1 text-xs text-slate-400">Based on the existing Shore approval status.</p><div className="mt-3 grid grid-cols-3 gap-2">{approvalOptions.map(([value, label]) => <button key={value} type="button" onClick={() => setApproval(value)} className={`rounded-lg border px-3 py-2.5 text-xs font-semibold transition ${approval === value ? 'border-[#14223d] bg-[#14223d] text-white' : 'border-slate-200 text-slate-600 hover:border-indigo-300 hover:text-indigo-700'}`}>{label}</button>)}</div></fieldset>
+          <fieldset><legend className="text-sm font-semibold text-[#14223d]">Lifecycle</legend><p className="mt-1 text-xs text-slate-400">Filter by current operational trip state.</p><div className="mt-3 grid grid-cols-3 gap-2">{approvalOptions.map(([value, label]) => <button key={value} type="button" onClick={() => setApproval(value)} className={`rounded-lg border px-3 py-2.5 text-xs font-semibold transition ${approval === value ? 'border-[#14223d] bg-[#14223d] text-white' : 'border-slate-200 text-slate-600 hover:border-indigo-300 hover:text-indigo-700'}`}>{label}</button>)}</div></fieldset>
 
           <fieldset><legend className="text-sm font-semibold text-[#14223d]">Boats</legend><p className="mt-1 text-xs text-slate-400">Leave empty to include any boat, or select multiple boats.</p><div className="mt-3 flex flex-wrap gap-2"><button type="button" onClick={() => setSelectedBoatIds([])} className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${!selectedBoatIds.length ? 'border-[#14223d] bg-[#14223d] text-white' : 'border-slate-200 text-slate-600'}`}>Any boat</button>{selectedBoats.map((boat) => <button key={boat.id} type="button" onClick={() => toggleBoat(boat.id)} className="inline-flex items-center gap-1 rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-semibold text-indigo-700">{boat.name}<X size={13}/></button>)}</div>
             <div className="relative mt-3"><Search size={16} className="pointer-events-none absolute left-3 top-3.5 text-slate-400"/><input type="search" value={boatSearch} onChange={(event) => setBoatSearch(event.target.value)} placeholder="Search boat, registration or owner" className="h-11 w-full rounded-lg border border-slate-200 bg-[#f9fbff] pl-10 pr-3 text-sm outline-none focus:border-indigo-400"/>{boatSearch.trim() && <div className="absolute z-10 mt-1 max-h-56 w-full overflow-y-auto rounded-xl border border-slate-200 bg-white p-1 shadow-xl">{suggestions.length ? suggestions.map((boat) => <button key={boat.id} type="button" onClick={() => toggleBoat(boat.id)} className="flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left transition hover:bg-slate-50"><span><b className="block text-sm text-[#14223d]">{boat.name}</b><span className="text-xs text-slate-400">{boat.registrationNumber} · {boat.ownerName}</span></span><Check size={16} className="text-indigo-600"/></button>) : <p className="px-3 py-4 text-sm text-slate-400">No matching boats.</p>}</div>}</div>

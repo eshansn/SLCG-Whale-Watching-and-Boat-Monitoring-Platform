@@ -9,7 +9,7 @@ void main() {
       'ownerName': 'Nimal',
       'route': 'Dondra Head',
       'status': 'Scheduled',
-      'wildlifeShoreApproval': 'Pending',
+      'monitoringStatus': 'Draft',
       'scheduledDepartureUtc': '2026-08-02T02:00:00Z',
     },
     {
@@ -18,7 +18,7 @@ void main() {
       'ownerName': 'Amal',
       'route': 'Mirissa',
       'status': 'Completed',
-      'wildlifeShoreApproval': 'Approved',
+      'monitoringStatus': 'Completed',
       'scheduledDepartureUtc': '2026-08-01T02:00:00Z',
     },
   ];
@@ -30,7 +30,7 @@ void main() {
       'Amal',
       'Mirissa',
       'Completed',
-      'Approved',
+      'Completed',
     ]) {
       expect(visibleWildlifeTrips(trips, query, 'newest').single['boatName'],
           'Ocean Star');

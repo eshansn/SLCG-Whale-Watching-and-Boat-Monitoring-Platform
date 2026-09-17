@@ -1,17 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Copy, Download, Mic, Play, Search, Square } from "lucide-react";
+import { Copy, Download, Mic, Search, Square } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
-import Map, { Marker } from "react-map-gl/maplibre";
-import "maplibre-gl/dist/maplibre-gl.css";
 import { useParams } from "react-router-dom";
 import {
   operationsApi,
   type TripPassenger,
-  type VesselMapRecord,
 } from "../../operations/operationsApi";
 import { useOperations } from "../../operations/useOperations";
+import { formatPassengerCountry } from "../../data/countries";
+import { PassengerCountryDisplay } from "../../components/CountryFlag";
 import { CrewLayout, State } from "./components/CrewLayout";
 import { CrewSOSButton } from "./components/CrewSOSButton";
+import TripTrackingPanel from "../OPS/components/TripTrackingPanel";
 import {
   getCrewAttendance,
   type CrewAttendanceManifest,
@@ -76,8 +76,6 @@ export default function BoatCrewTripDetails() {
   const [passengerError, setPassengerError] = useState("");
   const [attendance, setAttendance] = useState<CrewAttendanceManifest>();
   const [attendanceError, setAttendanceError] = useState("");
-  const [vessel, setVessel] = useState<VesselMapRecord | null>(null);
-  const [mapError, setMapError] = useState("");
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState("name");
   const [startingTrip, setStartingTrip] = useState(false);
@@ -143,44 +141,11 @@ export default function BoatCrewTripDetails() {
     };
   }, [token, trip?.id, trip?.updatedAtUtc]);
 
-  useEffect(() => {
-    if (!token || !trip?.boatId) return;
-    let active = true;
-    let requestInFlight = false;
-    const load = async () => {
-      if (requestInFlight) return;
-      requestInFlight = true;
-      try {
-        const vessels = await operationsApi.vesselMap(token);
-        if (active) {
-          setVessel(vessels.find((item) => item.id === trip.boatId) ?? null);
-          setMapError("");
-        }
-      } catch (reason) {
-        if (active) {
-          setMapError(
-            reason instanceof Error
-              ? reason.message
-              : "Unable to load live vessel location.",
-          );
-        }
-      } finally {
-        requestInFlight = false;
-      }
-    };
-    void load();
-    const timer = window.setInterval(() => void load(), 10_000);
-    return () => {
-      active = false;
-      window.clearInterval(timer);
-    };
-  }, [token, trip?.boatId]);
-
   const rows = useMemo(
     () =>
       passengers
         .filter((passenger) =>
-          `${passenger.name} ${passenger.identificationNumber} ${passenger.passengerType}`
+          `${passenger.name} ${passenger.identificationNumber} ${formatPassengerCountry(passenger.passengerType, passenger.countryCode)}`
             .toLowerCase()
             .includes(search.toLowerCase()),
         )
@@ -252,19 +217,18 @@ export default function BoatCrewTripDetails() {
       window.setTimeout(() => URL.revokeObjectURL(url), 1_000);
     }
   };
-  const startTrip = async () => {
+  const endTrip = async () => {
     if (!token || startingTrip) return;
-    const isOngoing = trip.status === "Ongoing";
     setStartingTrip(true);
     setStartError("");
     try {
-      await operationsApi.status(token, trip.id, isOngoing ? "Completed" : "Ongoing");
+      await operationsApi.endTrip(token, trip.id);
       await reload();
     } catch (reason) {
       setStartError(
         reason instanceof Error
           ? reason.message
-          : `Unable to ${isOngoing ? "end" : "start"} this trip.`,
+          : "Unable to end this trip.",
       );
     } finally {
       setStartingTrip(false);
@@ -329,7 +293,7 @@ export default function BoatCrewTripDetails() {
               }).format(new Date(trip.scheduledDepartureUtc))}
             />
             <p className="mt-2 text-[9px] font-semibold uppercase text-emerald-500">
-              ● {trip.shoreApproval}
+              ● {trip.status}
             </p>
           </div>
           <div className="justify-self-end text-center">
@@ -374,24 +338,16 @@ export default function BoatCrewTripDetails() {
           </div>
         </section>
 
-        {(trip.status === "Scheduled" ||
-          trip.status === "Boarding" ||
-          trip.status === "Ongoing") && (
+        {trip.status === "Ongoing" && (
           <div className="mt-6 flex flex-col items-center gap-2">
             <button
               type="button"
               disabled={startingTrip}
-              onClick={() => void startTrip()}
+              onClick={() => void endTrip()}
               className="flex min-h-11 items-center gap-2 rounded-lg bg-[#162d54] px-6 py-3 text-sm font-semibold text-white hover:bg-[#203d6c] disabled:opacity-50"
             >
-              {trip.status === "Ongoing" ? <Square size={18} /> : <Play size={18} />}
-              {startingTrip
-                ? trip.status === "Ongoing"
-                  ? "Ending..."
-                  : "Starting..."
-                : trip.status === "Ongoing"
-                  ? "End Trip"
-                  : "Start Trip"}
+              <Square size={18} />
+              {startingTrip ? "Ending..." : "End Trip"}
             </button>
             {startError && (
               <p role="alert" className="text-sm font-medium text-red-600">
@@ -477,7 +433,7 @@ export default function BoatCrewTripDetails() {
                       </td>
                       <td className="px-2 py-4 text-xs">{passenger.ageCategory}</td>
                       <td className="px-2 py-4 text-xs">
-                        {passenger.passengerType}
+                        <PassengerCountryDisplay passengerType={passenger.passengerType} countryCode={passenger.countryCode} />
                       </td>
                       <td className="px-2 py-4">
                         <AttendanceBadge status={status} />
@@ -498,38 +454,9 @@ export default function BoatCrewTripDetails() {
           </div>
         </section>
 
-        <section className="mt-4 overflow-hidden rounded-xl bg-white shadow-sm">
-          <div className="px-5 py-4">
-            <h2 className="font-semibold text-[#162d54]">Live vessel location</h2>
-            <p className="text-xs text-slate-500">
-              Updates automatically every 10 seconds
-            </p>
-          </div>
-          {mapError ? (
-            <p className="m-5 bg-red-50 p-4 text-sm text-red-700">{mapError}</p>
-          ) : vessel?.latitude != null && vessel.longitude != null ? (
-            <div className="h-[360px] w-full sm:h-[460px]">
-              <Map
-                initialViewState={{
-                  longitude: vessel.longitude,
-                  latitude: vessel.latitude,
-                  zoom: 14,
-                }}
-                mapStyle="https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json"
-              >
-                <Marker longitude={vessel.longitude} latitude={vessel.latitude}>
-                  <span className="grid h-11 w-11 place-items-center rounded-full border-4 border-white bg-[#162d54] text-white shadow-lg">
-                    ▲
-                  </span>
-                </Marker>
-              </Map>
-            </div>
-          ) : (
-            <p className="px-5 pb-6 text-sm text-slate-500">
-              No GPS location received yet.
-            </p>
-          )}
-        </section>
+        <div className="mt-4">
+          <TripTrackingPanel tripId={trip.id} vesselName={trip.vesselName} />
+        </div>
       </div>
       {token && (
         <CrewSOSButton

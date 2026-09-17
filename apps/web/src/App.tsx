@@ -47,7 +47,9 @@ import PassengerRegistrationPage from './screens/Passenger/PassengerRegistration
 import PassengerOnboardingPage from './screens/Passenger/PassengerOnboardingPage';
 import WildlifeNavbar from './screens/Wildlife/WildlifeNavbar';
 import ShoreWildlifeNavbar from './screens/ShoreWildlife/ShoreWildlifeNavbar';
-import { WildlifeRecords as ShoreWildlifeRecords, WildlifeTripDetails as ShoreWildlifeTripDetails, WildlifeTrips as ShoreWildlifeTrips } from './screens/ShoreWildlife/ShoreWildlifePages';
+import { WildlifeRecords as ShoreWildlifeRecords, WildlifeTrips as ShoreWildlifeTrips } from './screens/ShoreWildlife/ShoreWildlifePages';
+import ShoreWildlifeTripDetails from './screens/ShoreWildlife/WildlifeTripDetailsPage';
+import SignaturePortalPage from './screens/SignaturePortal/SignaturePortalPage';
 import BoatCrewDashboard from './screens/BoatCrew/BoatCrewDashboard';
 import BoatCrewProfile from './screens/BoatCrew/BoatCrewProfile';
 import BoatCrewSettings from './screens/BoatCrew/BoatCrewSettings';
@@ -71,6 +73,8 @@ const ADMIN_ROLES = ['Admin'] as const;
 const SHORE_ROLES = ['ShoreCrew'] as const;
 const WILDLIFE_ROLES = ['Wildlife'] as const;
 const SHORE_WILDLIFE_ROLES = ['ShoreWildlife'] as const;
+const SUPERVISOR_ROLES = ['Supervisor'] as const;
+const HARBOUR_OFFICER_ROLES = ['HarbourOfficer'] as const;
 const OWNER_ROLES = ['BoatOwner'] as const;
 const CREW_ROLES = ['BoatCrew'] as const;
 
@@ -127,6 +131,11 @@ function WildlifeRoute({ children }: { children: ReactElement }) {
 
 function ShoreWildlifeRoute({ children }: { children: ReactElement }) {
   return <ProtectedRoute allowedRoles={[...SHORE_WILDLIFE_ROLES]}><div className="shore-wildlife-portal min-h-screen bg-[#f8f9fb] font-[Poppins] text-[#14223d]"><ShoreWildlifeNavbar />{children}</div></ProtectedRoute>;
+}
+
+function SignatureRoute({ children, role }: { children: ReactElement; role: 'Supervisor' | 'HarbourOfficer' }) {
+  const allowedRoles = role === 'Supervisor' ? [...SUPERVISOR_ROLES] : [...HARBOUR_OFFICER_ROLES];
+  return <ProtectedRoute allowedRoles={allowedRoles}>{children}</ProtectedRoute>;
 }
 
 function OwnerRoute({ children }: { children: ReactElement }) {
@@ -249,9 +258,13 @@ export default function App() {
             <Route path="/wildlife/trip-info/:tripId" element={<WildlifeRoute><TripInfo /></WildlifeRoute>} />
             <Route path="/wildlife/complaints" element={<WildlifeRoute><ComplaintsInquiriesPage /></WildlifeRoute>} />
             <Route path="/wildlife/notifications" element={<WildlifeRoute><PortalNotificationsPage portal="wildlife" /></WildlifeRoute>} />
+            <Route path="/wildlife/manage-staff" element={<AdminRoute><StaffPage /></AdminRoute>} />
+            <Route path="/wildlife/staff-info/:staffId" element={<AdminRoute><StaffDetailsPage /></AdminRoute>} />
             <Route path="/shore-wildlife" element={<ShoreWildlifeRoute><ShoreWildlifeTrips /></ShoreWildlifeRoute>} />
             <Route path="/shore-wildlife/trips/:id" element={<ShoreWildlifeRoute><ShoreWildlifeTripDetails /></ShoreWildlifeRoute>} />
             <Route path="/shore-wildlife/records" element={<ShoreWildlifeRoute><ShoreWildlifeRecords /></ShoreWildlifeRoute>} />
+            <Route path="/supervisor" element={<SignatureRoute role="Supervisor"><SignaturePortalPage portalRole="Supervisor" /></SignatureRoute>} />
+            <Route path="/harbour-officer" element={<SignatureRoute role="HarbourOfficer"><SignaturePortalPage portalRole="HarbourOfficer" /></SignatureRoute>} />
 
             <Route
               path="/access-denied"

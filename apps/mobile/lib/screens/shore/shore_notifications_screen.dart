@@ -49,7 +49,7 @@ class _State extends State<ShoreNotificationsScreen> {
         'owner': t['ownerName'],
         'reg': t['registrationNumber'],
         'time': formatShoreDate(t['scheduledDepartureUtc']),
-        'status': t['shoreApproval'],
+        'status': t['status'],
         'crew': t['crew'] ?? const [],
         'raw': t
       };
@@ -125,7 +125,7 @@ class _State extends State<ShoreNotificationsScreen> {
         itemCount: trips.length,
         separatorBuilder: (_, __) => const Divider(color: Color(0xFFF1F5F9)),
         itemBuilder: (context, index) {
-          final t = trips[index], pending = t['shoreApproval'] == 'Pending';
+          final t = trips[index], pending = ['Scheduled','Boarding','NeedsReschedule'].contains(t['status']);
           return ListTile(
               contentPadding:
                   const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
@@ -151,8 +151,8 @@ class _State extends State<ShoreNotificationsScreen> {
                       color: shoreInk)),
               subtitle: Text(
                   pending
-                      ? 'Trip requires shore approval.'
-                      : 'Shore approval: ${t['shoreApproval']}',
+                      ? 'Trip is ready for Shore processing.'
+                      : 'Trip lifecycle: ${t['status']}',
                   style: const TextStyle(fontSize: 12, color: shoreMuted)),
               trailing: const Icon(Icons.chevron_right, color: shoreMuted));
         });

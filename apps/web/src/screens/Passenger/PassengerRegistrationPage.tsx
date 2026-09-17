@@ -6,6 +6,7 @@ import {
   storePassengerSession,
 } from "./store/passengerStorage";
 import { registerTripPassenger } from "./passengerTripApi";
+import CountryCombobox from "./components/CountryCombobox";
 
 const whaleBackground = "/Hero.png";
 const slcgLogo = "/SLCGicon.png";
@@ -15,6 +16,7 @@ interface RegistrationFormData {
   identificationNumber: string;
   phoneNumber: string;
   passengerType: "local" | "foreign";
+  countryCode: string;
   gender: "male" | "female" | "other";
   ageCategory: "adult" | "child" | "small";
 }
@@ -29,6 +31,7 @@ function PassengerRegistrationPage() {
     identificationNumber: "",
     phoneNumber: "",
     passengerType: "local",
+    countryCode: "",
     gender: "male",
     ageCategory: "adult",
   });
@@ -61,6 +64,11 @@ function PassengerRegistrationPage() {
     return;
   }
 
+  if (formData.passengerType === "foreign" && !formData.countryCode) {
+    setErrorMessage("Please select your country.");
+    return;
+  }
+
   if (!/^[0-9+\-\s]{9,15}$/.test(formData.phoneNumber.trim())) {
     setErrorMessage("Please enter a valid phone number.");
     return;
@@ -70,7 +78,7 @@ function PassengerRegistrationPage() {
   try {
     setSubmitting(true); setErrorMessage("");
     activatePassengerTrip(invitationCode);
-    const details={name:formData.name.trim(),identificationNumber:formData.identificationNumber.trim(),phoneNumber:formData.phoneNumber.trim(),passengerType:formData.passengerType,gender:formData.gender,ageCategory:formData.ageCategory};
+    const details={name:formData.name.trim(),identificationNumber:formData.identificationNumber.trim(),phoneNumber:formData.phoneNumber.trim(),passengerType:formData.passengerType,countryCode:formData.passengerType==="foreign"?formData.countryCode:undefined,gender:formData.gender,ageCategory:formData.ageCategory};
     const registered=await registerTripPassenger(invitationCode,details);
     storePassengerSession(invitationCode, registered.sessionToken);
     navigate("/passenger/onboarding");
@@ -91,7 +99,7 @@ function PassengerRegistrationPage() {
           <div className="absolute inset-0 bg-[linear-gradient(to_bottom,transparent_76%,rgba(0,0,0,.1)_86%,rgba(0,0,0,.45)_95%,#000_100%)]" aria-hidden="true" />
         </div>
 
-        <div className="relative flex min-h-0 flex-1 flex-col items-center overflow-y-auto bg-black px-[22px] pb-[10px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden max-[599px]:px-8 max-[599px]:pt-3 min-[600px]:max-[1023px]:px-8 min-[600px]:max-[1023px]:pt-3 min-[1024px]:overflow-hidden min-[1024px]:px-10 min-[1024px]:pt-3">
+        <div className="relative flex min-h-0 flex-1 flex-col items-center overflow-y-auto bg-black px-[22px] pb-[10px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden max-[599px]:px-8 max-[599px]:pt-3 min-[600px]:max-[1023px]:px-8 min-[600px]:max-[1023px]:pt-3 min-[1024px]:px-10 min-[1024px]:pt-3">
           <img
             className="absolute -top-[60px] left-1/2 z-2 h-[100px] w-[100px] -translate-x-1/2 object-contain max-[599px]:static max-[599px]:h-[90px] max-[599px]:w-[90px] max-[599px]:translate-x-0 min-[600px]:h-[90px] min-[600px]:w-[90px] min-[1024px]:static min-[1024px]:h-[100px] min-[1024px]:w-[100px] min-[1024px]:translate-x-0"
             src={slcgLogo}
@@ -180,20 +188,30 @@ function PassengerRegistrationPage() {
                   name="passengerType"
                   className="block h-11 w-full cursor-pointer rounded-lg border border-transparent bg-white px-3 font-poppins text-sm font-normal text-[#111] outline-none focus:border-[#5cefdc] focus:shadow-[0_0_0_3px_rgba(92,239,220,.2)] min-[1024px]:text-[clamp(11px,.72vw,15px)]"
                   value={formData.passengerType}
-                  onChange={(event) =>
-                    updateField(
-                      "passengerType",
-                      event.target.value as
-                        | "local"
-                        | "foreign",
-                    )
-                  }
+                  onChange={(event) => {
+                    const passengerType = event.target.value as "local" | "foreign";
+                    setFormData((previousData) => ({
+                      ...previousData,
+                      passengerType,
+                      countryCode: passengerType === "local" ? "" : previousData.countryCode,
+                    }));
+                    setErrorMessage("");
+                  }}
                 >
                   <option value="local">Local</option>
                   <option value="foreign">Foreign</option>
                 </select>
               </div>
             </div>
+
+            {formData.passengerType === "foreign" && (
+              <CountryCombobox
+                id="passengerCountry"
+                value={formData.countryCode}
+                onChange={(countryCode) => updateField("countryCode", countryCode)}
+                tone="dark"
+              />
+            )}
 
             <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2 min-[1024px]:gap-[10px]">
               <div className="min-w-0 w-full">

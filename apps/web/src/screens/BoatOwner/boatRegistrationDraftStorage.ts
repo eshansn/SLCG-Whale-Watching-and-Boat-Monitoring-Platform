@@ -16,11 +16,11 @@ export interface BoatFormData {
 
 export interface CertificationDraft {
   id: string;
+  documentType: string;
   name: string;
   fileName: string;
   file?: File;
-  expirationDate?: string;
-  requiresExpirationDate?: boolean;
+  renewable?: boolean;
 }
 
 export interface BoatRegistrationDraft {

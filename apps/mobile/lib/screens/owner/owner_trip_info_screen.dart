@@ -164,22 +164,18 @@ class _OwnerTripInfoScreenState extends State<OwnerTripInfoScreen> {
               const SizedBox(height: 14),
               Column(
                 children: [
-                  SizedBox(
+                  if (isOngoing) SizedBox(
                     width: double.infinity,
                     child: FilledButton.icon(
-                      onPressed: _starting ? null : _startTrip,
+                      onPressed: _starting ? null : _endTrip,
                       icon: _starting
                           ? const SizedBox(
                               width: 17,
                               height: 17,
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
-                          : Icon(isOngoing
-                              ? Icons.stop_rounded
-                              : Icons.play_arrow_rounded),
-                      label: Text(_starting
-                          ? (isOngoing ? 'Ending...' : 'Starting...')
-                          : (isOngoing ? 'End Trip' : 'Start Trip')),
+                          : const Icon(Icons.stop_rounded),
+                      label: Text(_starting ? 'Ending...' : 'End Trip'),
                     ),
                   ),
                   if (!isOngoing) ...[
@@ -300,7 +296,7 @@ class _OwnerTripInfoScreenState extends State<OwnerTripInfoScreen> {
                           'Date',
                           formatOwnerDate(_trip!['scheduledDepartureUtc'],
                               full: true)),
-                      OwnerStatusBadge(_trip!['shoreApproval']),
+                      OwnerStatusBadge(_trip!['status']),
                     ],
                   ),
                 ),
@@ -515,18 +511,15 @@ class _OwnerTripInfoScreenState extends State<OwnerTripInfoScreen> {
     await _loadAll();
   }
 
-  Future<void> _startTrip() async {
+  Future<void> _endTrip() async {
     if (_tripId == null || _starting) return;
-    final isOngoing = '${_trip?['status']}' == 'Ongoing';
     setState(() => _starting = true);
     try {
-      await _api.updateStatus(_tripId!, isOngoing ? 'Completed' : 'Ongoing');
+      await _api.endTrip(_tripId!);
       await _loadAll();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(isOngoing
-                ? 'Trip ended successfully.'
-                : 'Trip started successfully.')));
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Trip ended successfully.')));
       }
     } catch (error) {
       if (mounted) {

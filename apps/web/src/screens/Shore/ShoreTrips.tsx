@@ -16,7 +16,7 @@ const ShoreTrips = () => {
     const query = search.trim().toLowerCase();
     return shoreTrips
       .filter((trip) => isOperationalTripVisible(trip, tripStateNow))
-      .filter((trip) => [trip.vesselName, trip.ownerName, trip.registrationNumber, trip.shoreApproval].some((value) => value.toLowerCase().includes(query)))
+      .filter((trip) => [trip.vesselName, trip.ownerName, trip.registrationNumber, trip.status].some((value) => value.toLowerCase().includes(query)))
       .sort((a, b) => sort === "vessel" ? a.vesselName.localeCompare(b.vesselName) : a.scheduledDepartureUtc.localeCompare(b.scheduledDepartureUtc));
   }, [search, sort, shoreTrips, tripStateNow]);
 
@@ -47,7 +47,7 @@ const ShoreTrips = () => {
         <div className="divide-y divide-slate-100 md:hidden">
           {visibleTrips.map((trip) => (
             <button key={trip.id} type="button" onClick={() => navigate(`/shore/trips/${trip.id}`)} className="block w-full p-5 text-left transition hover:bg-slate-50">
-              <div className="flex items-start justify-between gap-3"><strong className="text-sm text-[#14223d]">{trip.vesselName}</strong><Status status={trip.shoreApproval} /></div>
+              <div className="flex items-start justify-between gap-3"><strong className="text-sm text-[#14223d]">{trip.vesselName}</strong><Status status={trip.status} /></div>
               <p className="mt-2 text-xs text-slate-500">{trip.registrationNumber} · {trip.ownerName}</p><p className="mt-1 text-xs text-slate-400">{formatTripDate(trip.scheduledDepartureUtc)}</p>
             </button>
           ))}
@@ -59,7 +59,7 @@ const ShoreTrips = () => {
 };
 
 function TripRow({ trip, onOpen }: { trip: Trip; onOpen: () => void }) {
-  return <tr className="transition hover:bg-slate-50/70"><td className="px-8 py-5 font-medium text-[#14223d]">{trip.vesselName}</td><td className="px-5 py-5 text-slate-600">{trip.ownerName}</td><td className="px-5 py-5 text-slate-600">{trip.registrationNumber}</td><td className="px-5 py-5 text-slate-600">{formatTripDate(trip.scheduledDepartureUtc)}</td><td className="px-5 py-5"><Status status={trip.shoreApproval} /></td><td className="px-8 py-5 text-right"><button type="button" onClick={onOpen} aria-label={`Review ${trip.vesselName}`} title="Review" className="rounded-full border border-indigo-200 p-2 text-indigo-700 transition hover:bg-indigo-50"><Eye size={18}/></button></td></tr>;
+  return <tr className="transition hover:bg-slate-50/70"><td className="px-8 py-5 font-medium text-[#14223d]">{trip.vesselName}</td><td className="px-5 py-5 text-slate-600">{trip.ownerName}</td><td className="px-5 py-5 text-slate-600">{trip.registrationNumber}</td><td className="px-5 py-5 text-slate-600">{formatTripDate(trip.scheduledDepartureUtc)}</td><td className="px-5 py-5"><Status status={trip.status} /></td><td className="px-8 py-5 text-right"><button type="button" onClick={onOpen} aria-label={`Review ${trip.vesselName}`} title="Review" className="rounded-full border border-indigo-200 p-2 text-indigo-700 transition hover:bg-indigo-50"><Eye size={18}/></button></td></tr>;
 }
 
 function Status({ status }: { status: string }) {

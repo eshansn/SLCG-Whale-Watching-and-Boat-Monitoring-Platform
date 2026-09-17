@@ -115,6 +115,7 @@ function BoatOwnerNewTripPage() {
     useState<TripSubmissionState>();
   const [crewState, setCrewState] = useState<CrewState>();
   const [selectedCrewState, setSelectedCrewState] = useState<CrewSelectionState>();
+  const [crewOverride, setCrewOverride] = useState(false);
   const currentTripForm = accountId !== undefined
     && tripFormState?.accountId === accountId
     ? tripFormState
@@ -134,6 +135,7 @@ function BoatOwnerNewTripPage() {
     ? selectedCrewState.crewUserIds
     : [];
   const effectiveSelectedVessel = selectedVessel || boats[0]?.id || "";
+  const assignedCrew = crew.filter(member => member.assignedBoatId === effectiveSelectedVessel);
 
   useLayoutEffect(() => {
     activeAccountIdRef.current = accountId;
@@ -252,7 +254,7 @@ function BoatOwnerNewTripPage() {
         statusMessage: "Scheduling trip...",
         submitting: true,
       });
-      const created = await operationsApi.createTrip(token, effectiveSelectedVessel, scheduled.toISOString(), selectedCrew);
+      const created = await operationsApi.createTrip(token, effectiveSelectedVessel, scheduled.toISOString(), crewOverride ? selectedCrew : []);
       if (activeAccountIdRef.current !== accountId) return;
       setTripSubmissionState({
         accountId,
@@ -380,6 +382,8 @@ function BoatOwnerNewTripPage() {
               value={effectiveSelectedVessel}
               onChange={(event) => {
                 updateTripForm({ selectedVessel: event.target.value });
+                setCrewOverride(false);
+                if(accountId)setSelectedCrewState({accountId,crewUserIds:[],revision:(selectedCrewState?.revision??0)+1});
                 clearStatusMessage();
               }}
               className="
@@ -405,13 +409,14 @@ function BoatOwnerNewTripPage() {
         </div>
 
         <fieldset className="mt-5">
-          <legend className="mb-2 text-[14px] font-semibold text-[#252525] sm:text-[15px]">Assign Crew</legend>
-          <p className="mb-2 text-xs text-slate-500">Optional: leave every crew member unchecked to automatically assign all certified crew who are available at the selected date and time.</p>
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-2"><legend className="text-[14px] font-semibold text-[#252525] sm:text-[15px]">Assigned Crew</legend><button type="button" onClick={()=>{setCrewOverride(value=>!value);if(!crewOverride&&accountId)setSelectedCrewState({accountId,crewUserIds:assignedCrew.map(member=>member.crewUserId),revision:(selectedCrewState?.revision??0)+1})}} className="rounded-lg border border-[#162d54] px-3 py-2 text-xs font-semibold text-[#162d54]">{crewOverride?'Use Boat Crew':'Change Crew for This Trip'}</button></div>
+          <p className="mb-2 text-xs text-slate-500">{crewOverride?'This changes only this trip. Permanent boat assignments will stay unchanged.':'The crew permanently assigned to the selected boat will be used automatically.'}</p>
           <div className="overflow-hidden rounded-xl border border-[#e8e8e8]">
-            {crew.length ? crew.map((member) => <label key={member.crewUserId} className="grid min-h-[50px] cursor-pointer grid-cols-[minmax(120px,1fr)_minmax(120px,1fr)_40px] items-center border-b border-[#e8e8e8] px-4 last:border-0 hover:bg-gray-50">
+            {(crewOverride?crew:assignedCrew).length ? (crewOverride?crew:assignedCrew).map((member) => <label key={member.crewUserId} className="grid min-h-[50px] cursor-pointer grid-cols-[minmax(120px,1fr)_minmax(120px,1fr)_minmax(100px,1fr)_40px] items-center border-b border-[#e8e8e8] px-4 last:border-0 hover:bg-gray-50">
               <span className="truncate text-sm">{member.name}</span>
               <span className="truncate text-sm text-slate-600">{member.position}</span>
-              <input type="checkbox" checked={selectedCrew.includes(member.crewUserId)}
+              <span className="truncate text-xs text-slate-500">{member.assignedBoatName??'Not assigned'}</span>
+              <input type="checkbox" disabled={!crewOverride} checked={crewOverride?selectedCrew.includes(member.crewUserId):true}
                 onChange={() => {
                   if (!accountId) return;
                   setSelectedCrewState((current) => {
@@ -430,7 +435,7 @@ function BoatOwnerNewTripPage() {
                   });
                 }}
                 className="h-4 w-4 accent-[#162d54]" />
-            </label>) : <p className="p-4 text-sm text-slate-500">No certified crew members are in your crew pool. Add them from My Crew first.</p>}
+            </label>) : <p className="p-4 text-sm text-slate-500">No certified crew members are assigned to this boat. Assign them from My Crew first.</p>}
           </div>
         </fieldset>
 

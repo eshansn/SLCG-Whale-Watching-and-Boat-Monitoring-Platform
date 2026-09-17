@@ -8,13 +8,14 @@ using System.Text;
 using Microsoft.AspNetCore.WebUtilities;
 using WhaleWatching.Api.Data;
 using WhaleWatching.Api.Domain;
+using WhaleWatching.Api.Gps;
 
 namespace WhaleWatching.Api.Passenger;
 
 [ApiController]
 [Route("api/passenger/trips")]
 [AllowAnonymous]
-public sealed class PassengerTripController(WhaleWatchingDbContext db) : ControllerBase
+public sealed class PassengerTripController(WhaleWatchingDbContext db, GpsTrackerStatus trackerStatus) : ControllerBase
 {
     [HttpGet("~/api/passenger/session/trip")]
     public async Task<ActionResult<PassengerTripPreviewDto>> ActiveTrip(CancellationToken ct)
@@ -26,12 +27,54 @@ public sealed class PassengerTripController(WhaleWatchingDbContext db) : Control
                 x.TokenHash == hash && x.ExpiresAtUtc > DateTimeOffset.UtcNow)
             .Select(x => new PassengerTripPreviewDto(x.Trip.Id, x.Trip.Boat.Name,
                 x.Trip.Boat.RegistrationNumber, x.Trip.ScheduledDepartureUtc, x.Trip.Status.ToString(),
-                x.Trip.ShoreApproval.ToString(), x.Trip.Boat.MaximumCapacity,
+                x.Trip.Boat.MaximumCapacity,
                 x.Trip.Status != TripStatus.Completed && x.Trip.Status != TripStatus.Cancelled &&
+                    x.Trip.Status != TripStatus.Declined &&
                     x.Trip.PassengerVerificationFinalizedAtUtc == null,
                 x.Trip.InvitationCode ?? string.Empty))
             .SingleOrDefaultAsync(ct);
         return preview is null ? Unauthorized() : Ok(preview);
+    }
+
+    [HttpGet("~/api/passenger/session/boat-location")]
+    public async Task<ActionResult<PassengerBoatLocationDto>> BoatLocation(CancellationToken ct)
+    {
+        var rawToken = Request.Headers["X-Passenger-Session"].ToString();
+        if (string.IsNullOrWhiteSpace(rawToken)) return Unauthorized();
+        var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(rawToken)));
+        var sessionTrip = await db.PassengerSessions.AsNoTracking().Where(x =>
+                x.TokenHash == hash && x.ExpiresAtUtc > DateTimeOffset.UtcNow)
+            .Select(x => new
+            {
+                x.TripId,
+                x.Trip.Status,
+                BoatName = x.Trip.Boat.Name,
+                RegistrationNumber = x.Trip.Boat.RegistrationNumber,
+                x.Trip.ActualArrivalUtc,
+                x.Trip.Boat.GpsDeviceId
+            })
+            .SingleOrDefaultAsync(ct);
+        if (sessionTrip is null) return Unauthorized();
+
+        var presentation = PassengerBoatLocationPolicy.For(sessionTrip.Status);
+        GpsTelemetry? telemetry = null;
+        if (presentation.CanExposeCoordinates && !string.IsNullOrWhiteSpace(sessionTrip.GpsDeviceId))
+        {
+            var latestAllowedAtUtc = sessionTrip.Status == TripStatus.Completed
+                ? sessionTrip.ActualArrivalUtc ?? DateTimeOffset.UtcNow
+                : DateTimeOffset.MaxValue;
+            telemetry = await db.GpsTelemetry.AsNoTracking()
+                .Where(x => x.DeviceId == sessionTrip.GpsDeviceId && x.RecordedAtUtc <= latestAllowedAtUtc)
+                .OrderByDescending(x => x.RecordedAtUtc)
+                .FirstOrDefaultAsync(ct);
+        }
+
+        var message = telemetry is null ? presentation.MissingCoordinatesMessage : presentation.Message;
+        return Ok(new PassengerBoatLocationDto(sessionTrip.TripId, sessionTrip.BoatName,
+            sessionTrip.RegistrationNumber, sessionTrip.Status.ToString(), telemetry?.Latitude,
+            telemetry?.Longitude, telemetry?.RecordedAtUtc, telemetry?.ReceivedAtUtc,
+            telemetry is null ? "Unavailable" : trackerStatus.Classify(telemetry.RecordedAtUtc),
+            telemetry?.HeadingDegrees, presentation.ShouldRefresh, message));
     }
 
     [HttpGet("~/api/passenger/session/qr")]
@@ -68,7 +111,7 @@ public sealed class PassengerTripController(WhaleWatchingDbContext db) : Control
             .ThenBy(x => x.RegisteredAtUtc)
             .Select(x => new PassengerPartyMemberDto(x.PassengerId, x.Passenger.Name,
                 x.Passenger.IdentificationNumber, x.Passenger.PhoneNumber, x.Passenger.PassengerType,
-                x.Passenger.Gender, x.Passenger.AgeCategory, x.Passenger.SpecialNeedType,
+                x.Passenger.CountryCode, x.Passenger.Gender, x.Passenger.AgeCategory, x.Passenger.SpecialNeedType,
                 x.Passenger.SelfCareConfirmed))
             .ToListAsync(ct));
     }
@@ -80,8 +123,9 @@ public sealed class PassengerTripController(WhaleWatchingDbContext db) : Control
             return NotFound();
         var preview = await db.Trips.AsNoTracking().Where(x => x.InvitationCode == invitationCode)
             .Select(x => new PassengerTripPreviewDto(x.Id, x.Boat.Name, x.Boat.RegistrationNumber,
-                x.ScheduledDepartureUtc, x.Status.ToString(), x.ShoreApproval.ToString(),
+                x.ScheduledDepartureUtc, x.Status.ToString(),
                 x.Boat.MaximumCapacity, x.Status != TripStatus.Completed && x.Status != TripStatus.Cancelled &&
+                    x.Status != TripStatus.Declined &&
                     x.PassengerVerificationFinalizedAtUtc == null,
                 x.InvitationCode ?? string.Empty))
             .SingleOrDefaultAsync(ct);
@@ -98,13 +142,16 @@ public sealed class PassengerTripController(WhaleWatchingDbContext db) : Control
         await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
         var trip = await db.Trips.Include(x => x.Boat).SingleOrDefaultAsync(x => x.InvitationCode == invitationCode, ct);
         if (trip is null) return NotFound();
-        if (trip.Status is TripStatus.Completed or TripStatus.Cancelled)
+        if (trip.Status is TripStatus.Completed or TripStatus.Cancelled or TripStatus.Declined)
             return Conflict(new { message = "This trip is no longer accepting passenger registrations." });
         if (trip.PassengerVerificationFinalizedAtUtc is not null)
             return Conflict(new { message = "Passenger registration closed when shore verification was finalized." });
         if (trip.PassengerCount >= trip.Boat.MaximumCapacity)
             return Conflict(new { message = "This trip has reached its maximum passenger capacity." });
         if (SpecialNeedsInvalid(request)) return ValidationProblem("Select the special need and confirm self-care responsibility.");
+        if (!PassengerCountryPolicy.TryNormalize(request.PassengerType, request.CountryCode,
+                out var countryCode, out var countryError))
+            return ValidationProblem(countryError);
 
         var identificationRequired = IdentificationRequired(request);
         if (identificationRequired && string.IsNullOrWhiteSpace(request.IdentificationNumber))
@@ -116,7 +163,8 @@ public sealed class PassengerTripController(WhaleWatchingDbContext db) : Control
             IdentificationNumber = identificationRequired ? request.IdentificationNumber.Trim().ToUpperInvariant() : string.Empty,
             NormalizedIdentificationNumber = normalizedId, PhoneNumber = request.PhoneNumber.Trim(),
             NormalizedPhoneNumber = Normalize(request.PhoneNumber), PassengerType = request.PassengerType,
-            Gender = request.Gender, AgeCategory = request.AgeCategory, CreatedAtUtc = DateTimeOffset.UtcNow,
+            CountryCode = countryCode, Gender = request.Gender, AgeCategory = request.AgeCategory,
+            CreatedAtUtc = DateTimeOffset.UtcNow,
             SpecialNeedType = request.SpecialNeedType?.Trim(), SelfCareConfirmed = request.SelfCareConfirmed,
             PersonalQrToken = CreatePersonalQrToken() };
         db.PassengerProfiles.Add(passenger);
@@ -130,7 +178,7 @@ public sealed class PassengerTripController(WhaleWatchingDbContext db) : Control
         return Created($"api/passenger/trips/{invitationCode}/passengers/{passenger.Id}",
             new RegisteredPassengerDto(passenger.Id, trip.Id, passenger.Name, passenger.IdentificationNumber,
                 passenger.PhoneNumber, passenger.PassengerType, passenger.Gender, passenger.AgeCategory,
-                session.RawToken, session.Entity.ExpiresAtUtc));
+                passenger.CountryCode, session.RawToken, session.Entity.ExpiresAtUtc));
         });
     }
 
@@ -144,7 +192,7 @@ public sealed class PassengerTripController(WhaleWatchingDbContext db) : Control
         await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
         var trip = await db.Trips.Include(x => x.Boat).SingleOrDefaultAsync(x => x.InvitationCode == invitationCode, ct);
         if (trip is null) return NotFound();
-        if (trip.Status is TripStatus.Completed or TripStatus.Cancelled)
+        if (trip.Status is TripStatus.Completed or TripStatus.Cancelled or TripStatus.Declined)
             return Conflict(new { message = "This trip is no longer accepting passenger registrations." });
         var lookup = Normalize(request.Identifier);
         var passenger = await db.PassengerProfiles.SingleOrDefaultAsync(x =>
@@ -169,7 +217,7 @@ public sealed class PassengerTripController(WhaleWatchingDbContext db) : Control
         await db.SaveChangesAsync(ct); await transaction.CommitAsync(ct);
         return Ok(new RegisteredPassengerDto(passenger.Id, trip.Id, passenger.Name, passenger.IdentificationNumber,
             passenger.PhoneNumber, passenger.PassengerType, passenger.Gender, passenger.AgeCategory,
-            session.RawToken, session.Entity.ExpiresAtUtc));
+            passenger.CountryCode, session.RawToken, session.Entity.ExpiresAtUtc));
         });
     }
 
@@ -187,13 +235,16 @@ public sealed class PassengerTripController(WhaleWatchingDbContext db) : Control
             var session = await db.PassengerSessions.Include(x => x.Trip).ThenInclude(x => x.Boat)
                 .SingleOrDefaultAsync(x => x.TokenHash == hash && x.ExpiresAtUtc > DateTimeOffset.UtcNow, ct);
             if (session is null) return Unauthorized();
-            if (session.Trip.Status is TripStatus.Completed or TripStatus.Cancelled)
+            if (session.Trip.Status is TripStatus.Completed or TripStatus.Cancelled or TripStatus.Declined)
                 return Conflict(new { message = "This trip is no longer accepting passenger registrations." });
             if (session.Trip.PassengerVerificationFinalizedAtUtc is not null)
                 return Conflict(new { message = "Passenger registration closed when shore verification was finalized." });
             if (session.Trip.PassengerCount >= session.Trip.Boat.MaximumCapacity)
                 return Conflict(new { message = "This trip has reached its maximum passenger capacity." });
             if (SpecialNeedsInvalid(request)) return ValidationProblem("Select the special need and confirm self-care responsibility.");
+            if (!PassengerCountryPolicy.TryNormalize(request.PassengerType, request.CountryCode,
+                    out var countryCode, out var countryError))
+                return ValidationProblem(countryError);
             var identificationRequired = IdentificationRequired(request);
             if (identificationRequired && string.IsNullOrWhiteSpace(request.IdentificationNumber))
                 return ValidationProblem("NIC or passport number is required for Local Adults and all Foreign passengers.");
@@ -204,7 +255,8 @@ public sealed class PassengerTripController(WhaleWatchingDbContext db) : Control
                 IdentificationNumber = identificationRequired ? request.IdentificationNumber.Trim().ToUpperInvariant() : string.Empty,
                 NormalizedIdentificationNumber = normalizedId, PhoneNumber = request.PhoneNumber.Trim(),
                 NormalizedPhoneNumber = Normalize(request.PhoneNumber), PassengerType = request.PassengerType,
-                Gender = request.Gender, AgeCategory = request.AgeCategory, CreatedAtUtc = DateTimeOffset.UtcNow,
+                CountryCode = countryCode, Gender = request.Gender, AgeCategory = request.AgeCategory,
+                CreatedAtUtc = DateTimeOffset.UtcNow,
                 SpecialNeedType = request.SpecialNeedType?.Trim(), SelfCareConfirmed = request.SelfCareConfirmed,
                 PersonalQrToken = CreatePersonalQrToken() };
             db.PassengerProfiles.Add(passenger);
@@ -220,7 +272,8 @@ public sealed class PassengerTripController(WhaleWatchingDbContext db) : Control
             await db.SaveChangesAsync(ct); await transaction.CommitAsync(ct);
             return Created("api/passenger/session/companions", new RegisteredCompanionDto(passenger.Id,
                 session.TripId, session.PassengerId, passenger.Name, passenger.IdentificationNumber,
-                passenger.PhoneNumber, passenger.PassengerType, passenger.Gender, passenger.AgeCategory));
+                passenger.PhoneNumber, passenger.PassengerType, passenger.Gender, passenger.AgeCategory,
+                passenger.CountryCode));
         });
     }
 
@@ -248,7 +301,7 @@ public sealed class PassengerTripController(WhaleWatchingDbContext db) : Control
 }
 
 public sealed record PassengerTripPreviewDto(Guid TripId, string BoatName, string RegistrationNumber,
-    DateTimeOffset ScheduledDepartureUtc, string Status, string ShoreApproval,
+    DateTimeOffset ScheduledDepartureUtc, string Status,
     int MaximumCapacity, bool AcceptingPassengers, string InvitationCode);
 
 public sealed class RegisterPassengerRequest
@@ -257,6 +310,7 @@ public sealed class RegisterPassengerRequest
     [MaxLength(32)] public string IdentificationNumber { get; init; } = string.Empty;
     [Required, Phone, MaxLength(32)] public required string PhoneNumber { get; init; }
     [Required, RegularExpression("^(local|foreign)$")] public required string PassengerType { get; init; }
+    [MaxLength(8)] public string? CountryCode { get; init; }
     [Required, RegularExpression("^(male|female|other)$")] public required string Gender { get; init; }
     [Required, RegularExpression("^(adult|child|small|specialneeds)$")] public required string AgeCategory { get; init; }
     [MaxLength(80)] public string? SpecialNeedType { get; init; }
@@ -265,13 +319,18 @@ public sealed class RegisterPassengerRequest
 
 public sealed record RegisteredPassengerDto(Guid Id, Guid TripId, string Name, string IdentificationNumber,
     string PhoneNumber, string PassengerType, string Gender, string AgeCategory,
-    string SessionToken, DateTimeOffset SessionExpiresAtUtc);
+    string? CountryCode, string SessionToken, DateTimeOffset SessionExpiresAtUtc);
 public sealed record RegisteredCompanionDto(Guid Id, Guid TripId, Guid PrimaryPassengerId, string Name,
-    string IdentificationNumber, string PhoneNumber, string PassengerType, string Gender, string AgeCategory);
+    string IdentificationNumber, string PhoneNumber, string PassengerType, string Gender, string AgeCategory,
+    string? CountryCode);
 public sealed record PassengerPersonalQrDto(Guid PassengerId, string PassengerName, string QrToken, string QrValue);
 public sealed record PassengerPartyMemberDto(Guid Id, string Name, string IdentificationNumber,
-    string PhoneNumber, string PassengerType, string Gender, string AgeCategory,
+    string PhoneNumber, string PassengerType, string? CountryCode, string Gender, string AgeCategory,
     string? SpecialNeedType, bool SelfCareConfirmed);
+public sealed record PassengerBoatLocationDto(Guid TripId, string BoatName, string RegistrationNumber,
+    string TripStatus, decimal? Latitude, decimal? Longitude, DateTimeOffset? CoordinatesRecordedAtUtc,
+    DateTimeOffset? CoordinatesReceivedAtUtc, string TrackerStatus, decimal? HeadingDegrees,
+    bool ShouldRefresh, string Message);
 public sealed class VerifyReturningPassengerRequest
 {
     [Required, MaxLength(32)] public required string Identifier { get; init; }

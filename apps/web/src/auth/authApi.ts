@@ -1,7 +1,7 @@
 import { clearRefreshToken, getRefreshToken, setRefreshToken } from './authStorage';
 import type { AuthResponse, AuthSession, LoginCredentials, PortalRole } from './types';
+import { apiFetch } from '../api/httpClient';
 
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '');
 let restorePromise: Promise<AuthSession | null> | null = null;
 
 interface JwtPayload {
@@ -43,7 +43,7 @@ async function getErrorMessage(response: Response): Promise<string> {
 }
 
 async function post<T>(path: string, body: unknown, accessToken?: string): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  const response = await apiFetch(path, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { ArrowLeft, Info, Trash2, UserPlus, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { connectOperations, operationsApi, type CrewSuggestion, type OwnerCrew } from "../../operations/operationsApi";
+import { connectOperations, operationsApi, type Boat, type CrewSuggestion, type OwnerCrew } from "../../operations/operationsApi";
 import { useAuth } from "../../auth/useAuth";
 
 export default function BoatOwnerCrewPage() {
@@ -9,6 +9,7 @@ export default function BoatOwnerCrewPage() {
   const { session } = useAuth();
   const token = session?.accessToken;
   const [members, setMembers] = useState<OwnerCrew[]>([]);
+  const [boats, setBoats] = useState<Boat[]>([]);
   const [selected, setSelected] = useState<OwnerCrew>();
   const [email, setEmail] = useState("");
   const [suggestions, setSuggestions] = useState<CrewSuggestion[]>([]);
@@ -17,7 +18,7 @@ export default function BoatOwnerCrewPage() {
 
   const load = useCallback(async () => {
     if (!token) return;
-    try { setMembers(await operationsApi.ownerCrew(token)); }
+    try { const [crew, ownerBoats] = await Promise.all([operationsApi.ownerCrew(token), operationsApi.boats(token)]); setMembers(crew); setBoats(ownerBoats.filter(boat=>!boat.isPatrolBoat)); }
     catch (error) { setStatus(error instanceof Error ? error.message : "Unable to load crew."); }
   }, [token]);
 
@@ -45,6 +46,12 @@ export default function BoatOwnerCrewPage() {
     catch (error) { setStatus(error instanceof Error ? error.message : "Unable to remove crew member."); }
   };
 
+  const assignBoat = async (member: OwnerCrew, boatId: string) => {
+    if (!token) return;
+    try { setStatus(boatId ? "Assigning crew member..." : "Removing boat assignment..."); await operationsApi.assignCrewBoat(token, member.crewUserId, boatId || undefined); await load(); setStatus("Boat assignment saved."); }
+    catch (error) { setStatus(error instanceof Error ? error.message : "Unable to assign this boat."); }
+  };
+
   return <main className="boat-owner-page min-h-dvh bg-white text-black">
     <div className="mx-auto w-full max-w-[900px] px-4 pb-12 pt-5 sm:px-8">
       <header className="relative flex min-h-12 items-center justify-center">
@@ -53,12 +60,13 @@ export default function BoatOwnerCrewPage() {
       </header>
 
       <section className="mt-7 overflow-hidden rounded-xl border border-slate-200" aria-label="Current crew members">
-        <div className="grid grid-cols-[minmax(110px,1fr)_minmax(120px,2fr)_80px] gap-2 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase text-slate-500">
-          <span>Name</span><span>Type</span><span className="text-center">Actions</span>
+        <div className="grid grid-cols-[minmax(110px,1fr)_minmax(100px,1fr)_minmax(150px,1.5fr)_80px] gap-2 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase text-slate-500">
+          <span>Name</span><span>Type</span><span>Assigned boat</span><span className="text-center">Actions</span>
         </div>
-        {members.length ? members.map((member) => <article key={member.assignmentId} className="grid min-h-16 grid-cols-[minmax(110px,1fr)_minmax(120px,2fr)_80px] items-center gap-2 border-t border-slate-100 px-4 text-sm">
+        {members.length ? members.map((member) => <article key={member.assignmentId} className="grid min-h-16 grid-cols-[minmax(110px,1fr)_minmax(100px,1fr)_minmax(150px,1.5fr)_80px] items-center gap-2 border-t border-slate-100 px-4 text-sm">
           <div className="min-w-0"><p className="truncate font-medium">{member.name}</p><p className="truncate text-xs text-emerald-600">Certified</p></div>
           <p className="truncate">{member.position}</p>
+          <select aria-label={`Assigned boat for ${member.name}`} value={member.assignedBoatId??""} onChange={event=>void assignBoat(member,event.target.value)} className="min-h-10 rounded-lg border border-slate-200 bg-white px-2 text-xs"><option value="">Not assigned</option>{boats.map(boat=><option key={boat.id} value={boat.id}>{boat.name}</option>)}</select>
           <div className="flex justify-center gap-1">
             <button type="button" onClick={() => setSelected(member)} aria-label={`View ${member.name} information`} className="grid h-9 w-9 place-items-center rounded-full hover:bg-slate-100"><Info size={18}/></button>
             <button type="button" onClick={() => void removeMember(member)} aria-label={`Remove ${member.name}`} className="grid h-9 w-9 place-items-center rounded-full text-red-600 hover:bg-red-50"><Trash2 size={18}/></button>
@@ -82,7 +90,7 @@ export default function BoatOwnerCrewPage() {
     {selected && <div className="fixed inset-0 z-50 grid place-items-center bg-black/35 p-4" role="dialog" aria-modal="true" aria-label="Crew member information">
       <section className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
         <div className="flex items-start justify-between"><div><h2 className="text-xl font-semibold">{selected.name}</h2><p className="text-sm text-emerald-600">Certified crew member</p></div><button type="button" onClick={() => setSelected(undefined)} className="grid h-9 w-9 place-items-center rounded-full hover:bg-slate-100"><X size={20}/></button></div>
-        <dl className="mt-5 space-y-3 text-sm">{[["Email",selected.email],["Phone",selected.phoneNumber || 'Not provided'],["Type",selected.position]].map(([label,value]) => <div key={label} className="flex justify-between gap-4 border-b border-slate-100 pb-2"><dt className="font-semibold">{label}</dt><dd className="text-right text-slate-600">{value}</dd></div>)}</dl>
+        <dl className="mt-5 space-y-3 text-sm">{[["Email",selected.email],["Phone",selected.phoneNumber || 'Not provided'],["Type",selected.position],["Assigned boat",selected.assignedBoatName||"Not assigned"]].map(([label,value]) => <div key={label} className="flex justify-between gap-4 border-b border-slate-100 pb-2"><dt className="font-semibold">{label}</dt><dd className="text-right text-slate-600">{value}</dd></div>)}</dl>
       </section>
     </div>}
   </main>;

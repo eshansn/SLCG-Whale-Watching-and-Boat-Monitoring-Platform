@@ -17,6 +17,7 @@ class _OwnerNewTripScreenState extends State<OwnerNewTripScreen> {
   List<Map<String, dynamic>> _boats = [];
   List<Map<String, dynamic>> _crew = [];
   final Set<String> _crewIds = {};
+  bool _crewOverride = false;
   String? _boatId;
   DateTime _departure = DateTime.now().add(const Duration(days: 1));
   bool _loading = true;
@@ -82,7 +83,8 @@ class _OwnerNewTripScreenState extends State<OwnerNewTripScreen> {
       _error = null;
     });
     try {
-      await _api.createOwnerTrip(_boatId!, _departure, _crewIds.toList());
+      await _api.createOwnerTrip(
+          _boatId!, _departure, _crewOverride ? _crewIds.toList() : <String>[]);
       if (!mounted) return;
       _message('Trip scheduled successfully.');
       Navigator.pop(context, true);
@@ -112,7 +114,7 @@ class _OwnerNewTripScreenState extends State<OwnerNewTripScreen> {
                             fontSize: 24, fontWeight: FontWeight.w700)),
                     const SizedBox(height: 4),
                     const Text(
-                        'Choose a vessel, departure time, and optional crew assignments.',
+                        'Choose a vessel and departure time. Assigned boat crew are included automatically.',
                         style: TextStyle(color: ownerMuted)),
                     const SizedBox(height: 22),
                     if (_error != null) ...[
@@ -143,8 +145,11 @@ class _OwnerNewTripScreenState extends State<OwnerNewTripScreen> {
                                             '${boat['name']} · ${boat['registrationNumber']}'),
                                       ))
                                   .toList(),
-                              onChanged: (value) =>
-                                  setState(() => _boatId = value),
+                              onChanged: (value) => setState(() {
+                                _boatId = value;
+                                _crewOverride = false;
+                                _crewIds.clear();
+                              }),
                             ),
                             const SizedBox(height: 18),
                             _label('Scheduled Departure'),
@@ -166,12 +171,21 @@ class _OwnerNewTripScreenState extends State<OwnerNewTripScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text('Assign Certified Crew',
+                            Row(children: [
+                              const Expanded(child: Text('Assigned Crew',
                                 style: TextStyle(
-                                    fontSize: 17, fontWeight: FontWeight.w700)),
+                                    fontSize: 17, fontWeight: FontWeight.w700))),
+                              TextButton(onPressed: () => setState(() {
+                                _crewOverride = !_crewOverride;
+                                _crewIds
+                                  ..clear()
+                                  ..addAll(_crew.where((member) =>
+                                    '${member['assignedBoatId']}' == _boatId).map((member) => '${member['crewUserId']}'));
+                              }), child: Text(_crewOverride ? 'Use Boat Crew' : 'Change Crew for This Trip')),
+                            ]),
                             const SizedBox(height: 5),
                             const Text(
-                              'Optional: leave every crew member unchecked to automatically assign all certified crew who are available at the selected date and time.',
+                              'A trip override never changes permanent boat assignments.',
                               style: TextStyle(color: ownerMuted, fontSize: 12),
                             ),
                             const SizedBox(height: 12),
@@ -180,16 +194,20 @@ class _OwnerNewTripScreenState extends State<OwnerNewTripScreen> {
                                   'No certified crew members are in your crew pool. Add them from My Crew first.',
                                   style: TextStyle(color: ownerMuted))
                             else
-                              ..._crew.map((member) {
+                              ...(_crewOverride
+                                      ? _crew
+                                      : _crew.where((member) =>
+                                          '${member['assignedBoatId']}' == _boatId))
+                                  .map((member) {
                                 final id = '${member['crewUserId']}';
                                 return CheckboxListTile(
                                   contentPadding: EdgeInsets.zero,
-                                  value: _crewIds.contains(id),
+                                  value: _crewOverride ? _crewIds.contains(id) : true,
                                   title: Text('${member['name']}',
                                       style: const TextStyle(
                                           fontWeight: FontWeight.w600)),
-                                  subtitle: Text('${member['position']}'),
-                                  onChanged: (checked) => setState(() {
+                                  subtitle: Text('${member['position']} · ${member['assignedBoatName'] ?? 'Not assigned'}'),
+                                  onChanged: !_crewOverride ? null : (checked) => setState(() {
                                     checked == true
                                         ? _crewIds.add(id)
                                         : _crewIds.remove(id);

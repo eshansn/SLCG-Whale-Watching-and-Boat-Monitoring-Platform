@@ -15,10 +15,7 @@ import { useOperations } from "../../operations/useOperations";
 import { useTripStateClock } from "../../operations/useTripStateClock";
 import TripReportModal from "./components/TripReportModal";
 
-type ApprovalStatus =
-  | "Approved"
-  | "Not Approved"
-  | "Pending";
+type ApprovalStatus = string;
 
 type StateFilter = "All" | TripDisplayState;
 
@@ -161,14 +158,15 @@ const initialTrips: Omit<ScheduledTrip, "state">[] = [
 ];
 
 const ITEMS_PER_PAGE = 4;
-const tripStates: TripDisplayState[] = ["Scheduled", "Late", "Expired", "Ongoing", "Completed", "Cancelled"];
+const tripStates: TripDisplayState[] = ["Scheduled", "Late", "NeedsReschedule", "Ongoing", "Declined", "Completed", "Cancelled"];
 const statePriority: Record<TripDisplayState, number> = {
   Ongoing: 1,
   Late: 2,
   Scheduled: 3,
-  Expired: 4,
-  Completed: 5,
-  Cancelled: 6,
+  NeedsReschedule: 4,
+  Declined: 5,
+  Completed: 6,
+  Cancelled: 7,
 };
 
 const Trips = () => {
@@ -186,9 +184,7 @@ const Trips = () => {
       registrationNumber: trip.registrationNumber,
       scheduledDateTime: trip.scheduledDepartureUtc,
       state: getTripDisplayState(trip, tripStateNow),
-      approval: trip.shoreApproval === "Rejected"
-        ? "Not Approved"
-        : trip.shoreApproval as ApprovalStatus,
+      approval: getTripDisplayState(trip, tripStateNow),
     })), [databaseTrips, tripStateNow]);
 
   const [searchValue, setSearchValue] =
@@ -283,11 +279,11 @@ const Trips = () => {
             return (
               getApprovalPriority(
                 firstTrip.approval,
-                "Approved",
+                "Ongoing",
               ) -
               getApprovalPriority(
                 secondTrip.approval,
-                "Approved",
+                "Ongoing",
               )
             );
 
@@ -295,11 +291,11 @@ const Trips = () => {
             return (
               getApprovalPriority(
                 firstTrip.approval,
-                "Pending",
+                "Scheduled",
               ) -
               getApprovalPriority(
                 secondTrip.approval,
-                "Pending",
+                "Scheduled",
               )
             );
 
@@ -307,11 +303,11 @@ const Trips = () => {
             return (
               getApprovalPriority(
                 firstTrip.approval,
-                "Not Approved",
+                "Declined",
               ) -
               getApprovalPriority(
                 secondTrip.approval,
-                "Not Approved",
+                "Declined",
               )
             );
 
@@ -701,15 +697,15 @@ const Trips = () => {
                   </option>
 
                   <option value="approved-first">
-                    Approved first
+                    Ongoing first
                   </option>
 
                   <option value="pending-first">
-                    Pending first
+                    Scheduled first
                   </option>
 
                   <option value="not-approved-first">
-                    Not Approved first
+                    Declined first
                   </option>
                 </select>
               </div>
@@ -760,7 +756,7 @@ const Trips = () => {
                   </th>
 
                   <th className="px-4 py-4">
-                    Approval
+                    Lifecycle
                   </th>
 
                   <th className="px-4 py-4 text-center">
@@ -903,7 +899,7 @@ const Trips = () => {
 
                   <p>
                     <span className="font-medium">
-                      Approval:{" "}
+                      Lifecycle:{" "}
                     </span>
 
                     <span
@@ -969,7 +965,7 @@ const Trips = () => {
               <p className="mt-2 text-xs text-slate-500">
                 Try searching by vessel,
                 owner, registration number,
-                scheduled time, state, or approval status.
+                scheduled time or lifecycle status.
               </p>
             </div>
           )}
@@ -1082,13 +1078,13 @@ const getApprovalClassName = (
   approval: ApprovalStatus,
 ): string => {
   switch (approval) {
-    case "Approved":
+    case "Ongoing":
       return "text-green-500";
 
-    case "Not Approved":
+    case "Declined":
       return "text-[#FF0000]";
 
-    case "Pending":
+    case "Scheduled":
       return "text-slate-700";
 
     default:
@@ -1101,7 +1097,8 @@ const getStateClassName = (state: TripDisplayState): string => {
     case "Completed": return "bg-emerald-50 text-emerald-700";
     case "Ongoing": return "bg-blue-50 text-blue-700";
     case "Late": return "bg-amber-50 text-amber-700";
-    case "Expired": return "bg-amber-50 text-amber-700";
+    case "NeedsReschedule": return "bg-amber-50 text-amber-700";
+    case "Declined": return "bg-red-50 text-red-700";
     case "Cancelled": return "bg-red-50 text-red-700";
     default: return "bg-slate-100 text-slate-700";
   }

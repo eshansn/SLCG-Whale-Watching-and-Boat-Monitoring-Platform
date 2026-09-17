@@ -193,21 +193,24 @@ section {
  */
 @media (min-width: 100rem) and (min-height: 53.125rem) {
   .admin-portal,
-  .shore-portal {
+  .shore-portal,
+  .signature-portal {
     zoom: 1.1;
   }
 }
 
 @media (min-width: 118.75rem) and (min-height: 60rem) {
   .admin-portal,
-  .shore-portal {
+  .shore-portal,
+  .signature-portal {
     zoom: 1.2;
   }
 }
 
 @media (min-width: 150rem) and (min-height: 75rem) {
   .admin-portal,
-  .shore-portal {
+  .shore-portal,
+  .signature-portal {
     zoom: 1.3;
   }
 }

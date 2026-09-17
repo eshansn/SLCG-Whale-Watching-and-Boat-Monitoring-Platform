@@ -97,11 +97,12 @@ const menuItems: MenuItem[] = [
   },
 ];
 
-const ownerTripStates: TripDisplayState[] = ["Scheduled", "Late", "Expired", "Ongoing", "Completed", "Cancelled"];
+const ownerTripStates: TripDisplayState[] = ["Scheduled", "Late", "NeedsReschedule", "Ongoing", "Declined", "Completed", "Cancelled"];
 const ownerTripStateTone: Record<TripDisplayState, { dot: string; text: string }> = {
   Scheduled: { dot: "bg-slate-500", text: "text-slate-600" },
   Late: { dot: "bg-amber-400", text: "text-amber-600" },
-  Expired: { dot: "bg-amber-500", text: "text-amber-700" },
+  NeedsReschedule: { dot: "bg-amber-500", text: "text-amber-700" },
+  Declined: { dot: "bg-red-500", text: "text-red-700" },
   Ongoing: { dot: "bg-blue-500", text: "text-blue-700" },
   Completed: { dot: "bg-emerald-500", text: "text-emerald-700" },
   Cancelled: { dot: "bg-red-500", text: "text-red-700" },
@@ -117,7 +118,7 @@ function BoatOwnerTripsPage() {
       id: trip.id, boatName: trip.vesselName, registrationNumber: trip.registrationNumber,
       time: new Intl.DateTimeFormat('en-LK', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(trip.scheduledDepartureUtc)),
       state,
-      needsReschedule: state === "Expired",
+      needsReschedule: state === "NeedsReschedule",
       image: boats.find((boat) => boat.id === trip.boatId)?.imageUrl || '/OwnerBoat1.png',
     };
   }), [boats, savedTrips, tripStateNow]);
@@ -649,7 +650,7 @@ function BoatOwnerTripsPage() {
                   />
                 </div>
 
-                <div className={`mt-3 grid gap-2 ${trip.state === "Scheduled" || trip.state === "Late" || trip.state === "Expired" ? "grid-cols-2" : "grid-cols-1"}`}>
+                <div className={`mt-3 grid gap-2 ${trip.state === "Scheduled" || trip.state === "Late" || trip.state === "NeedsReschedule" ? "grid-cols-2" : "grid-cols-1"}`}>
                 <button
                   type="button"
                   aria-label={`Open ${trip.boatName} trip details`}
@@ -683,7 +684,7 @@ function BoatOwnerTripsPage() {
                     className="h-4 w-4 brightness-0 invert"
                   />
                 </button>
-                {(trip.state === "Scheduled" || trip.state === "Late" || trip.state === "Expired")&&<button type="button" disabled={cancellingTripId!==undefined} onClick={()=>void cancelTrip(trip)} className="flex min-h-9 w-full items-center justify-center rounded-[9px] border border-red-300 bg-white px-4 py-2 text-[12px] font-medium text-red-700 hover:bg-red-50 disabled:opacity-50 sm:min-h-10 sm:text-[13px]">{cancellingTripId===trip.id?"Cancelling...":"Cancel"}</button>}
+                {(trip.state === "Scheduled" || trip.state === "Late" || trip.state === "NeedsReschedule")&&<button type="button" disabled={cancellingTripId!==undefined} onClick={()=>void cancelTrip(trip)} className="flex min-h-9 w-full items-center justify-center rounded-[9px] border border-red-300 bg-white px-4 py-2 text-[12px] font-medium text-red-700 hover:bg-red-50 disabled:opacity-50 sm:min-h-10 sm:text-[13px]">{cancellingTripId===trip.id?"Cancelling...":"Cancel"}</button>}
                 </div>
               </article>
             ))}

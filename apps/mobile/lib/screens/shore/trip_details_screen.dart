@@ -66,7 +66,9 @@ class _TripDetailsScreenState extends State<TripDetailsScreen> {
             ..['owner'] = latest['ownerName']
             ..['reg'] = latest['registrationNumber']
             ..['time'] = formatShoreDate(latest['scheduledDepartureUtc'])
-            ..['status'] = latest['shoreApproval']
+            ..['status'] = latest['status']
+            ..['passengerVerificationFinalizedAtUtc'] =
+                latest['passengerVerificationFinalizedAtUtc']
             ..['crew'] = latest['crew'] ?? const []
             ..['raw'] = latest;
         }
@@ -175,7 +177,7 @@ class _TripDetailsScreenState extends State<TripDetailsScreen> {
               style: TextStyle(
                   fontSize: 22, fontWeight: FontWeight.w600, color: shoreInk)),
           SizedBox(height: 3),
-          Text('Review passenger attendance, crew, and shore approval.',
+          Text('Confirm passengers, then start or decline the trip.',
               style: TextStyle(fontSize: 12, color: shoreMuted))
         ]))
       ]);
@@ -333,23 +335,25 @@ class _TripDetailsScreenState extends State<TripDetailsScreen> {
         padding: const EdgeInsets.all(24),
         decoration: _cardDecoration(),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Text('Approval',
+          const Text('Trip Departure',
               style: TextStyle(
                   fontSize: 20, fontWeight: FontWeight.w600, color: shoreInk)),
           const SizedBox(height: 12),
           const Text(
-              'Inspection completed. The information entered in the system has been verified against the actual vessel and all safety requirements, including passenger capacity and life jacket availability.',
+              'Start after passenger confirmation is finalized. Wildlife monitoring does not authorize departure.',
               style: TextStyle(
                   fontSize: 12, height: 1.6, color: Color(0xFF64748B))),
           const SizedBox(height: 24),
           SizedBox(
               width: double.infinity,
               child: FilledButton(
-                  onPressed: deciding ? null : () => _decide(true),
+                  onPressed: deciding || trip['passengerVerificationFinalizedAtUtc'] == null
+                      ? null : () => _decide(true),
                   style: FilledButton.styleFrom(
                       backgroundColor: const Color(0xFF10B981),
                       padding: const EdgeInsets.symmetric(vertical: 14)),
-                  child: const Text('Approve',
+                  child: Text(trip['status'] == 'NeedsReschedule'
+                      ? 'Start Anyway' : 'Start Trip',
                       style: TextStyle(fontWeight: FontWeight.w600)))),
           const SizedBox(height: 12),
           SizedBox(
@@ -359,20 +363,34 @@ class _TripDetailsScreenState extends State<TripDetailsScreen> {
                   style: FilledButton.styleFrom(
                       backgroundColor: const Color(0xFFEF4444),
                       padding: const EdgeInsets.symmetric(vertical: 14)),
-                  child: const Text('Decline',
+                  child: const Text('Decline Trip',
                       style: TextStyle(fontWeight: FontWeight.w600))))
         ]),
       );
 
-  Future<void> _decide(bool approved) async {
+  Future<void> _decide(bool start) async {
     final id = trip['id']?.toString();
     if (id == null) return;
     setState(() => deciding = true);
     try {
-      await ApiService.instance.approve(id, approved ? 'Approved' : 'Rejected');
+      final override = trip['status'] == 'NeedsReschedule';
+      if (start && override) {
+        final confirmed = await showDialog<bool>(context: context, builder: (context) => AlertDialog(
+          title: const Text('Start Anyway?'),
+          content: const Text('This trip is marked as needing rescheduling. Override that status and start it now?'),
+          actions: [TextButton(onPressed: ()=>Navigator.pop(context,false), child: const Text('Cancel')), FilledButton(onPressed: ()=>Navigator.pop(context,true), child: const Text('Start Anyway'))],
+        )) ?? false;
+        if (!confirmed) return;
+      }
+      if (start) {
+        await ApiService.instance.startTrip(id,
+            confirmRescheduleOverride: override);
+      } else {
+        await ApiService.instance.declineTrip(id);
+      }
       if (!mounted) return;
-      setState(() => trip['status'] = approved ? 'Approved' : 'Rejected');
-      await _decisionDialog(approved);
+      setState(() => trip['status'] = start ? 'Ongoing' : 'Declined');
+      await _decisionDialog(start);
       await _load(silent: true);
     } catch (decisionError) {
       if (mounted) {
@@ -384,30 +402,28 @@ class _TripDetailsScreenState extends State<TripDetailsScreen> {
     }
   }
 
-  Future<void> _decisionDialog(bool approved) => showDialog<void>(
+  Future<void> _decisionDialog(bool started) => showDialog<void>(
         context: context,
         builder: (dialogContext) => AlertDialog(
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           icon: CircleAvatar(
             backgroundColor:
-                approved ? const Color(0xFF10B981) : const Color(0xFFEF4444),
-            child: Icon(approved ? Icons.check : Icons.priority_high,
+                started ? const Color(0xFF10B981) : const Color(0xFFEF4444),
+            child: Icon(started ? Icons.check : Icons.priority_high,
                 color: Colors.white),
           ),
-          title: Text(approved
-              ? 'Ride Successfully Authorized'
-              : 'Ride Not Authorized'),
-          content: Text(approved
-              ? 'Authorization has been completed successfully. All required checks have been verified.'
-              : 'The authorization request has been declined. The applicant must resolve the identified issues before submitting a new request.'),
+          title: Text(started ? 'Trip Started' : 'Trip Declined'),
+          content: Text(started
+              ? 'The trip is now ongoing and the server start time has been recorded.'
+              : 'The trip remains stored with its decline audit history.'),
           actions: [
             SizedBox(
               width: double.infinity,
               child: FilledButton(
                 onPressed: () => Navigator.pop(dialogContext),
                 style: FilledButton.styleFrom(
-                    backgroundColor: approved
+                    backgroundColor: started
                         ? const Color(0xFF10B981)
                         : const Color(0xFFEF4444)),
                 child: const Text('Continue'),

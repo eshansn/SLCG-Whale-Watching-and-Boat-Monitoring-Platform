@@ -8,13 +8,13 @@ void main() {
       'vesselName': 'Ocean Pearl',
       'registrationNumber': 'SL-WB-2140',
       'scheduledDepartureUtc': '2026-08-02T05:00:00Z',
-      'shoreApproval': 'Approved',
+      'status': 'Ongoing',
     },
     {
       'vesselName': 'Blue Whale',
       'registrationNumber': 'SL-WB-1200',
       'scheduledDepartureUtc': '2026-08-03T05:00:00Z',
-      'shoreApproval': 'Pending',
+      'status': 'Scheduled',
     },
   ];
 
@@ -32,10 +32,10 @@ void main() {
       ..sort((a, b) => compareOwnerTrips(a, b, 'status'));
     expect(byName.first['vesselName'], 'Blue Whale');
     expect(byTime.first['vesselName'], 'Blue Whale');
-    expect(byStatus.first['shoreApproval'], 'Approved');
+    expect(byStatus.first['status'], 'Ongoing');
   });
 
-  test('dashboard includes due fully approved scheduled trips', () {
+  test('dashboard includes only lifecycle ongoing trips', () {
     final now = DateTime.utc(2026, 8, 7, 6);
     final boats = [
       {
@@ -46,15 +46,13 @@ void main() {
     ];
     final trip = {
       'boatId': 'boat-1',
-      'status': 'Scheduled',
+      'status': 'Ongoing',
       'scheduledDepartureUtc': now.toIso8601String(),
-      'shoreApproval': 'Approved',
-      'wildlifeShoreApproval': 'Approved',
     };
     expect(ownerTripIsDashboardOngoing(trip, boats, now), isTrue);
   });
 
-  test('dashboard excludes unapproved, future, stale and completed trips', () {
+  test('dashboard excludes every non-ongoing lifecycle state', () {
     final now = DateTime.utc(2026, 8, 7, 6);
     final boats = [
       {
@@ -65,25 +63,15 @@ void main() {
     ];
     Map<String, dynamic> trip({
       String status = 'Scheduled',
-      String shore = 'Approved',
       Duration offset = Duration.zero,
     }) =>
         {
           'boatId': 'boat-1',
           'status': status,
           'scheduledDepartureUtc': now.add(offset).toIso8601String(),
-          'shoreApproval': shore,
-          'wildlifeShoreApproval': 'Approved',
         };
-    expect(ownerTripIsDashboardOngoing(trip(shore: 'Pending'), boats, now),
-        isFalse);
-    expect(
-        ownerTripIsDashboardOngoing(
-            trip(offset: const Duration(hours: 1)), boats, now),
-        isFalse);
-    expect(
-        ownerTripIsDashboardOngoing(
-            trip(offset: const Duration(hours: -13)), boats, now),
+    expect(ownerTripIsDashboardOngoing(trip(), boats, now), isFalse);
+    expect(ownerTripIsDashboardOngoing(trip(status: 'Declined'), boats, now),
         isFalse);
     expect(ownerTripIsDashboardOngoing(trip(status: 'Completed'), boats, now),
         isFalse);

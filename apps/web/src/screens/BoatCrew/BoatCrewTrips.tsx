@@ -45,7 +45,7 @@ export default function BoatCrewTrips() {
   const rows = useMemo(
     () => trips
       .filter((trip) =>
-        `${trip.vesselName} ${trip.registrationNumber} ${trip.status} ${trip.shoreApproval}`
+        `${trip.vesselName} ${trip.registrationNumber} ${trip.status}`
           .toLowerCase()
           .includes(search.trim().toLowerCase()),
       )
@@ -178,19 +178,19 @@ export default function BoatCrewTrips() {
                       <div className="mt-3 flex items-center gap-1">
                         <span
                           className={`h-2 w-2 rounded-full ${
-                            trip.shoreApproval === "Approved"
+                            trip.status === "Ongoing"
                               ? "bg-[#20e620]"
                               : "bg-amber-400"
                           }`}
                         />
                         <span
                           className={`text-[8px] font-medium uppercase sm:text-[9px] ${
-                            trip.shoreApproval === "Approved"
+                            trip.status === "Ongoing"
                               ? "text-[#20d820]"
                               : "text-amber-500"
                           }`}
                         >
-                          {trip.shoreApproval}
+                          {trip.status}
                         </span>
                       </div>
                     </div>

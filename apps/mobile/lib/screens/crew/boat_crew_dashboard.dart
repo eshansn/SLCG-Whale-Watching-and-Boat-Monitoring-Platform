@@ -505,7 +505,7 @@ class _BoatCrewDashboardState extends State<BoatCrewDashboard>
           Text(_date(t['scheduledDepartureUtc']),
               style: const TextStyle(color: ownerMuted, fontSize: 11)),
           const SizedBox(height: 8),
-          CrewStatus(t['shoreApproval'] ?? 'Pending')
+          CrewStatus(t['status'] ?? 'Scheduled')
         ])),
         IconButton(
           tooltip: 'View trip',
@@ -662,7 +662,7 @@ class _CrewTripCard extends StatelessWidget {
                       ],
                     ),
                   ),
-                  CrewStatus(trip['shoreApproval'] ?? 'Pending'),
+                  CrewStatus(trip['status'] ?? 'Scheduled'),
                 ],
               ),
               const SizedBox(height: 16),
@@ -700,7 +700,7 @@ class _CrewTripCard extends StatelessWidget {
 
 /*
 class BoatCrewTripDetailsScreen extends StatefulWidget{const BoatCrewTripDetailsScreen({super.key});@override State<BoatCrewTripDetailsScreen> createState()=>_CrewTripDetailsState();}
-class _CrewTripDetailsState extends State<BoatCrewTripDetailsScreen>{Map<String,dynamic>? trip,attendance,vessel;List<Map<String,dynamic>> passengers=[];bool loading=true,sosBusy=false;String? error,id;@override void didChangeDependencies(){super.didChangeDependencies();id??=ModalRoute.of(context)?.settings.arguments as String?;if(loading)_load();}Future<void> _load()async{try{final all=await ApiService.instance.trips();final found=all.where((x)=>x['id']==id).firstOrNull;if(found==null)throw Exception('Trip not found.');final values=await Future.wait([ApiService.instance.tripPassengers(id!),ApiService.instance.crewAttendance(id!),ApiService.instance.vesselMap()]);if(mounted)setState((){trip=found;passengers=values[0] as List<Map<String,dynamic>>;attendance=values[1] as Map<String,dynamic>;final vessels=values[2] as List<Map<String,dynamic>>;vessel=vessels.where((x)=>x['id']==found['boatId']).firstOrNull;loading=false;error=null;});}catch(e){if(mounted)setState((){loading=false;error=_error(e);});}}@override Widget build(BuildContext context)=>CrewShell(title:'Trip Info',child:loading?const Center(child:CircularProgressIndicator()):error!=null?_ErrorCard(error!,_load):RefreshIndicator(onRefresh:_load,child:ListView(padding:const EdgeInsets.all(18),children:[_summary(),const SizedBox(height:16),_attendance(),const SizedBox(height:16),_passengers(),const SizedBox(height:16),_location(),const SizedBox(height:90)])));Widget _summary()=>Card(child:Padding(padding:const EdgeInsets.all(18),child:Column(children:[Row(crossAxisAlignment:CrossAxisAlignment.start,children:[Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(trip!['vesselName']??'',style:const TextStyle(fontSize:21,fontWeight:FontWeight.w800)),Text(trip!['registrationNumber']??'',style:const TextStyle(color:Colors.blueGrey)),const SizedBox(height:12),Text(_date(trip!['scheduledDepartureUtc'])),const SizedBox(height:8),CrewStatus(trip!['shoreApproval']??'Pending')])),if(trip!['invitationCode']!=null)QrImageView(data:trip!['invitationCode'],size:112)]),if(trip!['invitationCode']!=null)Align(alignment:Alignment.centerRight,child:TextButton.icon(onPressed:(){Clipboard.setData(ClipboardData(text:trip!['invitationCode']));},icon:const Icon(Icons.copy,size:16),label:const Text('Copy invitation code')))])));
+class _CrewTripDetailsState extends State<BoatCrewTripDetailsScreen>{Map<String,dynamic>? trip,attendance,vessel;List<Map<String,dynamic>> passengers=[];bool loading=true,sosBusy=false;String? error,id;@override void didChangeDependencies(){super.didChangeDependencies();id??=ModalRoute.of(context)?.settings.arguments as String?;if(loading)_load();}Future<void> _load()async{try{final all=await ApiService.instance.trips();final found=all.where((x)=>x['id']==id).firstOrNull;if(found==null)throw Exception('Trip not found.');final values=await Future.wait([ApiService.instance.tripPassengers(id!),ApiService.instance.crewAttendance(id!),ApiService.instance.vesselMap()]);if(mounted)setState((){trip=found;passengers=values[0] as List<Map<String,dynamic>>;attendance=values[1] as Map<String,dynamic>;final vessels=values[2] as List<Map<String,dynamic>>;vessel=vessels.where((x)=>x['id']==found['boatId']).firstOrNull;loading=false;error=null;});}catch(e){if(mounted)setState((){loading=false;error=_error(e);});}}@override Widget build(BuildContext context)=>CrewShell(title:'Trip Info',child:loading?const Center(child:CircularProgressIndicator()):error!=null?_ErrorCard(error!,_load):RefreshIndicator(onRefresh:_load,child:ListView(padding:const EdgeInsets.all(18),children:[_summary(),const SizedBox(height:16),_attendance(),const SizedBox(height:16),_passengers(),const SizedBox(height:16),_location(),const SizedBox(height:90)])));Widget _summary()=>Card(child:Padding(padding:const EdgeInsets.all(18),child:Column(children:[Row(crossAxisAlignment:CrossAxisAlignment.start,children:[Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(trip!['vesselName']??'',style:const TextStyle(fontSize:21,fontWeight:FontWeight.w800)),Text(trip!['registrationNumber']??'',style:const TextStyle(color:Colors.blueGrey)),const SizedBox(height:12),Text(_date(trip!['scheduledDepartureUtc'])),const SizedBox(height:8),CrewStatus(trip!['status']??'Scheduled')])),if(trip!['invitationCode']!=null)QrImageView(data:trip!['invitationCode'],size:112)]),if(trip!['invitationCode']!=null)Align(alignment:Alignment.centerRight,child:TextButton.icon(onPressed:(){Clipboard.setData(ClipboardData(text:trip!['invitationCode']));},icon:const Icon(Icons.copy,size:16),label:const Text('Copy invitation code')))])));
   Widget _attendance(){final s=(attendance?['summary'] as Map?)?.cast<String,dynamic>()??{};return Card(child:Padding(padding:const EdgeInsets.all(18),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('Passenger Attendance',style:TextStyle(fontSize:18,fontWeight:FontWeight.w800)),const SizedBox(height:14),Row(children:[_metric('Present',s['present']??0,Colors.green),_metric('Absent',s['notPresent']??0,Colors.red),_metric('Not checked',s['notChecked']??0,Colors.orange)]),const SizedBox(height:14),LinearProgressIndicator(value:(s['total']??0)==0?0:(s['present']??0)/(s['total']??1),minHeight:8,borderRadius:BorderRadius.circular(10))])));}
   Widget _metric(String label,dynamic value,Color color)=>Expanded(child:Column(children:[Text('$value',style:TextStyle(fontSize:22,fontWeight:FontWeight.w800,color:color)),Text(label,style:const TextStyle(fontSize:10,color:Colors.blueGrey))]));
   Widget _passengers()=>Card(child:Padding(padding:const EdgeInsets.all(18),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[const Text('Passenger Info',style:TextStyle(fontSize:18,fontWeight:FontWeight.w800)),CrewStatus('${passengers.length} registered')]),const SizedBox(height:8),if(passengers.isEmpty)const Text('No passengers registered yet.',style:TextStyle(color:Colors.blueGrey))else ...passengers.map((p)=>ListTile(contentPadding:EdgeInsets.zero,leading:const CircleAvatar(child:Icon(Icons.person_outline)),title:Text(p['name']??''),subtitle:Text('${p['identificationNumber']??''} · ${p['passengerType']??''}')))])));
@@ -805,7 +805,7 @@ class _CrewDetailsState extends State<BoatCrewTripDetailsScreen> {
                         const SizedBox(height: 12),
                         Text(_date(trip!['scheduledDepartureUtc'])),
                         const SizedBox(height: 8),
-                        CrewStatus(trip!['shoreApproval'] ?? 'Pending'),
+                        CrewStatus(trip!['status'] ?? 'Scheduled'),
                       ],
                     ),
                   ),
@@ -815,25 +815,19 @@ class _CrewDetailsState extends State<BoatCrewTripDetailsScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            if (trip!['status'] == 'Scheduled' ||
-                trip!['status'] == 'Boarding' ||
-                isOngoing) ...[
+            if (isOngoing) ...[
               SizedBox(
                 width: double.infinity,
                 child: FilledButton.icon(
-                  onPressed: startBusy ? null : _startTrip,
+                  onPressed: startBusy ? null : _endTrip,
                   icon: startBusy
                       ? const SizedBox(
                           width: 17,
                           height: 17,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : Icon(isOngoing
-                          ? Icons.stop_rounded
-                          : Icons.play_arrow_rounded),
-                  label: Text(startBusy
-                      ? (isOngoing ? 'Ending...' : 'Starting...')
-                      : (isOngoing ? 'End Trip' : 'Start Trip')),
+                      : const Icon(Icons.stop_rounded),
+                  label: Text(startBusy ? 'Ending...' : 'End Trip'),
                 ),
               ),
               const SizedBox(height: 16),
@@ -913,19 +907,15 @@ class _CrewDetailsState extends State<BoatCrewTripDetailsScreen> {
         Text(label, style: const TextStyle(fontSize: 10, color: ownerMuted)),
       ]));
 
-  Future<void> _startTrip() async {
+  Future<void> _endTrip() async {
     if (id == null || startBusy) return;
-    final isOngoing = trip?['status'] == 'Ongoing';
     setState(() => startBusy = true);
     try {
-      await ApiService.instance
-          .updateStatus(id!, isOngoing ? 'Completed' : 'Ongoing');
+      await ApiService.instance.endTrip(id!);
       await _load();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(isOngoing
-                ? 'Trip ended successfully.'
-                : 'Trip started successfully.')));
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Trip ended successfully.')));
       }
     } catch (exception) {
       if (mounted) {
@@ -1138,7 +1128,7 @@ class BoatCrewNotificationsScreen extends StatelessWidget {
                                   style: const TextStyle(
                                       fontWeight: FontWeight.w700)),
                               subtitle: Text(
-                                  'Shore approval: ${t['shoreApproval']}\n${_date(t['updatedAtUtc'])}'),
+                                  'Trip lifecycle: ${t['status']}\n${_date(t['updatedAtUtc'])}'),
                               isThreeLine: true));
                     });
           }));

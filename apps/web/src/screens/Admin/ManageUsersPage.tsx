@@ -1,17 +1,20 @@
 import { useNavigate } from "react-router-dom";
 import { Icon } from "../../components/ui/icon";
 import { useAdminRecords } from "./AdminRecordsContext";
+import { useAuth } from "../../auth/useAuth";
 
 const ManageUsers = () => {
   const navigate = useNavigate();
   const { owners, crew, boats } = useAdminRecords();
+  const { session } = useAuth();
+  const basePath = session?.roles.includes("Wildlife") ? "/wildlife" : "/admin";
 
   const handleUsersClick = (): void => {
-    navigate("/admin/select-users");
+    navigate(`${basePath}/select-users`);
   };
 
   const handleFleetsClick = (): void => {
-    navigate("/admin/manage-fleets");
+    navigate(`${basePath}/boats`);
   };
 
   return (

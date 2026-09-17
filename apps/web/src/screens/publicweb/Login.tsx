@@ -47,6 +47,16 @@ const Login = () => {
         return;
       }
 
+      if (session.roles.includes('Supervisor')) {
+        navigate(requestedPath?.startsWith('/supervisor') ? requestedPath : '/supervisor', { replace: true });
+        return;
+      }
+
+      if (session.roles.includes('HarbourOfficer')) {
+        navigate(requestedPath?.startsWith('/harbour-officer') ? requestedPath : '/harbour-officer', { replace: true });
+        return;
+      }
+
       if (session.roles.includes('BoatOwner')) {
         navigate(requestedPath?.startsWith('/owner') ? requestedPath : '/owner', { replace: true });
         return;

@@ -14,8 +14,7 @@ export interface Vessel {
   status: 'active' | 'idle' | 'emergency';
   certificationApproval: string;
   wildlifeApproval: string;
-  shoreApproval: string;
-  fullyApproved: boolean;
+  operationalStatus: string;
   coordinatesRecordedAtUtc?: string;
   coordinatesReceivedAtUtc?: string;
   trackerStatus: 'Online' | 'Stale' | 'Offline';
@@ -162,7 +161,7 @@ export const useDashboardStore = create<DashboardState>((set) => ({
     const records = await operationsApi.vesselMap(token);
     set({ vessels: records.filter((record) => record.latitude != null && record.longitude != null).map((record) => ({
       ...record, regNo: record.registrationNumber, lat: record.latitude!, lon: record.longitude!,
-      heading: record.headingDegrees ?? 0, color: record.fullyApproved ? '#10B981' : '#F59E0B',
+      heading: record.headingDegrees ?? 0, color: record.activeTripId ? '#10B981' : '#64748B',
       status: record.activeTripId ? 'active' : 'idle',
     })) });
   },

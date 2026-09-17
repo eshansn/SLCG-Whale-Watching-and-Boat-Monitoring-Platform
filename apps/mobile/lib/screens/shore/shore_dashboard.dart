@@ -49,7 +49,7 @@ class _State extends State<ShoreDashboard> {
         'owner': t['ownerName'],
         'reg': t['registrationNumber'],
         'time': formatShoreDate(t['scheduledDepartureUtc']),
-        'status': t['shoreApproval'],
+        'status': t['status'],
         'crew': t['crew'] ?? const [],
         'raw': t
       };
@@ -91,7 +91,7 @@ class _State extends State<ShoreDashboard> {
                                       _cards()
                                     ])))))));
   Widget _welcome() {
-    final pending = trips.where((t) => t['shoreApproval'] == 'Pending').length;
+    final pending = trips.where((t) => ['Scheduled','Boarding','NeedsReschedule'].contains(t['status'])).length;
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       const Text('Hello,',
           style: TextStyle(

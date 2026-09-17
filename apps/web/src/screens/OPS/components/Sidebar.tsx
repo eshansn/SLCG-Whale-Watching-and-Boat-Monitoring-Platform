@@ -72,8 +72,8 @@ export default function Sidebar() {
             <div className="mt-1 flex items-center gap-3">
               <span className="text-xs font-mono text-slate-400">{selectedVessel.regNo}</span>
               {monitoredTripId ? (
-                <span className={`text-xs font-medium tracking-wide ${selectedVessel.fullyApproved ? 'text-emerald-500' : 'text-amber-500'}`}>
-                  {selectedVessel.fullyApproved ? 'Fully approved' : 'Approval pending'}
+                <span className="text-xs font-medium tracking-wide text-emerald-500">
+                  {selectedVessel.operationalStatus}
                 </span>
               ) : (
                 <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-semibold text-slate-600">No active trip</span>
@@ -114,7 +114,7 @@ function ActiveTripDetails({ vessel, tripId }: { vessel: Vessel; tripId: string 
         {[
           ['Certified', vessel.certificationApproval],
           ['Wildlife', vessel.wildlifeApproval],
-          ['Shore', vessel.shoreApproval],
+          ['Trip', vessel.operationalStatus],
         ].map(([label, value]) => (
           <div key={label} className="rounded-lg bg-slate-50 px-2 py-2">
             <div className="font-semibold text-[#1A2B4C]">{label}</div>

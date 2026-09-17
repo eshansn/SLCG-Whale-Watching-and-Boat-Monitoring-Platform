@@ -7,22 +7,13 @@ internal static class TripWorkflowRules
     private static readonly TimeSpan SriLankaUtcOffset = TimeSpan.FromMinutes(330);
     private static readonly TimeSpan LateAfter = TimeSpan.FromMinutes(30);
 
-    internal static bool RequiresTouristClearance(TripType type) => type == TripType.WhaleWatching;
+    internal static bool CanStart(TripStatus status) =>
+        status is TripStatus.Scheduled or TripStatus.Boarding or TripStatus.NeedsReschedule;
 
-    internal static IReadOnlyList<string> GetIncompleteTouristApprovals(
-        ApprovalStatus administrativeBoatApproval, ApprovalStatus wildlifeBoatApproval,
-        ApprovalStatus shoreApproval, ApprovalStatus wildlifeShoreApproval)
-    {
-        var incompleteApprovals = new List<string>();
-        if (administrativeBoatApproval != ApprovalStatus.Approved &&
-            wildlifeBoatApproval != ApprovalStatus.Approved)
-            incompleteApprovals.Add("boat approval from either Administration or the Wildlife Authority");
-        if (shoreApproval != ApprovalStatus.Approved)
-            incompleteApprovals.Add("SLCG shore approval");
-        if (wildlifeShoreApproval != ApprovalStatus.Approved)
-            incompleteApprovals.Add("wildlife shore approval");
-        return incompleteApprovals;
-    }
+    internal static bool CanDecline(TripStatus status) =>
+        status is TripStatus.Scheduled or TripStatus.Boarding or TripStatus.NeedsReschedule;
+
+    internal static bool CanEnd(TripStatus status) => status == TripStatus.Ongoing;
 
     internal static bool IsExpiredScheduledTrip(TripStatus status, DateTimeOffset scheduledDepartureUtc,
         DateTimeOffset nowUtc) => IsAwaitingDeparture(status) &&
@@ -40,8 +31,9 @@ internal static class TripWorkflowRules
             0, 0, 0, SriLankaUtcOffset).ToUniversalTime();
     }
 
-    internal static bool CanReschedule(TripStatus status) => IsAwaitingDeparture(status);
+    internal static bool CanReschedule(TripStatus status) =>
+        IsAwaitingDeparture(status) || status == TripStatus.NeedsReschedule;
 
     private static bool IsAwaitingDeparture(TripStatus status) =>
-        status is TripStatus.Scheduled or TripStatus.Boarding;
+        status is TripStatus.Scheduled or TripStatus.Boarding or TripStatus.NeedsReschedule;
 }

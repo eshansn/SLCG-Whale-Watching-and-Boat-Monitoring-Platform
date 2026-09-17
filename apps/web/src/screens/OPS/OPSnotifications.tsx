@@ -61,7 +61,7 @@ export default function OPSNotifications() {
     ...trips.map((trip) => ({
       id: `t-${trip.id}`,
       title: `${trip.vesselName} · ${trip.status}`,
-      message: `${trip.route} · Shore ${trip.shoreApproval} · Wildlife ${trip.wildlifeShoreApproval}`,
+      message: `${trip.route} · ${trip.status}${trip.rescheduleOverride?' · Shore reschedule override':''}`,
       time: trip.updatedAtUtc,
       alert: trip.hasActiveSos,
     })),

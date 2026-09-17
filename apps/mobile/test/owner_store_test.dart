@@ -2,7 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:wwms_app/owner/owner_store.dart';
 
 void main() {
-  test('trip approval reflects both shore approvals', () {
+  test('trip operational readiness reflects lifecycle, not approvals', () {
     final trip = OwnerTrip(
       id: 'trip-id',
       boatId: 'boat-id',
@@ -10,14 +10,13 @@ void main() {
       returnTime: DateTime.utc(2026, 8, 5, 5),
       destination: 'Dondra Head',
       passengerCapacity: 30,
-      status: OwnerTripStatus.upcoming,
-      shoreApproval: 'Approved',
-      wildlifeApproval: 'Approved',
+      status: OwnerTripStatus.active,
       qrToken: 'invitation-code',
     );
 
     expect(trip.approved, isTrue);
-    trip.wildlifeApproval = 'Pending';
+    expect(trip.approved, isTrue);
+    trip.status = OwnerTripStatus.upcoming;
     expect(trip.approved, isFalse);
   });
 

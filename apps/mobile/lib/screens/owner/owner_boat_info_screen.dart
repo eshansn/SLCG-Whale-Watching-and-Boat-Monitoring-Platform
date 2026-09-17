@@ -1,9 +1,17 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../services/api_service.dart';
 import '../../widgets/owner_layout.dart';
 import 'owner_portal_common.dart';
+
+class _DocumentRequirement {
+  final String type;
+  final String name;
+  final bool renewable;
+  const _DocumentRequirement(this.type, this.name, {this.renewable = false});
+}
 
 class OwnerBoatInfoScreen extends StatefulWidget {
   const OwnerBoatInfoScreen({super.key});
@@ -13,14 +21,31 @@ class OwnerBoatInfoScreen extends StatefulWidget {
 }
 
 class _OwnerBoatInfoScreenState extends State<OwnerBoatInfoScreen> {
-  static const _certificateNames = [
-    'Certificate of registration of Sole Proprietorship',
-    'ME Certificate',
-    'Certificate of Vessel',
-    'Wildlife Certificate',
-    'Coxswain Certificate',
-    'Vessel Registration Certificate',
-    'Boat Insurance',
+  static const _requirements = [
+    _DocumentRequirement('VesselPhotographOrDiagram',
+        'Color Aerial Photograph or Diagram of the Vessel'),
+    _DocumentRequirement('BusinessRegistration',
+        'Certificate of Registration of Sole Proprietorship / Business'),
+    _DocumentRequirement('MECertificate', 'ME Certificate', renewable: true),
+    _DocumentRequirement(
+        'VesselInsuranceCertificate', 'Vessel Insurance Certificate',
+        renewable: true),
+    _DocumentRequirement('PassengerLifeInsuranceCertificate',
+        "Passengers' Life Insurance Certificate",
+        renewable: true),
+    _DocumentRequirement('WildlifeCertificate', 'Wildlife Certificate'),
+    _DocumentRequirement('CoxswainCertificate', 'Coxswain Certificate'),
+    _DocumentRequirement(
+        'VesselRegistrationCertificate', 'Vessel Registration Certificate',
+        renewable: true),
+    _DocumentRequirement('LifeSavingCertificate', 'Life Saving Certificate'),
+    _DocumentRequirement('FirstAidCertificate', 'First Aid Certificate',
+        renewable: true),
+    _DocumentRequirement(
+        'FireFightingEquipmentReport', 'Fire-Fighting Equipment Report',
+        renewable: true),
+    _DocumentRequirement(
+        'FireFightingCertificate', 'Fire Fighting Certificate'),
   ];
 
   final _api = ApiService.instance;
@@ -29,6 +54,7 @@ class _OwnerBoatInfoScreenState extends State<OwnerBoatInfoScreen> {
   bool _loading = true;
   String? _error;
   String? _downloadingId;
+  String? _uploadingType;
 
   @override
   void didChangeDependencies() {
@@ -114,6 +140,56 @@ class _OwnerBoatInfoScreenState extends State<OwnerBoatInfoScreen> {
     }
   }
 
+  String _contentType(String extension) => switch (extension.toLowerCase()) {
+        'pdf' => 'application/pdf',
+        'png' => 'image/png',
+        'jpg' || 'jpeg' => 'image/jpeg',
+        _ => 'application/octet-stream',
+      };
+
+  Future<void> _uploadReplacement(_DocumentRequirement requirement) async {
+    if (_boat == null || _uploadingType != null) return;
+    final result = await FilePicker.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: requirement.type == 'VesselPhotographOrDiagram'
+          ? const ['jpg', 'jpeg', 'png']
+          : const ['pdf', 'jpg', 'jpeg', 'png'],
+      withData: true,
+    );
+    final file = result?.files.single;
+    if (file?.bytes == null) {
+      return;
+    }
+    if (file!.bytes!.isEmpty || file.bytes!.length > 10 * 1024 * 1024) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Document must be between 1 byte and 10 MB.')));
+      }
+      return;
+    }
+    setState(() => _uploadingType = requirement.type);
+    try {
+      await _api.uploadBoatDocument(_boat!['id'].toString(), requirement.type,
+          file.bytes!, file.name, _contentType(file.extension ?? ''));
+      await _load(silent: true);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(requirement.renewable
+                ? 'Renewal uploaded for Wildlife review.'
+                : 'Replacement uploaded for Wildlife review.')));
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(ownerError(error))));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _uploadingType = null);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) => OwnerLayout(
         active: 'boats',
@@ -141,6 +217,24 @@ class _OwnerBoatInfoScreenState extends State<OwnerBoatInfoScreen> {
   List<Widget> _content() {
     final boat = _boat!;
     final documents = ownerMaps(boat['documents']);
+    final displayedRequirements = <_DocumentRequirement>[];
+    if ((boat['documentRequirementsVersion'] as num? ?? 1) >= 2) {
+      displayedRequirements.addAll(_requirements);
+    } else {
+      for (final document in documents) {
+        final type =
+            document['documentType']?.toString() ?? 'LegacyUnclassified';
+        if (displayedRequirements.any((item) => item.type == type)) continue;
+        _DocumentRequirement? known;
+        for (final requirement in _requirements) {
+          if (requirement.type == type) known = requirement;
+        }
+        displayedRequirements.add(known ??
+            _DocumentRequirement(
+                type, document['name']?.toString() ?? 'Legacy vessel document',
+                renewable: document['expirationDate'] != null));
+      }
+    }
     return [
       LayoutBuilder(
         builder: (context, constraints) {
@@ -198,29 +292,38 @@ class _OwnerBoatInfoScreenState extends State<OwnerBoatInfoScreen> {
         ),
       ),
       const SizedBox(height: 22),
-      const Text('Certifications',
+      const Text('Current Documents',
           style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600)),
       const SizedBox(height: 12),
       OwnerCard(
         child: Column(
-          children: _certificateNames.map((name) {
+          children: displayedRequirements.map<Widget>((requirement) {
+            final versions = documents
+                .where((candidate) =>
+                    candidate['documentType']?.toString() == requirement.type)
+                .toList()
+              ..sort((a, b) => (b['version'] as num? ?? 0)
+                  .compareTo(a['version'] as num? ?? 0));
             Map<String, dynamic>? document;
-            for (final candidate in documents) {
-              if (candidate['name']?.toString() == name) {
+            for (final candidate in versions) {
+              if (candidate['isCurrent'] == true) {
                 document = candidate;
                 break;
               }
             }
+            document ??= versions.isEmpty ? null : versions.first;
             final loading = document != null &&
                 _downloadingId == document['id']?.toString();
-            return ListTile(
-              contentPadding: EdgeInsets.zero,
-              title: Text(name,
+            return ExpansionTile(
+              tilePadding: EdgeInsets.zero,
+              title: Text(requirement.name,
                   style: const TextStyle(fontWeight: FontWeight.w500)),
               subtitle: document == null
                   ? const Text('Not uploaded')
                   : Text([
+                      'Version ${document['version'] ?? 1}',
                       document['fileName']?.toString() ?? '',
+                      'Status: ${document['renewalState'] ?? document['status'] ?? 'Unknown'}',
                       if (document['expirationDate'] != null)
                         'Expires ${document['expirationDate']}'
                     ].join('\n')),
@@ -233,8 +336,40 @@ class _OwnerBoatInfoScreenState extends State<OwnerBoatInfoScreen> {
                   : Icon(document == null
                       ? Icons.description_outlined
                       : Icons.download_outlined),
-              enabled: document != null && _downloadingId == null,
-              onTap: document == null ? null : () => _download(document!),
+              children: [
+                if (document != null)
+                  ListTile(
+                    dense: true,
+                    leading: const Icon(Icons.visibility_outlined),
+                    title: const Text('View current/latest document'),
+                    onTap: _downloadingId == null
+                        ? () => _download(document!)
+                        : null,
+                  ),
+                ...versions.map((version) => ListTile(
+                      dense: true,
+                      title: Text('Version ${version['version'] ?? 1}'
+                          '${version['isCurrent'] == true ? ' · Current' : ''}'),
+                      subtitle: Text(
+                          'Uploaded ${version['uploadedAtUtc'] ?? ''}\nStatus: ${version['renewalState'] ?? version['status'] ?? ''}'),
+                      trailing: const Icon(Icons.download_outlined),
+                      onTap: () => _download(version),
+                    )),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    onPressed: _uploadingType == null
+                        ? () => _uploadReplacement(requirement)
+                        : null,
+                    icon: const Icon(Icons.upload_file_outlined),
+                    label: Text(_uploadingType == requirement.type
+                        ? 'Uploading...'
+                        : requirement.renewable
+                            ? 'Renew Document'
+                            : 'Replace Document'),
+                  ),
+                ),
+              ],
             );
           }).toList(),
         ),

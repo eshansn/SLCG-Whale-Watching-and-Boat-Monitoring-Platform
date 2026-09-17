@@ -52,8 +52,11 @@ const AdminNavbar = () => {
   const homePath = isWildlife ? "/wildlife" : "/admin";
   const notificationsPath = isWildlife ? "/wildlife/notifications" : "/admin/notifications";
   const navigationItems = adminNavigationItems
-    .filter((item) => !isWildlife || item.label !== "Staff")
-    .map((item) => isWildlife ? { ...item, path: item.path.replace("/admin", "/wildlife") } : item);
+    .map((item) => isWildlife ? {
+      ...item,
+      label: item.label === "Staff" ? "Wildlife Users" : item.label,
+      path: item.path.replace("/admin", "/wildlife"),
+    } : item);
 
   const handleLogout = (): void => {
     logout();

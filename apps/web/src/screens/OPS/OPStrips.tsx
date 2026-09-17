@@ -9,7 +9,7 @@ import Navbar from "./components/Navbar";
 import { useOperations } from "../../operations/useOperations";
 import { useTripStateClock } from "../../operations/useTripStateClock";
 import { getTripDisplayState, operationsApi, type Trip as OperationTrip, type TripDisplayState } from "../../operations/operationsApi";
-type ApprovalStatus = "Approved" | "Pending" | "Not Approved" | "Exempt";
+type ApprovalStatus = TripDisplayState;
 type StateFilter = "All" | TripDisplayState;
 
 type SortOption =
@@ -68,36 +68,30 @@ declare global {
 const ITEMS_PER_PAGE = 4;
 
 const approvalPriority: Record<ApprovalStatus, number> = {
-  Approved: 1,
-  Exempt: 1,
-  Pending: 2,
-  "Not Approved": 3,
+  Ongoing: 1, Scheduled: 2, Late: 3, NeedsReschedule: 4, Declined: 5, Completed: 6, Cancelled: 7,
 };
 
 const statePriority: Record<TripDisplayState, number> = {
   Ongoing: 1,
   Late: 2,
   Scheduled: 3,
-  Expired: 4,
-  Completed: 5,
-  Cancelled: 6,
+  NeedsReschedule: 4,
+  Declined: 5,
+  Completed: 6,
+  Cancelled: 7,
 };
 
-const tripStates: TripDisplayState[] = ["Scheduled", "Late", "Expired", "Ongoing", "Completed", "Cancelled"];
+const tripStates: TripDisplayState[] = ["Scheduled", "Late", "NeedsReschedule", "Ongoing", "Declined", "Completed", "Cancelled"];
 
 const OPStrips = () => {
   const navigate = useNavigate();
   const { trips: operationTrips, boats, loading, error, reload, token } = useOperations();
   const tripStateNow = useTripStateClock();
   const trips = useMemo<Trip[]>(() => operationTrips.map((trip:OperationTrip) => {
-    const boat=boats.find(item=>item.id===trip.boatId);
-    const boatApproved=boat?.approval==='Approved'||boat?.wildlifeApproval==='Approved';
-    const fullyApproved=boatApproved&&trip.shoreApproval==='Approved'&&trip.wildlifeShoreApproval==='Approved';
-    const rejected=trip.shoreApproval==='Rejected'||trip.wildlifeShoreApproval==='Rejected';
+    const lifecycleState=getTripDisplayState(trip,tripStateNow);
     return {id:trip.id,vesselName:trip.vesselName,registrationNumber:trip.registrationNumber,
       departureTime:new Intl.DateTimeFormat('en-LK',{dateStyle:'medium',timeStyle:'short'}).format(new Date(trip.scheduledDepartureUtc)),
-      type:trip.type,state:getTripDisplayState(trip,tripStateNow),
-      approval:trip.type==='Patrol'?'Exempt':fullyApproved?'Approved':rejected?'Not Approved':'Pending'};
+      type:trip.type,state:lifecycleState, approval:lifecycleState};
   }),[operationTrips,boats,tripStateNow]);
   const [searchValue, setSearchValue] = useState<string>("");
   const [sortOption, setSortOption] = useState<SortOption>("vessel-asc");
@@ -160,22 +154,10 @@ const OPStrips = () => {
         case "approval-approved":
           return approvalPriority[firstTrip.approval] - approvalPriority[secondTrip.approval];
         case "approval-pending": {
-          const pendingPriority: Record<ApprovalStatus, number> = {
-            Pending: 1,
-          Approved: 2,
-            Exempt: 2,
-            "Not Approved": 3,
-          };
-          return pendingPriority[firstTrip.approval] - pendingPriority[secondTrip.approval];
+          return approvalPriority[firstTrip.approval] - approvalPriority[secondTrip.approval];
         }
         case "approval-not-approved": {
-          const notApprovedPriority: Record<ApprovalStatus, number> = {
-            "Not Approved": 1,
-            Pending: 2,
-            Approved: 3,
-            Exempt: 3,
-          };
-          return notApprovedPriority[firstTrip.approval] - notApprovedPriority[secondTrip.approval];
+          return approvalPriority[secondTrip.approval] - approvalPriority[firstTrip.approval];
         }
         case "vessel-asc":
         default:
@@ -243,13 +225,13 @@ const OPStrips = () => {
 
   const getApprovalColour = (approval: ApprovalStatus): string => {
     switch (approval) {
-      case "Approved":
+      case "Ongoing":
         return "text-[#10B981]"; // Green
-      case "Not Approved":
+      case "Declined":
         return "text-[#FF0000]"; // Red
-      case "Pending":
+      case "Scheduled":
         return "text-slate-600"; // Slate/Dark
-      case "Exempt":
+      case "NeedsReschedule":
         return "text-indigo-600";
       default:
         return "text-slate-500";
@@ -261,7 +243,8 @@ const OPStrips = () => {
       case "Completed": return "bg-emerald-50 text-emerald-700";
       case "Ongoing": return "bg-blue-50 text-blue-700";
       case "Late": return "bg-amber-50 text-amber-700";
-      case "Expired": return "bg-amber-50 text-amber-700";
+      case "NeedsReschedule": return "bg-amber-50 text-amber-700";
+      case "Declined": return "bg-red-50 text-red-700";
       case "Cancelled": return "bg-red-50 text-red-700";
       default: return "bg-slate-100 text-slate-700";
     }
@@ -340,9 +323,9 @@ const OPStrips = () => {
                   <option value="registration-asc">Registration: Ascending</option>
                   <option value="registration-desc">Registration: Descending</option>
                   <option value="state">State</option>
-                  <option value="approval-approved">Approval: Approved first</option>
-                  <option value="approval-pending">Approval: Pending first</option>
-                  <option value="approval-not-approved">Approval: Not Approved first</option>
+                  <option value="approval-approved">Lifecycle: active first</option>
+                  <option value="approval-pending">Lifecycle: scheduled first</option>
+                  <option value="approval-not-approved">Lifecycle: closed first</option>
                 </select>
               </div>
 
@@ -388,7 +371,7 @@ const OPStrips = () => {
                   <th className="px-3 py-3 text-center font-medium">State</th>
                   <th className="px-3 py-3 text-center font-medium">Departure Time</th>
                   <th className="px-3 py-3 text-center font-medium">Type</th>
-                  <th className="px-3 py-3 text-center font-medium">Approval</th>
+                  <th className="px-3 py-3 text-center font-medium">Lifecycle</th>
                   <th className="px-3 py-3 text-center"></th> {/* Actions */}
                 </tr>
               </thead>

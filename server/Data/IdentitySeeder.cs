@@ -50,6 +50,18 @@ public sealed class IdentitySeeder(
             "IdentitySeed:ShoreWildlifePassword",
             PortalRoles.ShoreWildlife,
             "development wildlife shore officer");
+        await SeedPortalUserAsync(
+            "IdentitySeed:SupervisorEmail",
+            "IdentitySeed:SupervisorPassword",
+            PortalRoles.Supervisor,
+            "development supervisor",
+            "John Perera");
+        await SeedPortalUserAsync(
+            "IdentitySeed:HarbourOfficerEmail",
+            "IdentitySeed:HarbourOfficerPassword",
+            PortalRoles.HarbourOfficer,
+            "development harbour officer",
+            "Nimal Fernando");
         await SeedPortalUserAsync("IdentitySeed:OwnerEmail", "IdentitySeed:OwnerPassword",
             PortalRoles.BoatOwner, "development boat owner", "Kamal Silva");
         await SeedPortalUserAsync("IdentitySeed:CrewEmail", "IdentitySeed:CrewPassword",
@@ -124,6 +136,8 @@ public sealed class IdentitySeeder(
             ("Shore", PortalRoles.ShoreCrew, "WWMS Demo Shore Officer"),
             ("Wildlife", PortalRoles.Wildlife, "WWMS Demo Wildlife Officer"),
             ("ShoreWildlife", PortalRoles.ShoreWildlife, "WWMS Demo Wildlife Shore Officer"),
+            ("Supervisor", PortalRoles.Supervisor, "John Perera"),
+            ("HarbourOfficer", PortalRoles.HarbourOfficer, "Nimal Fernando"),
             ("Owner", PortalRoles.BoatOwner, "Kamal Silva"),
             ("Crew", PortalRoles.BoatCrew, "Nimal Perera"),
             ("Passenger", PortalRoles.Passenger, "Amara Fernando")
@@ -231,7 +245,8 @@ public sealed class IdentitySeeder(
             var boat = boats[ownerBoatOffset + (index % 5 >= 3 ? 1 : 0)];
             if (!await db.CrewAssignments.AnyAsync(x => x.BoatId == boat.Id && x.CrewUserId == member.User.Id))
                 db.CrewAssignments.Add(new CrewAssignment { Id = Guid.NewGuid(), BoatId = boat.Id,
-                    CrewUserId = member.User.Id, Position = member.Position, IsActive = true });
+                    CrewUserId = member.User.Id, Position = member.Position, IsActive = true,
+                    AssignedAtUtc = DateTimeOffset.UtcNow });
         }
         await db.SaveChangesAsync();
 
@@ -261,10 +276,12 @@ public sealed class IdentitySeeder(
                     Status = TripStatus.Completed, ShoreApproval = ApprovalStatus.Approved, UpdatedAtUtc = now }
             };
             db.Trips.AddRange(seededTrips);
-            var boatCrewIds = await db.CrewAssignments.AsNoTracking()
-                .Where(x => x.BoatId == boat.Id && x.IsActive).Select(x => x.CrewUserId).ToListAsync();
-            db.TripCrewAssignments.AddRange(seededTrips.SelectMany(trip => boatCrewIds.Select(crewUserId =>
-                new TripCrewAssignment { Id = Guid.NewGuid(), TripId = trip.Id, CrewUserId = crewUserId })));
+            var boatCrew = await db.CrewAssignments.AsNoTracking()
+                .Where(x => x.BoatId == boat.Id && x.IsActive)
+                .Select(x => new { x.CrewUserId, x.Position }).ToListAsync();
+            db.TripCrewAssignments.AddRange(seededTrips.SelectMany(trip => boatCrew.Select(crew =>
+                new TripCrewAssignment { Id = Guid.NewGuid(), TripId = trip.Id,
+                    CrewUserId = crew.CrewUserId, Position = crew.Position, Source = "BoatDefault" })));
         }
         await db.SaveChangesAsync();
 

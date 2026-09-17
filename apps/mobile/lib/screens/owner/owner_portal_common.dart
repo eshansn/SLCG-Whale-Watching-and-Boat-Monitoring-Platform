@@ -37,26 +37,7 @@ bool ownerTripIsDashboardOngoing(
   List<Map<String, dynamic>> boats,
   DateTime now,
 ) {
-  final status = '${trip['status']}'.toLowerCase();
-  if (status == 'ongoing') return true;
-  if (status != 'scheduled' && status != 'boarding') return false;
-
-  final boatId = '${trip['boatId']}';
-  final boat = boats.where((item) => '${item['id']}' == boatId).firstOrNull;
-  if (boat == null) return false;
-  final boatApproved =
-      boat['approval'] == 'Approved' || boat['wildlifeApproval'] == 'Approved';
-  final fullyApproved = boatApproved &&
-      trip['shoreApproval'] == 'Approved' &&
-      trip['wildlifeShoreApproval'] == 'Approved';
-  if (!fullyApproved) return false;
-
-  final departure = DateTime.tryParse('${trip['scheduledDepartureUtc']}');
-  if (departure == null) return false;
-  final utcNow = now.toUtc();
-  final utcDeparture = departure.toUtc();
-  return !utcDeparture.isAfter(utcNow.add(const Duration(minutes: 15))) &&
-      !utcDeparture.isBefore(utcNow.subtract(const Duration(hours: 12)));
+  return '${trip['status']}'.toLowerCase() == 'ongoing';
 }
 
 int compareOwnerTrips(
@@ -65,7 +46,7 @@ int compareOwnerTrips(
     return '${first['vesselName']}'.compareTo('${second['vesselName']}');
   }
   if (sort == 'status') {
-    return '${first['shoreApproval']}'.compareTo('${second['shoreApproval']}');
+    return '${first['status']}'.compareTo('${second['status']}');
   }
   return '${second['scheduledDepartureUtc']}'
       .compareTo('${first['scheduledDepartureUtc']}');

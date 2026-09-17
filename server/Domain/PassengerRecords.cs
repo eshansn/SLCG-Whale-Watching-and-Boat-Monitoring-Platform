@@ -9,6 +9,7 @@ public sealed class PassengerProfile
     public string PhoneNumber { get; set; } = string.Empty;
     public string NormalizedPhoneNumber { get; set; } = string.Empty;
     public string PassengerType { get; set; } = string.Empty;
+    public string? CountryCode { get; set; }
     public string Gender { get; set; } = string.Empty;
     public string AgeCategory { get; set; } = string.Empty;
     public string? SpecialNeedType { get; set; }
@@ -109,7 +110,9 @@ public sealed class PassengerAttendanceAudit
     public DateTimeOffset ChangedAtUtc { get; set; }
 }
 
-public enum WildlifeMonitoringStatus { Draft, PendingHarbourSignature, Completed }
+public enum WildlifeMonitoringStatus { Draft, PendingHarbourSignature, Completed, Discarded, PendingSignatures }
+public enum WildlifeSignatureType { Supervisor, HarbourOfficer }
+public enum WildlifeSignatureRequestStatus { Pending, Signed, Declined, Cancelled, Superseded }
 
 public sealed class WildlifeMonitoringRecord
 {
@@ -133,8 +136,31 @@ public sealed class WildlifeMonitoringRecord
     public string? HarbourOfficerSignature { get; set; }
     public string? MonitoringOfficerSignature { get; set; }
     public string? SupervisorSignature { get; set; }
+    public bool UsesSignatureRequestWorkflow { get; set; }
+    public DateTimeOffset? MonitoringOfficerSignedAtUtc { get; set; }
     public DateTimeOffset CreatedAtUtc { get; set; }
     public DateTimeOffset UpdatedAtUtc { get; set; }
     public DateTimeOffset? SignedAtUtc { get; set; }
     public DateTimeOffset? CompletedAtUtc { get; set; }
+    public ICollection<WildlifeSignatureRequest> SignatureRequests { get; set; } = [];
+}
+
+public sealed class WildlifeSignatureRequest
+{
+    public Guid Id { get; set; }
+    public Guid WildlifeMonitoringRecordId { get; set; }
+    public WildlifeMonitoringRecord WildlifeMonitoringRecord { get; set; } = null!;
+    public WildlifeSignatureType SignatureType { get; set; }
+    public Guid RequestedUserId { get; set; }
+    public ApplicationUser RequestedUser { get; set; } = null!;
+    public Guid RequestedByUserId { get; set; }
+    public ApplicationUser RequestedByUser { get; set; } = null!;
+    public DateTimeOffset RequestedAtUtc { get; set; }
+    public WildlifeSignatureRequestStatus Status { get; set; }
+    public string? SignatureData { get; set; }
+    public string? SignedByName { get; set; }
+    public DateTimeOffset? SignedAtUtc { get; set; }
+    public DateTimeOffset? DeclinedAtUtc { get; set; }
+    public string? DeclineReason { get; set; }
+    public DateTimeOffset UpdatedAtUtc { get; set; }
 }

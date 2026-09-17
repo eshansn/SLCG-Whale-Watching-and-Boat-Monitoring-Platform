@@ -277,7 +277,7 @@ List<Map<String, dynamic>> visibleWildlifeTrips(
           trip['ownerName'],
           trip['route'],
           trip['status'],
-          trip['wildlifeShoreApproval'],
+          trip['monitoringStatus'],
         ].any((value) =>
             value?.toString().toLowerCase().contains(query) ?? false);
       })
@@ -290,9 +290,9 @@ List<Map<String, dynamic>> visibleWildlifeTrips(
           .compareTo(right['boatName'].toString());
     }
     if (sort == 'approval') {
-      return left['wildlifeShoreApproval']
+      return left['monitoringStatus']
           .toString()
-          .compareTo(right['wildlifeShoreApproval'].toString());
+          .compareTo(right['monitoringStatus'].toString());
     }
     final leftDate =
         DateTime.tryParse(left['scheduledDepartureUtc']?.toString() ?? '');

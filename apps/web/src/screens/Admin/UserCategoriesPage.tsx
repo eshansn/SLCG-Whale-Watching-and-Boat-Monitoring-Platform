@@ -33,7 +33,11 @@ const SelectUsers = () => {
   const navigate = useNavigate();
   const { session } = useAuth();
   const visibleCategories = session?.roles.includes("Wildlife")
-    ? userCategories.filter((category) => category.title !== "Staff")
+    ? userCategories.map((category) => ({
+        ...category,
+        title: category.title === "Staff" ? "Wildlife Users" : category.title,
+        path: category.path.replace("/admin", "/wildlife"),
+      }))
     : userCategories;
 
   return (

@@ -72,20 +72,18 @@ class OwnerTrip {
       required this.destination,
       required this.passengerCapacity,
       required this.status,
-      required this.shoreApproval,
-      required this.wildlifeApproval,
       required this.qrToken,
       List<OwnerPassenger>? passengers})
       : passengers = passengers ?? [];
   final String id, boatId;
   DateTime departure, returnTime;
-  String destination, qrToken, shoreApproval, wildlifeApproval;
+  String destination, qrToken;
   int passengerCapacity;
   OwnerTripStatus status;
   final List<OwnerPassenger> passengers;
   double latitude = 5.949186, longitude = 80.438509;
   bool get approved =>
-      shoreApproval == 'Approved' && wildlifeApproval == 'Approved';
+      status == OwnerTripStatus.active || status == OwnerTripStatus.completed;
 }
 
 class OwnerNotification {
@@ -180,45 +178,75 @@ class OwnerStore extends ChangeNotifier {
   }
 
   OwnerBoat _boatFromJson(Map<String, dynamic> value) => OwnerBoat(
-      id: value['id'].toString(), ownerEmail: profile.email,
+      id: value['id'].toString(),
+      ownerEmail: profile.email,
       name: value['name']?.toString() ?? '',
       registrationNumber: value['registrationNumber']?.toString() ?? '',
-      type: 'Boat', capacity: (value['maximumCapacity'] as num?)?.toInt() ?? 0,
+      type: 'Boat',
+      capacity: (value['maximumCapacity'] as num?)?.toInt() ?? 0,
       engineDetails: value['hullNumber']?.toString() ?? '',
       status: _certification(value['approval']?.toString()));
   OwnerCrewMember _crewFromJson(Map<String, dynamic> value) => OwnerCrewMember(
-      id: value['assignmentId'].toString(), name: value['name']?.toString() ?? '',
-      email: value['email']?.toString() ?? '', role: value['position']?.toString() ?? 'Crew Member',
-      phone: value['phoneNumber']?.toString() ?? '', certified: value['certified'] == true);
+      id: value['assignmentId'].toString(),
+      name: value['name']?.toString() ?? '',
+      email: value['email']?.toString() ?? '',
+      role: value['position']?.toString() ?? 'Crew Member',
+      phone: value['phoneNumber']?.toString() ?? '',
+      certified: value['certified'] == true);
   OwnerTrip _tripFromJson(Map<String, dynamic> value) {
     final departure = DateTime.parse(value['scheduledDepartureUtc'].toString());
     final tripBoat = boat(value['boatId'].toString());
-    return OwnerTrip(id: value['id'].toString(), boatId: value['boatId'].toString(),
-      departure: departure, returnTime: DateTime.tryParse(value['actualArrivalUtc']?.toString() ?? '') ?? departure.add(const Duration(hours: 5)),
-      destination: value['route']?.toString() ?? '', passengerCapacity: tripBoat?.capacity ?? (value['passengerCount'] as num?)?.toInt() ?? 0,
-      status: _tripStatus(value['status']?.toString()), shoreApproval: value['shoreApproval']?.toString() ?? 'Pending',
-      wildlifeApproval: value['wildlifeShoreApproval']?.toString() ?? 'Pending', qrToken: value['invitationCode']?.toString() ?? value['id'].toString());
+    return OwnerTrip(
+        id: value['id'].toString(),
+        boatId: value['boatId'].toString(),
+        departure: departure,
+        returnTime:
+            DateTime.tryParse(value['actualArrivalUtc']?.toString() ?? '') ??
+                departure.add(const Duration(hours: 5)),
+        destination: value['route']?.toString() ?? '',
+        passengerCapacity: tripBoat?.capacity ??
+            (value['passengerCount'] as num?)?.toInt() ??
+            0,
+        status: _tripStatus(value['status']?.toString()),
+        qrToken: value['invitationCode']?.toString() ?? value['id'].toString());
   }
+
   Future<void> _loadPassengers(OwnerTrip trip) async {
     final data = await ApiService.instance.tripPassengers(trip.id);
-    trip.passengers.addAll(data.map((p) => OwnerPassenger(id: p['id'].toString(), name: p['name']?.toString() ?? '',
-      nicOrPassport: p['identificationNumber']?.toString() ?? '', phone: p['phoneNumber']?.toString() ?? '',
-      nationality: p['passengerType']?.toString() ?? '', emergencyContact: '',
-      registeredAt: DateTime.parse(p['registeredAtUtc'].toString()))));
+    trip.passengers.addAll(data.map((p) => OwnerPassenger(
+        id: p['id'].toString(),
+        name: p['name']?.toString() ?? '',
+        nicOrPassport: p['identificationNumber']?.toString() ?? '',
+        phone: p['phoneNumber']?.toString() ?? '',
+        nationality: p['passengerType']?.toString() ?? '',
+        emergencyContact: '',
+        registeredAt: DateTime.parse(p['registeredAtUtc'].toString()))));
   }
-  CertificationStatus _certification(String? value) => switch (value?.toLowerCase()) {
-    'approved' => CertificationStatus.certified, 'rejected' => CertificationStatus.rejected,
-    'underreview' || 'under review' => CertificationStatus.underReview, _ => CertificationStatus.pending};
+
+  CertificationStatus _certification(String? value) =>
+      switch (value?.toLowerCase()) {
+        'approved' => CertificationStatus.certified,
+        'rejected' => CertificationStatus.rejected,
+        'underreview' || 'under review' => CertificationStatus.underReview,
+        _ => CertificationStatus.pending
+      };
   OwnerTripStatus _tripStatus(String? value) => switch (value?.toLowerCase()) {
-    'ongoing' => OwnerTripStatus.active, 'completed' => OwnerTripStatus.completed,
-    'cancelled' => OwnerTripStatus.cancelled, _ => OwnerTripStatus.upcoming};
+        'ongoing' => OwnerTripStatus.active,
+        'completed' => OwnerTripStatus.completed,
+        'cancelled' => OwnerTripStatus.cancelled,
+        _ => OwnerTripStatus.upcoming
+      };
   void _buildNotifications() {
     final read = {for (final n in notifications) n.id: n.isRead};
     notifications
       ..clear()
-      ..addAll(trips.map((t) => OwnerNotification(id: 'trip-${t.id}', title: 'Trip ${t.status.name}',
-        message: '${t.destination}: shore ${t.shoreApproval}, wildlife ${t.wildlifeApproval}.', category: 'Trip',
-        timestamp: t.departure, isRead: read['trip-${t.id}'] ?? false)));
+      ..addAll(trips.map((t) => OwnerNotification(
+          id: 'trip-${t.id}',
+          title: 'Trip ${t.status.name}',
+          message: '${t.destination}: lifecycle ${t.status.name}.',
+          category: 'Trip',
+          timestamp: t.departure,
+          isRead: read['trip-${t.id}'] ?? false)));
   }
 
   OwnerBoat? boat(String id) => boats.where((x) => x.id == id).firstOrNull;
@@ -228,8 +256,10 @@ class OwnerStore extends ChangeNotifier {
       required String address,
       required String about,
       String? imagePath}) async {
-    await ApiService.instance.updateOwnerProfile(email: profile.email, phoneNumber: phone, bio: about);
-    if (imagePath != null) await ApiService.instance.uploadOwnerPhoto(imagePath);
+    await ApiService.instance.updateOwnerProfile(
+        email: profile.email, phoneNumber: phone, bio: about);
+    if (imagePath != null)
+      await ApiService.instance.uploadOwnerPhoto(imagePath);
     await refresh();
   }
 
@@ -244,7 +274,6 @@ class OwnerStore extends ChangeNotifier {
   }
 
   Future<void> acceptInvitation(String email) => inviteCrew(email);
-
 
   void markRead(String id) {
     final n = notifications.where((x) => x.id == id).firstOrNull;

@@ -18,6 +18,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../auth/useAuth";
 import { operationsApi } from "../../operations/operationsApi";
+import { boatDocumentRequirements, validateBoatDocumentFile } from "../../operations/boatDocumentRequirements";
 import {
   clearBoatRegistrationDraft,
   loadBoatRegistrationDraft,
@@ -38,45 +39,13 @@ const initialBoatForm: BoatFormData = {
   lifeJacketCount: "",
 };
 
-const initialCertifications: Certification[] = [
-  {
-    id: "sole-proprietorship",
-    name: "Certificate of registration of Sole Proprietorship",
-    fileName: "",
-  },
-  {
-    id: "me-certificate",
-    name: "ME Certificate",
-    fileName: "",
-  },
-  {
-    id: "vessel-certificate",
-    name: "Certificate of Vessel",
-    fileName: "",
-  },
-  {
-    id: "wildlife-certificate",
-    name: "Wildlife Certificate",
-    fileName: "",
-  },
-  {
-    id: "coxswain-certificate",
-    name: "Coxswain Certificate",
-    fileName: "",
-  },
-  {
-    id: "vessel-registration",
-    name: "Vessel Registration Certificate",
-    fileName: "",
-  },
-  {
-    id: "boat-insurance",
-    name: "Boat Insurance",
-    fileName: "",
-    expirationDate: "",
-    requiresExpirationDate: true,
-  },
-];
+const initialCertifications: Certification[] = boatDocumentRequirements.slice(1).map((requirement) => ({
+  id: requirement.documentType,
+  documentType: requirement.documentType,
+  name: requirement.name,
+  fileName: "",
+  renewable: requirement.renewable,
+}));
 
 type BoatRegistrationState = {
   ownerId: string;
@@ -116,7 +85,6 @@ function BoatOwnerNewBoatPage() {
     useState<ReadonlySet<string>>(() => new Set());
   const [draftLoadState, setDraftLoadState] =
     useState<{ ownerId: string; loading: boolean }>();
-  const [today] = useState(() => new Date().toISOString().slice(0, 10));
   const statusMessage = ownerId ? statusMessages[ownerId] ?? "" : "";
   const submitting = ownerId ? submittingOwnerIds.has(ownerId) : false;
   const savingDraft = ownerId ? savingDraftOwnerIds.has(ownerId) : false;
@@ -238,6 +206,13 @@ function BoatOwnerNewBoatPage() {
       return;
     }
 
+    const validation = validateBoatDocumentFile(selectedFile, true);
+    if (validation) {
+      event.target.value = "";
+      setStatusMessage(validation);
+      return;
+    }
+
     const photoOwnerId = ownerId;
     updateRegistrationDraft((current) => ({
       ...current,
@@ -272,6 +247,13 @@ function BoatOwnerNewBoatPage() {
       return;
     }
 
+    const validation = validateBoatDocumentFile(selectedFile);
+    if (validation) {
+      event.target.value = "";
+      setStatusMessage(validation);
+      return;
+    }
+
     updateRegistrationDraft((current) => ({
       ...current,
       certifications: current.certifications.map(
@@ -303,21 +285,11 @@ function BoatOwnerNewBoatPage() {
                 ...certification,
                 fileName: "",
                 file: undefined,
-                expirationDate: certification.requiresExpirationDate ? "" : certification.expirationDate,
               }
             : certification,
       ),
     }));
 
-    setStatusMessage("");
-  };
-
-  const updateCertificateExpiration = (certificationId: string, expirationDate: string): void => {
-    updateRegistrationDraft((current) => ({
-      ...current,
-      certifications: current.certifications.map((certification) =>
-        certification.id === certificationId ? { ...certification, expirationDate } : certification),
-    }));
     setStatusMessage("");
   };
 
@@ -357,8 +329,13 @@ function BoatOwnerNewBoatPage() {
 
     if (!boatPhoto) {
       setStatusMessage(
-        "Please upload a photograph of the boat.",
+        "Please upload the required color aerial photograph or vessel diagram.",
       );
+      return;
+    }
+
+    if (certifications.some((certificate) => !certificate.file)) {
+      setStatusMessage("Please upload all required vessel documents before submitting the registration.");
       return;
     }
 
@@ -422,16 +399,6 @@ function BoatOwnerNewBoatPage() {
       return;
     }
 
-    const insurance = certifications.find((certificate) => certificate.id === "boat-insurance");
-    if (insurance?.file && !insurance.expirationDate) {
-      setStatusMessage("Please select the boat insurance expiration date.");
-      return;
-    }
-    if (insurance?.expirationDate && !insurance.file) {
-      setStatusMessage("Please attach the boat insurance document.");
-      return;
-    }
-
     submissionLocks.current.add(ownerId);
     setSubmittingOwnerIds((current) => new Set(current).add(ownerId));
     let createdBoatId: string | undefined;
@@ -440,15 +407,19 @@ function BoatOwnerNewBoatPage() {
       const created = await operationsApi.createBoat(session.accessToken, {
         name: boatForm.name, registrationNumber: boatForm.registrationNumber,
         registrationDate: boatForm.registrationDate, hullNumber: boatForm.hullNumber,
-        lengthMeters, widthMeters, maximumCapacity, imageUrl: boatPhotoPreview || undefined,
+        lengthMeters, widthMeters, maximumCapacity,
+        imageUrl: boatPhotoPreview.length <= 1_000_000 ? boatPhotoPreview || undefined : undefined,
         maximumSpeedKnots,
         lifeJacketCount,
       });
       createdBoatId = created.id;
-      for (const certificate of certifications.filter((item) => item.file)) {
-        await operationsApi.uploadBoatDocument(session.accessToken, created.id, certificate.name,
-          certificate.file!, certificate.expirationDate || undefined);
+      await operationsApi.uploadBoatDocument(session.accessToken, created.id,
+        "VesselPhotographOrDiagram", boatPhoto);
+      for (const certificate of certifications) {
+        await operationsApi.uploadBoatDocument(session.accessToken, created.id,
+          certificate.documentType, certificate.file!);
       }
+      await operationsApi.submitBoatRegistration(session.accessToken, created.id);
       await clearBoatRegistrationDraft(session.userId).catch(() => undefined);
       setStatusMessage("Your boat approval request has been submitted successfully.");
       if (activeOwnerIdRef.current === ownerId) {
@@ -520,7 +491,7 @@ function BoatOwnerNewBoatPage() {
         {/* Boat photograph */}
         <section className="mt-3 sm:mt-5">
           <label className="mb-2 block text-[14px] font-semibold sm:text-[15px]">
-            Photograph of the Boat
+            Color Aerial Photograph or Diagram of the Vessel <span className="text-red-600">*</span>
           </label>
 
           <label
@@ -569,7 +540,7 @@ function BoatOwnerNewBoatPage() {
             <input
               id="boatPhotograph"
               type="file"
-              accept="image/*"
+              accept=".jpg,.jpeg,.png,image/jpeg,image/png"
               onChange={handleBoatPhotoChange}
               className="sr-only"
             />
@@ -905,18 +876,7 @@ function BoatOwnerNewBoatPage() {
                           }
                         </p>
                       )}
-                      {certification.requiresExpirationDate && (
-                        <label className="mt-2 block text-[11px] font-medium text-[#555]">
-                          Insurance expiration date
-                          <input
-                            type="date"
-                            value={certification.expirationDate ?? ""}
-                            min={today}
-                            onChange={(event) => updateCertificateExpiration(certification.id, event.target.value)}
-                            className="mt-1 block min-h-10 w-full rounded-lg border border-[#e8e2e2] px-3 text-[12px] text-[#555] outline-none focus:border-[#162d54] focus:ring-1 focus:ring-[#162d54]"
-                          />
-                        </label>
-                      )}
+                      {certification.renewable && <p className="mt-1 text-[10px] font-medium text-amber-700">Annual renewal · expiry entered by Wildlife Admin</p>}
                     </div>
 
                     {certification.fileName ? (

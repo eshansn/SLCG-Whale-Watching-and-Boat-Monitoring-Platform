@@ -92,7 +92,7 @@ class _ShoreWildlifeTripsScreenState extends State<ShoreWildlifeTripsScreen> {
                         const WildlifePageHeading(
                           title: 'Trips',
                           subtitle:
-                              'Monitor attendance and complete Wildlife Shore approval',
+                              'Monitor attendance and complete Wildlife records',
                           icon: Icons.sailing_outlined,
                         ),
                         const SizedBox(height: 24),
@@ -259,8 +259,8 @@ class _ShoreWildlifeTripsScreenState extends State<ShoreWildlifeTripsScreen> {
                   'Scheduled', formatShoreDate(trip['scheduledDepartureUtc'])),
               const SizedBox(height: 12),
               Wrap(spacing: 12, runSpacing: 10, children: [
-                _badge('SLCG', trip['shoreApproval']),
-                _badge('Wildlife Shore', trip['wildlifeShoreApproval']),
+                _badge('Trip', trip['status']),
+                _badge('Monitoring', trip['monitoringStatus']),
               ]),
             ]),
           ),

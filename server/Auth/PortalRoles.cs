@@ -7,6 +7,8 @@ public static class PortalRoles
     public const string ShoreCrew = "ShoreCrew";
     public const string Wildlife = "Wildlife";
     public const string ShoreWildlife = "ShoreWildlife";
+    public const string Supervisor = "Supervisor";
+    public const string HarbourOfficer = "HarbourOfficer";
     public const string Passenger = "Passenger";
     public const string BoatOwner = "BoatOwner";
     public const string BoatCrew = "BoatCrew";
@@ -18,6 +20,8 @@ public static class PortalRoles
         ShoreCrew,
         Wildlife,
         ShoreWildlife,
+        Supervisor,
+        HarbourOfficer,
         Passenger,
         BoatOwner,
         BoatCrew

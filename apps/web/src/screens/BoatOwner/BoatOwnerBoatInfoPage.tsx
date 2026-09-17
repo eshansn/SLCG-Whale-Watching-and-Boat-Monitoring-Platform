@@ -3,8 +3,12 @@ import {
   useState,
 } from "react";
 import {
+  Download,
+  Eye,
+  History,
   Menu as MenuIcon,
   Settings,
+  Upload,
   X,
 } from "lucide-react";
 import {
@@ -20,12 +24,9 @@ import crewIcon from "../../assets/icons/crew.svg";
 import tripsIcon from "../../assets/icons/trips.svg";
 import { useOperations } from "../../operations/useOperations";
 import { operationsApi } from "../../operations/operationsApi";
+import { boatDocumentRequirements, validateBoatDocumentFile } from "../../operations/boatDocumentRequirements";
+import type { BoatDocument } from "../../operations/operationsApi";
 import { useAuth } from "../../auth/useAuth";
-
-interface Certification {
-  id: string;
-  name: string;
-}
 
 interface MenuItem {
   label: string;
@@ -33,37 +34,6 @@ interface MenuItem {
   icon?: string;
   type?: "settings";
 }
-
-const certifications: Certification[] = [
-  {
-    id: "sole-proprietorship",
-    name: "Certificate of registration of Sole Proprietorship",
-  },
-  {
-    id: "me-certificate",
-    name: "ME Certificate",
-  },
-  {
-    id: "vessel-certificate",
-    name: "Certificate of Vessel",
-  },
-  {
-    id: "wildlife-certificate",
-    name: "Wildlife Certificate",
-  },
-  {
-    id: "coxswain-certificate",
-    name: "Coxswain Certificate",
-  },
-  {
-    id: "vessel-registration",
-    name: "Vessel Registration Certificate",
-  },
-  {
-    id: "boat-insurance",
-    name: "Boat Insurance",
-  },
-];
 
 const menuItems: MenuItem[] = [
   {
@@ -101,10 +71,13 @@ const menuItems: MenuItem[] = [
 function BoatOwnerBoatInfoPage() {
   const navigate = useNavigate();
   const { boatId } = useParams<{ boatId: string }>();
-  const { boats, loading, error } = useOperations();
+  const { boats, loading, error, reload } = useOperations();
   const { session } = useAuth();
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [historyType, setHistoryType] = useState<string>();
+  const [uploadingType, setUploadingType] = useState<string>();
+  const [documentNotice, setDocumentNotice] = useState("");
 
   const selectedBoat = boats.find((boat) => boat.id === boatId);
 
@@ -125,17 +98,52 @@ function BoatOwnerBoatInfoPage() {
     navigate(path);
   };
 
-  const openCertification = async (certificateName: string): Promise<void> => {
+  const openCertification = async (document: BoatDocument, download = false): Promise<void> => {
     if (!selectedBoat || !session) return;
-    const document = selectedBoat.documents.find((item) => item.name === certificateName);
-    if (!document) return;
     const url = await operationsApi.downloadBoatDocument(session.accessToken, selectedBoat.id, document.id);
-    window.open(url, '_blank', 'noopener,noreferrer');
+    if (download) {
+      const link = window.document.createElement('a');
+      link.href = url;
+      link.download = document.fileName;
+      link.click();
+    } else window.open(url, '_blank', 'noopener,noreferrer');
     window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
   };
 
+  const uploadReplacement = async (documentType: string, file?: File): Promise<void> => {
+    if (!selectedBoat || !session || !file) return;
+    const requirement = boatDocumentRequirements.find((item) => item.documentType === documentType);
+    const validation = validateBoatDocumentFile(file, requirement?.imageOnly);
+    if (validation) { setDocumentNotice(validation); return; }
+    setUploadingType(documentType);
+    setDocumentNotice("");
+    try {
+      await operationsApi.uploadBoatDocument(session.accessToken, selectedBoat.id, documentType, file);
+      await reload();
+      setDocumentNotice(`${requirement?.renewable ? 'Renewal' : 'Replacement'} uploaded for Wildlife review.`);
+    } catch (reason) {
+      setDocumentNotice(reason instanceof Error ? reason.message : 'Document upload failed.');
+    } finally {
+      setUploadingType(undefined);
+    }
+  };
+
+  const formatDate = (value?: string) => value
+    ? new Intl.DateTimeFormat('en-LK', { dateStyle: 'medium', timeZone: 'UTC' }).format(new Date(`${value.slice(0, 10)}T00:00:00Z`))
+    : 'Not set';
+
   if (loading) return <main className="grid min-h-dvh place-items-center">Loading vessel information...</main>;
   if (error || !selectedBoat) return <main className="grid min-h-dvh place-items-center">{error || 'Vessel not found.'}</main>;
+  const displayedRequirements = selectedBoat.documentRequirementsVersion >= 2
+    ? boatDocumentRequirements
+    : Array.from(new Map(selectedBoat.documents.map((document) => {
+        const known = boatDocumentRequirements.find((item) => item.documentType === document.documentType);
+        return [document.documentType, known ?? {
+          documentType: document.documentType,
+          name: document.name,
+          renewable: Boolean(document.expirationDate),
+        }];
+      })).values());
 
   return (
     <main className="boat-owner-page min-h-dvh w-full overflow-x-hidden bg-white text-black">
@@ -274,11 +282,11 @@ function BoatOwnerBoatInfoPage() {
           </dl>
         </section>
 
-        {/* Certifications */}
+        {/* Documents */}
         <section className="mt-5 sm:mt-8">
           <div className="mb-2 flex items-center gap-4">
             <h1 className="shrink-0 text-[17px] font-semibold sm:text-[22px] lg:text-[25px]">
-              Certifications
+              Current Documents
             </h1>
 
             <span
@@ -296,40 +304,46 @@ function BoatOwnerBoatInfoPage() {
               sm:ml-4 sm:px-5 sm:py-6
             "
           >
+            {documentNotice && <p className="mb-3 rounded-lg bg-blue-50 px-3 py-2 text-xs text-blue-800">{documentNotice}</p>}
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4">
-              {certifications.map((certification) => (
-                (() => {
-                const document = selectedBoat.documents.find((item) => item.name === certification.name);
-                return (
-                <button
-                  key={certification.id}
-                  type="button"
-                  onClick={() => void openCertification(certification.name)}
-                  disabled={!document}
-                  className="
-                    flex min-h-[62px] w-full
-                    items-center rounded-[12px]
-                    border border-[#e8e2e2]
-                    bg-white px-4 py-3
-                    text-left text-[14px]
-                    font-medium leading-[1.25]
-                    text-black
-                    transition-colors
-                    hover:border-[#162d54] disabled:cursor-default disabled:bg-slate-50 disabled:text-slate-500
-                    hover:bg-gray-50
-                    focus:outline-none
-                    focus-visible:ring-2
-                    focus-visible:ring-[#162d54]
-                    sm:min-h-[70px]
-                    sm:px-5 sm:text-[15px]
-                    lg:text-[16px]
-                  "
-                >
-                  <span className="min-w-0"><span className="block">{certification.name}</span>{document && <><span className="mt-1 block truncate text-[11px] font-normal text-slate-500">{document.fileName}</span>{document.expirationDate && <span className="mt-1 block text-[11px] font-medium text-amber-700">Expires {new Intl.DateTimeFormat('en-LK',{dateStyle:'medium',timeZone:'UTC'}).format(new Date(`${document.expirationDate}T00:00:00Z`))}</span>}</>}</span>
-                </button>
-                );
-                })()
-              ))}
+              {displayedRequirements.map((requirement) => {
+                const versions = selectedBoat.documents
+                  .filter((item) => item.documentType === requirement.documentType)
+                  .sort((a, b) => b.version - a.version);
+                const document = versions.find((item) => item.isCurrent)
+                  ?? versions.find((item) => item.status === 'PendingReview') ?? versions[0];
+                return <article key={requirement.documentType} className="rounded-[12px] border border-[#e8e2e2] bg-white p-4 text-sm">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <h3 className="font-semibold">{requirement.name}</h3>
+                      {document ? <>
+                        <p className="mt-1 truncate text-xs text-slate-500">Version {document.version} · {document.fileName}</p>
+                        <p className="mt-1 text-xs"><b>Status:</b> {document.renewalState.replace(/([A-Z])/g, ' $1').trim()}</p>
+                        {requirement.renewable && <p className="text-xs"><b>Expires:</b> {formatDate(document.expirationDate)}</p>}
+                        {document.verifiedBy && <p className="text-xs"><b>Verified by:</b> {document.verifiedBy}</p>}
+                      </> : <p className="mt-1 text-xs text-red-600">Not uploaded</p>}
+                    </div>
+                    {document && <button type="button" onClick={() => void openCertification(document)} title="View document" className="rounded-full p-2 text-indigo-700"><Eye size={18}/></button>}
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {document && <button type="button" onClick={() => void openCertification(document, true)} className="inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs font-semibold"><Download size={14}/>Download</button>}
+                    {versions.length > 0 && <button type="button" onClick={() => setHistoryType(historyType === requirement.documentType ? undefined : requirement.documentType)} className="inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs font-semibold"><History size={14}/>History ({versions.length})</button>}
+                    <label className="inline-flex cursor-pointer items-center gap-1 rounded-lg bg-[#162d54] px-2.5 py-1.5 text-xs font-semibold text-white">
+                      <Upload size={14}/>{uploadingType === requirement.documentType ? 'Uploading…' : requirement.renewable ? 'Renew Document' : 'Replace Document'}
+                      <input type="file" disabled={Boolean(uploadingType)} accept={requirement.imageOnly ? '.jpg,.jpeg,.png' : '.pdf,.jpg,.jpeg,.png'} className="sr-only" onChange={(event) => { const file = event.currentTarget.files?.[0]; event.currentTarget.value=''; void uploadReplacement(requirement.documentType, file); }}/>
+                    </label>
+                  </div>
+                  {historyType === requirement.documentType && <div className="mt-3 space-y-2 border-t pt-3">
+                    {versions.map((version) => <div key={version.id} className="rounded-lg bg-slate-50 p-3 text-xs">
+                      <div className="flex items-center justify-between gap-2"><b>Version {version.version}{version.isCurrent ? ' · Current' : ''}</b><button type="button" onClick={() => void openCertification(version)} className="text-indigo-700">View</button></div>
+                      <p>Uploaded: {new Intl.DateTimeFormat('en-LK',{dateStyle:'medium'}).format(new Date(version.uploadedAtUtc))}</p>
+                      {version.expirationDate && <p>Expires: {formatDate(version.expirationDate)}</p>}
+                      <p>Status: {version.renewalState.replace(/([A-Z])/g, ' $1').trim()}</p>
+                      {version.rejectionReason && <p className="text-red-700">Reason: {version.rejectionReason}</p>}
+                    </div>)}
+                  </div>}
+                </article>;
+              })}
             </div>
           </div>
         </section>

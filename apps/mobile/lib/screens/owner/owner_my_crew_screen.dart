@@ -17,6 +17,7 @@ class _OwnerMyCrewScreenState extends State<OwnerMyCrewScreen> {
   final _api = ApiService.instance;
   final _email = TextEditingController();
   List<Map<String, dynamic>> _members = [];
+  List<Map<String, dynamic>> _boats = [];
   List<Map<String, dynamic>> _suggestions = [];
   Timer? _debounce;
   bool _loading = true;
@@ -45,11 +46,13 @@ class _OwnerMyCrewScreenState extends State<OwnerMyCrewScreen> {
   Future<void> _load({bool silent = false}) async {
     if (!silent && mounted) setState(() => _loading = true);
     try {
-      final members = await _api.ownerCrew();
+      final result = await Future.wait([_api.ownerCrew(), _api.boats()]);
+      final members = result[0];
       members.sort((a, b) => '${a['name']}'.compareTo('${b['name']}'));
       if (!mounted) return;
       setState(() {
         _members = members;
+        _boats = result[1].where((boat) => boat['isPatrolBoat'] != true).toList();
         _error = null;
         _loading = false;
       });
@@ -249,6 +252,9 @@ class _OwnerMyCrewScreenState extends State<OwnerMyCrewScreen> {
                       fontWeight: FontWeight.w600,
                     ),
                   ),
+                  Text('Boat: ${member['assignedBoatName'] ?? 'Not assigned'}',
+                      maxLines: 1, overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: ownerMuted, fontSize: 8)),
                 ],
               ),
             ),
@@ -267,6 +273,14 @@ class _OwnerMyCrewScreenState extends State<OwnerMyCrewScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
+                  _compactAction(
+                    tooltip: member['assignedBoatId'] == null
+                        ? 'Assign boat'
+                        : 'Change boat',
+                    icon: Icons.directions_boat_outlined,
+                    color: const Color(0xFF2563EB),
+                    onPressed: () => _assignBoat(member),
+                  ),
                   _compactAction(
                     tooltip: 'Crew details',
                     icon: Icons.info_outline_rounded,
@@ -301,6 +315,41 @@ class _OwnerMyCrewScreenState extends State<OwnerMyCrewScreen> {
         color: color,
         icon: Icon(icon, size: 16),
       );
+
+  Future<void> _assignBoat(Map<String, dynamic> member) async {
+    String? selectedBoatId = member['assignedBoatId']?.toString();
+    final save = await showDialog<bool>(
+      context: context,
+      builder: (context) => StatefulBuilder(builder: (context, setDialogState) => AlertDialog(
+        title: Text('${member['assignedBoatId'] == null ? 'Assign' : 'Change'} Boat'),
+        content: DropdownButtonFormField<String?>(
+          initialValue: selectedBoatId,
+          isExpanded: true,
+          items: <DropdownMenuItem<String?>>[
+            const DropdownMenuItem(value: null, child: Text('Not assigned')),
+            ..._boats.map((boat) => DropdownMenuItem(
+                value: '${boat['id']}', child: Text('${boat['name']}'))),
+          ],
+          onChanged: (value) => setDialogState(() => selectedBoatId = value),
+          decoration: const InputDecoration(labelText: 'Normal assigned boat'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Save')),
+        ],
+      )),
+    );
+    if (save != true) return;
+    try {
+      await _api.assignCrewBoat('${member['crewUserId']}', selectedBoatId);
+      await _load(silent: true);
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Boat assignment saved.')));
+    } catch (error) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(ownerError(error))));
+    }
+  }
 
   Widget _addCrewPanel() => Container(
         padding: const EdgeInsets.all(17),

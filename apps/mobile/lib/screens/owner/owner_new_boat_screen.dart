@@ -24,12 +24,12 @@ class _SelectedOwnerFile {
 }
 
 class _OwnerCertificate {
+  final String documentType;
   final String name;
-  final bool requiresExpirationDate;
+  final bool renewable;
   _SelectedOwnerFile? file;
-  DateTime? expirationDate;
 
-  _OwnerCertificate(this.name, {this.requiresExpirationDate = false});
+  _OwnerCertificate(this.documentType, this.name, {this.renewable = false});
 }
 
 class _OwnerNewBoatScreenState extends State<OwnerNewBoatScreen> {
@@ -43,13 +43,27 @@ class _OwnerNewBoatScreenState extends State<OwnerNewBoatScreen> {
   final _speed = TextEditingController();
   final _lifeJackets = TextEditingController();
   final _certificates = [
-    _OwnerCertificate('Certificate of registration of Sole Proprietorship'),
-    _OwnerCertificate('ME Certificate'),
-    _OwnerCertificate('Certificate of Vessel'),
-    _OwnerCertificate('Wildlife Certificate'),
-    _OwnerCertificate('Coxswain Certificate'),
-    _OwnerCertificate('Vessel Registration Certificate'),
-    _OwnerCertificate('Boat Insurance', requiresExpirationDate: true),
+    _OwnerCertificate('BusinessRegistration',
+        'Certificate of Registration of Sole Proprietorship / Business'),
+    _OwnerCertificate('MECertificate', 'ME Certificate', renewable: true),
+    _OwnerCertificate(
+        'VesselInsuranceCertificate', 'Vessel Insurance Certificate',
+        renewable: true),
+    _OwnerCertificate('PassengerLifeInsuranceCertificate',
+        "Passengers' Life Insurance Certificate",
+        renewable: true),
+    _OwnerCertificate('WildlifeCertificate', 'Wildlife Certificate'),
+    _OwnerCertificate('CoxswainCertificate', 'Coxswain Certificate'),
+    _OwnerCertificate(
+        'VesselRegistrationCertificate', 'Vessel Registration Certificate',
+        renewable: true),
+    _OwnerCertificate('LifeSavingCertificate', 'Life Saving Certificate'),
+    _OwnerCertificate('FirstAidCertificate', 'First Aid Certificate',
+        renewable: true),
+    _OwnerCertificate(
+        'FireFightingEquipmentReport', 'Fire-Fighting Equipment Report',
+        renewable: true),
+    _OwnerCertificate('FireFightingCertificate', 'Fire Fighting Certificate'),
   ];
 
   DateTime? _registrationDate;
@@ -77,15 +91,16 @@ class _OwnerNewBoatScreenState extends State<OwnerNewBoatScreen> {
   String _contentType(String extension) => switch (extension.toLowerCase()) {
         'pdf' => 'application/pdf',
         'png' => 'image/png',
-        'webp' => 'image/webp',
         'jpg' || 'jpeg' => 'image/jpeg',
         _ => 'application/octet-stream',
       };
 
   Future<_SelectedOwnerFile?> _pick({required bool imageOnly}) async {
     final result = await FilePicker.pickFiles(
-      type: imageOnly ? FileType.image : FileType.custom,
-      allowedExtensions: imageOnly ? null : const ['pdf', 'jpg', 'jpeg', 'png'],
+      type: FileType.custom,
+      allowedExtensions: imageOnly
+          ? const ['jpg', 'jpeg', 'png']
+          : const ['pdf', 'jpg', 'jpeg', 'png'],
       withData: true,
     );
     final file = result?.files.single;
@@ -102,6 +117,10 @@ class _OwnerNewBoatScreenState extends State<OwnerNewBoatScreen> {
     if (file == null) return;
     if (!file.contentType.startsWith('image/')) {
       _setStatus('Please select a valid image of the boat.');
+      return;
+    }
+    if (file.bytes.isEmpty || file.bytes.length > 10 * 1024 * 1024) {
+      _setStatus('The vessel photograph must be between 1 byte and 10 MB.');
       return;
     }
     setState(() {
@@ -121,23 +140,6 @@ class _OwnerNewBoatScreenState extends State<OwnerNewBoatScreen> {
       certificate.file = file;
       _status = null;
     });
-  }
-
-  Future<void> _pickInsuranceExpiration(_OwnerCertificate certificate) async {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final date = await showDatePicker(
-      context: context,
-      firstDate: today,
-      lastDate: DateTime(today.year + 20, 12, 31),
-      initialDate: certificate.expirationDate ?? today,
-    );
-    if (date != null && mounted) {
-      setState(() {
-        certificate.expirationDate = date;
-        _status = null;
-      });
-    }
   }
 
   void _setStatus(String message) => setState(() => _status = message);
@@ -160,7 +162,13 @@ class _OwnerNewBoatScreenState extends State<OwnerNewBoatScreen> {
   Future<void> _submit() async {
     if (_submitting) return;
     if (_photo == null) {
-      _setStatus('Please upload a photograph of the boat.');
+      _setStatus(
+          'Please upload the required color aerial photograph or vessel diagram.');
+      return;
+    }
+    if (_certificates.any((certificate) => certificate.file == null)) {
+      _setStatus(
+          'Please upload all required vessel documents before submitting the registration.');
       return;
     }
     if (_name.text.trim().isEmpty) {
@@ -175,17 +183,6 @@ class _OwnerNewBoatScreenState extends State<OwnerNewBoatScreen> {
       _setStatus('Please select the registration date.');
       return;
     }
-    final insurance = _certificates
-        .where((certificate) => certificate.requiresExpirationDate)
-        .first;
-    if (insurance.file != null && insurance.expirationDate == null) {
-      _setStatus('Please select the boat insurance expiration date.');
-      return;
-    }
-    if (insurance.expirationDate != null && insurance.file == null) {
-      _setStatus('Please attach the boat insurance document.');
-      return;
-    }
     final capacity = int.tryParse(
         _capacity.text.trim().isEmpty ? '0' : _capacity.text.trim());
     final length = double.tryParse(
@@ -197,16 +194,21 @@ class _OwnerNewBoatScreenState extends State<OwnerNewBoatScreen> {
     final jackets = int.tryParse(
         _lifeJackets.text.trim().isEmpty ? '0' : _lifeJackets.text.trim());
     if (capacity == null ||
-        capacity < 0 ||
+        capacity < 1 ||
         length == null ||
-        length < 0 ||
+        length <= 0 ||
         width == null ||
-        width < 0 ||
+        width <= 0 ||
         speed == null ||
         speed < 0 ||
         jackets == null ||
         jackets < 0) {
-      _setStatus('Enter valid non-negative vessel measurements and counts.');
+      _setStatus(
+          'Enter valid vessel measurements and a capacity of at least one.');
+      return;
+    }
+    if (_hull.text.trim().isEmpty) {
+      _setStatus('Please enter the hull number.');
       return;
     }
     setState(() {
@@ -224,7 +226,7 @@ class _OwnerNewBoatScreenState extends State<OwnerNewBoatScreen> {
         'lengthMeters': length,
         'widthMeters': width,
         'maximumCapacity': capacity,
-        'imageUrl': photoUrl,
+        'imageUrl': photoUrl.length <= 1000000 ? photoUrl : null,
         'maximumSpeedKnots': speed,
         'lifeJacketCount': jackets,
       });
@@ -232,18 +234,24 @@ class _OwnerNewBoatScreenState extends State<OwnerNewBoatScreen> {
       if (boatId == null || boatId.isEmpty) {
         throw Exception('The server did not return the registered boat ID.');
       }
+      await _api.uploadBoatDocument(
+        boatId,
+        'VesselPhotographOrDiagram',
+        _photo!.bytes,
+        _photo!.name,
+        _photo!.contentType,
+      );
       for (final certificate in _certificates) {
         final file = certificate.file;
-        if (file == null) continue;
         await _api.uploadBoatDocument(
           boatId,
-          certificate.name,
-          file.bytes,
+          certificate.documentType,
+          file!.bytes,
           file.name,
           file.contentType,
-          expirationDate: certificate.expirationDate,
         );
       }
+      await _api.submitOwnerBoatRegistration(boatId);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content:
@@ -266,7 +274,7 @@ class _OwnerNewBoatScreenState extends State<OwnerNewBoatScreen> {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 36),
             children: [
-              const Text('Photograph of the Boat',
+              const Text('Color Aerial Photograph or Diagram of the Vessel *',
                   style: TextStyle(fontWeight: FontWeight.w600)),
               const SizedBox(height: 9),
               InkWell(
@@ -357,33 +365,21 @@ class _OwnerNewBoatScreenState extends State<OwnerNewBoatScreen> {
                                           ? () => _pickCertificate(certificate)
                                           : () => setState(() {
                                                 certificate.file = null;
-                                                if (certificate
-                                                    .requiresExpirationDate) {
-                                                  certificate.expirationDate =
-                                                      null;
-                                                }
                                               }),
                                   icon: Icon(certificate.file == null
                                       ? Icons.upload_outlined
                                       : Icons.delete_outline_rounded),
                                 ),
                               ),
-                              if (certificate.requiresExpirationDate)
-                                Padding(
-                                  padding: const EdgeInsets.only(bottom: 12),
-                                  child: SizedBox(
-                                    width: double.infinity,
-                                    child: OutlinedButton.icon(
-                                      onPressed: _submitting
-                                          ? null
-                                          : () => _pickInsuranceExpiration(
-                                              certificate),
-                                      icon: const Icon(
-                                          Icons.calendar_today_outlined),
-                                      label: Text(certificate.expirationDate ==
-                                              null
-                                          ? 'Select insurance expiration date'
-                                          : 'Expires ${DateFormat('MMM d, y').format(certificate.expirationDate!)}'),
+                              if (certificate.renewable)
+                                const Padding(
+                                  padding: EdgeInsets.only(bottom: 12),
+                                  child: Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: Text(
+                                      'Annual renewal · expiry entered by Wildlife Admin',
+                                      style: TextStyle(
+                                          fontSize: 12, color: Colors.orange),
                                     ),
                                   ),
                                 ),

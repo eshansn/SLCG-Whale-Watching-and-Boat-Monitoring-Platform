@@ -13,15 +13,12 @@ import {
   Download,
   Menu as MenuIcon,
   Mic,
-  Play,
   Square,
   Search,
   Settings,
   X,
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
-import Map, { Marker } from "react-map-gl/maplibre";
-import "maplibre-gl/dist/maplibre-gl.css";
 import {
   useNavigate,
   useParams,
@@ -35,7 +32,10 @@ import crewIcon from "../../assets/icons/crew.svg";
 import tripsIcon from "../../assets/icons/trips.svg";
 import { useOperations } from "../../operations/useOperations";
 import { useTripStateClock } from "../../operations/useTripStateClock";
-import { isExpiredScheduledTrip, operationsApi, type TripPassenger, type VesselMapRecord } from "../../operations/operationsApi";
+import { isExpiredScheduledTrip, operationsApi, type SosAlert, type TripPassenger } from "../../operations/operationsApi";
+import { formatPassengerCountry } from "../../data/countries";
+import { PassengerCountryDisplay } from "../../components/CountryFlag";
+import TripTrackingPanel from "../OPS/components/TripTrackingPanel";
 import TripTransferModal from "./TripTransferModal";
 
 interface MenuItem {
@@ -110,7 +110,7 @@ function BoatOwnerTripInfoPage() {
   const { trips, loading, error, reload, token } = useOperations();
   const tripStateNow = useTripStateClock();
   const trip = trips.find((item) => item.id === tripId);
-  const needsReschedule = trip ? isExpiredScheduledTrip(trip, tripStateNow) : false;
+  const needsReschedule = trip ? trip.status === "NeedsReschedule" || isExpiredScheduledTrip(trip, tripStateNow) : false;
   const invitationUrl = trip?.invitationCode ? `${window.location.origin}/passenger/trip/${trip.invitationCode}` : '';
 
   const [isMenuOpen, setIsMenuOpen] =
@@ -121,10 +121,10 @@ function BoatOwnerTripInfoPage() {
 
   const [sortOption, setSortOption] =
     useState("name");
-  const [liveVessel, setLiveVessel] = useState<VesselMapRecord | null>(null);
-  const [mapError, setMapError] = useState("");
   const [passengers, setPassengers] = useState<TripPassenger[]>([]);
   const [passengerError, setPassengerError] = useState("");
+  const [activeSos, setActiveSos] = useState<SosAlert | null>(null);
+  const [sosError, setSosError] = useState("");
   const [transferOpen,setTransferOpen]=useState(false);
   const [transferStatus,setTransferStatus]=useState("");
   const [startingTrip,setStartingTrip]=useState(false);
@@ -170,28 +170,19 @@ function BoatOwnerTripInfoPage() {
   }, [token, trip?.id, trip?.updatedAtUtc]);
 
   useEffect(() => {
-    if (!token || !trip?.boatId) return;
+    if (!token || !trip?.id || !trip.hasActiveSos) return;
     let active = true;
-    let requestInFlight = false;
-    const loadLocation = async (): Promise<void> => {
-      if (requestInFlight) return;
-      requestInFlight = true;
-      try {
-        const vessels = await operationsApi.vesselMap(token);
-        if (active) {
-          setLiveVessel(vessels.find((vessel) => vessel.id === trip.boatId) ?? null);
-          setMapError("");
-        }
-      } catch (locationError) {
-        if (active) setMapError(locationError instanceof Error ? locationError.message : "Unable to load live vessel location.");
-      } finally {
-        requestInFlight = false;
-      }
-    };
-    void loadLocation();
-    const timer = window.setInterval(() => void loadLocation(), 10_000);
-    return () => { active = false; window.clearInterval(timer); };
-  }, [token, trip?.boatId]);
+    void operationsApi.sosAlerts(token).then((alerts) => {
+      if (!active) return;
+      setActiveSos(alerts.find((alert) => alert.tripId === trip.id) ?? null);
+      setSosError("");
+    }).catch((sosLoadError: unknown) => {
+      if (!active) return;
+      setActiveSos(null);
+      setSosError(sosLoadError instanceof Error ? sosLoadError.message : "Unable to load emergency details.");
+    });
+    return () => { active = false; };
+  }, [token, trip?.id, trip?.hasActiveSos, trip?.updatedAtUtc]);
 
   const displayedPassengers = useMemo(() => {
     const normalizedSearch =
@@ -206,7 +197,7 @@ function BoatOwnerTripInfoPage() {
           passenger.identificationNumber
             .toLowerCase()
             .includes(normalizedSearch) ||
-          passenger.passengerType
+          formatPassengerCountry(passenger.passengerType, passenger.countryCode)
             .toLowerCase()
             .includes(normalizedSearch)
         );
@@ -357,16 +348,15 @@ function BoatOwnerTripInfoPage() {
     }
   };
 
-  const startTrip = async (): Promise<void> => {
+  const endTrip = async (): Promise<void> => {
     if (!token || !trip || startingTrip) return;
-    const isOngoing = trip.status === "Ongoing";
     setStartingTrip(true);
     setStartError("");
     try {
-      await operationsApi.status(token, trip.id, isOngoing ? "Completed" : "Ongoing");
+      await operationsApi.endTrip(token, trip.id);
       await reload();
     } catch (startFailure) {
-      setStartError(startFailure instanceof Error ? startFailure.message : `Unable to ${isOngoing ? "end" : "start"} this trip.`);
+      setStartError(startFailure instanceof Error ? startFailure.message : "Unable to end this trip.");
     } finally {
       setStartingTrip(false);
     }
@@ -529,7 +519,7 @@ function BoatOwnerTripInfoPage() {
               />
 
               <span className="text-[8px] font-medium uppercase text-[#20d820] sm:text-[9px]">
-                {trip.shoreApproval}
+                {needsReschedule ? "Needs Reschedule" : trip.status}
               </span>
             </div>
           </div>
@@ -547,12 +537,7 @@ function BoatOwnerTripInfoPage() {
           </div>
         </section>
 
-        {(trip.status==="Scheduled"||trip.status==="Boarding")&&liveVessel&&<section className="mt-7 rounded-xl border border-slate-200 bg-slate-50/70 p-4"><h2 className="text-sm font-semibold text-[#162d54]">Departure approvals</h2><p className="mt-1 text-[11px] text-slate-500">A boat needs approval from either Administration or the Wildlife Authority.</p><div className="mt-3 grid gap-2 sm:grid-cols-3">{[
-          ['Boat authority',liveVessel.certificationApproval==='Approved'||liveVessel.wildlifeApproval==='Approved'?'Approved':liveVessel.certificationApproval==='Rejected'&&liveVessel.wildlifeApproval==='Rejected'?'Rejected':'Pending'],
-          ['SLCG Shore trip',trip.shoreApproval],
-          ['Wildlife Shore trip',trip.wildlifeShoreApproval],
-        ].map(([label,status])=><div key={label} className="rounded-lg bg-white px-3 py-2 shadow-sm"><p className="text-[11px] text-slate-500">{label}</p><p className={`mt-1 text-xs font-semibold ${status==='Approved'?'text-emerald-700':status==='Rejected'?'text-red-700':'text-amber-700'}`}>{status}</p></div>)}</div></section>}
-        {(trip.status==="Scheduled"||trip.status==="Boarding"||trip.status==="Ongoing")&&<div className="mt-7 flex flex-col items-center gap-3 border-t border-slate-100 pt-7">
+        {(trip.status==="Scheduled"||trip.status==="Boarding"||trip.status==="NeedsReschedule"||trip.status==="Ongoing")&&<div className="mt-7 flex flex-col items-center gap-3 border-t border-slate-100 pt-7">
           {needsReschedule ? <>
             {!rescheduleOpen&&<button type="button" disabled={cancellingTrip} onClick={openReschedule} className="flex min-h-11 items-center gap-2 rounded-lg bg-amber-600 px-6 py-3 text-sm font-semibold text-white hover:bg-amber-700 disabled:opacity-50"><CalendarClock size={18}/>Reschedule Trip</button>}
             {rescheduleOpen&&<div className="w-full max-w-md rounded-xl border border-amber-200 bg-amber-50 p-4">
@@ -562,7 +547,7 @@ function BoatOwnerTripInfoPage() {
               <p className="mt-2 text-xs text-slate-600">The same trip QR, registered passengers, crew, and approvals will be kept.</p>
               <div className="mt-4 flex justify-end gap-2"><button type="button" disabled={rescheduling} onClick={()=>setRescheduleOpen(false)} className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-50">Cancel</button><button type="button" disabled={rescheduling||!rescheduleAt} onClick={()=>void saveReschedule()} className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{rescheduling?"Rescheduling...":"Save New Time"}</button></div>
             </div>}
-          </> : <button type="button" disabled={startingTrip||cancellingTrip} onClick={()=>void startTrip()} className="flex min-h-11 items-center gap-2 rounded-lg bg-[#162d54] px-6 py-3 text-sm font-semibold text-white hover:bg-[#203d6c] disabled:opacity-50">{trip.status==="Ongoing"?<Square size={18}/>:<Play size={18}/>} {startingTrip?(trip.status==="Ongoing"?"Ending...":"Starting..."):(trip.status==="Ongoing"?"End Trip":"Start Trip")}</button>}
+          </> : trip.status==="Ongoing"&&<button type="button" disabled={startingTrip||cancellingTrip} onClick={()=>void endTrip()} className="flex min-h-11 items-center gap-2 rounded-lg bg-[#162d54] px-6 py-3 text-sm font-semibold text-white hover:bg-[#203d6c] disabled:opacity-50"><Square size={18}/> {startingTrip?"Ending...":"End Trip"}</button>}
           {trip.status!=="Ongoing"&&!needsReschedule&&<button type="button" onClick={()=>{setTransferStatus("");setTransferOpen(true)}} className="flex min-h-11 items-center gap-2 rounded-lg bg-[#162d54] px-6 py-3 text-sm font-semibold text-white hover:bg-[#203d6c]"><ArrowRightLeft size={18}/>Transfer Passengers / Crew</button>}
           {(trip.status==="Scheduled"||trip.status==="Boarding")&&<button type="button" disabled={startingTrip||cancellingTrip||rescheduling} onClick={()=>void cancelTrip()} className="flex min-h-11 items-center gap-2 rounded-lg border border-red-300 bg-white px-6 py-3 text-sm font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50"><Ban size={18}/>{cancellingTrip?"Cancelling...":"Cancel Trip"}</button>}
           {startError&&<p role="alert" className="text-center text-sm font-medium text-red-600">{startError}</p>}{rescheduleStatus&&<p role="status" className={`text-center text-sm font-medium ${rescheduleStatus.startsWith("Trip rescheduled")?"text-emerald-700":"text-red-600"}`}>{rescheduleStatus}</p>}{transferStatus&&<p role="status" className="text-center text-sm font-medium text-emerald-700">{transferStatus}</p>}
@@ -746,7 +731,7 @@ function BoatOwnerTripInfoPage() {
                       </td>
 
                       <td className="px-2 py-4 text-[9px] sm:text-[12px]">
-                        {passenger.passengerType}
+                        <PassengerCountryDisplay passengerType={passenger.passengerType} countryCode={passenger.countryCode} />
                       </td>
                     </tr>
                   ),
@@ -760,46 +745,40 @@ function BoatOwnerTripInfoPage() {
 
         {/* Emergency status */}
         <section
-          className="
+          role="status"
+          aria-live="polite"
+          className={`
             mt-5 flex min-h-[58px]
             w-full items-center
             justify-center gap-3
-            rounded-[3px] bg-[#28ff00]
+            rounded-[3px]
             px-5 py-3
             sm:min-h-[65px]
-          "
+            ${trip.hasActiveSos ? "bg-red-600 text-white" : "bg-[#28ff00] text-black"}
+          `}
         >
-          <p className="text-[13px] font-medium sm:text-[15px]">
-            No Emergencies
-          </p>
+          <div className="text-center">
+            <p className="text-[13px] font-semibold sm:text-[15px]">
+              {trip.hasActiveSos ? "Emergency SOS Active" : "No Emergencies"}
+            </p>
+            {trip.hasActiveSos && activeSos?.tripId === trip.id && <p className="mt-1 text-[10px] sm:text-xs">
+              {activeSos.natureOfEmergency} · Reported {new Date(activeSos.raisedAtUtc).toLocaleString()}
+            </p>}
+            {trip.hasActiveSos && sosError && <p className="mt-1 text-[10px] text-white/80 sm:text-xs">
+              Emergency details are temporarily unavailable.
+            </p>}
+          </div>
 
           <Bell
-            className="h-5 w-5"
+            className={`h-5 w-5 ${trip.hasActiveSos ? "animate-pulse" : ""}`}
             strokeWidth={1.8}
             aria-hidden="true"
           />
         </section>
 
-        {/* Live vessel map */}
-        <section className="mt-4 overflow-hidden rounded-[12px] bg-white shadow-sm">
-          <div className="flex flex-wrap items-center justify-between gap-2 px-5 py-4">
-            <div><h2 className="font-semibold text-[#162d54]">Live vessel location</h2><p className="text-xs text-slate-500">Updates automatically every 10 seconds</p></div>
-            {liveVessel?.coordinatesRecordedAtUtc && <span className="text-xs text-slate-500">GPS updated {new Date(liveVessel.coordinatesRecordedAtUtc).toLocaleString()}</span>}
-          </div>
-          {mapError ? <p className="m-5 rounded-lg bg-red-50 p-4 text-sm text-red-700">{mapError}</p> :
-          liveVessel?.latitude != null && liveVessel.longitude != null ? (
-            <div className="h-[360px] w-full sm:h-[460px]">
-              <Map key={`${liveVessel.id}-${liveVessel.latitude}-${liveVessel.longitude}`} initialViewState={{longitude:liveVessel.longitude,latitude:liveVessel.latitude,zoom:14}} mapStyle="https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json">
-                <Marker longitude={liveVessel.longitude} latitude={liveVessel.latitude} anchor="center">
-                  <div className="flex flex-col items-center">
-                    <span className="relative flex h-11 w-11 items-center justify-center rounded-full border-4 border-white bg-[#162d54] text-white shadow-lg"><span className="absolute h-11 w-11 animate-ping rounded-full bg-[#162d54]/30"/><span className="relative text-xl">▲</span></span>
-                    <span className="mt-2 rounded bg-[#162d54] px-3 py-1 text-xs font-semibold text-white shadow">{liveVessel.name}</span>
-                  </div>
-                </Marker>
-              </Map>
-            </div>
-          ) : <p className="px-5 pb-6 text-sm text-slate-500">No GPS location has been received for this vessel yet.</p>}
-        </section>
+        <div className="mt-4">
+          <TripTrackingPanel tripId={trip.id} vesselName={trip.vesselName} />
+        </div>
       </div>
 
       {/* Side menu */}

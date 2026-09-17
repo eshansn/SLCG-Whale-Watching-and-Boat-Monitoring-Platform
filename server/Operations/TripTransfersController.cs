@@ -47,7 +47,7 @@ public sealed class TripTransfersController(WhaleWatchingDbContext db, IHubConte
         [FromQuery] Guid sourceTripId, [FromQuery] string? query, CancellationToken ct)
     {
         if (!await db.Trips.AnyAsync(x => x.Id == sourceTripId && x.Boat.OwnerId == UserId &&
-                (x.Status == TripStatus.Scheduled || x.Status == TripStatus.Boarding), ct))
+                (x.Status == TripStatus.Scheduled || x.Status == TripStatus.Boarding || x.Status == TripStatus.NeedsReschedule), ct))
             return NotFound(new { message = "The source trip is not available for transfer." });
         var term = query?.Trim() ?? string.Empty;
         if (term.Length < 2) return Ok(Array.Empty<TransferBoatDto>());
@@ -67,12 +67,12 @@ public sealed class TripTransfersController(WhaleWatchingDbContext db, IHubConte
         Guid boatId, [FromQuery] Guid sourceTripId, CancellationToken ct)
     {
         if (!await db.Trips.AnyAsync(x => x.Id == sourceTripId && x.Boat.OwnerId == UserId &&
-                (x.Status == TripStatus.Scheduled || x.Status == TripStatus.Boarding), ct))
+                (x.Status == TripStatus.Scheduled || x.Status == TripStatus.Boarding || x.Status == TripStatus.NeedsReschedule), ct))
             return NotFound(new { message = "The source trip is not available for transfer." });
         var boatEligible = await db.Boats.AnyAsync(x => x.Id == boatId && x.Approval == ApprovalStatus.Approved, ct);
         if (!boatEligible) return NotFound(new { message = "The selected destination boat is not registered and approved." });
         return Ok(await db.Trips.AsNoTracking().Where(x => x.BoatId == boatId && x.Id != sourceTripId &&
-                (x.Status == TripStatus.Scheduled || x.Status == TripStatus.Boarding))
+                (x.Status == TripStatus.Scheduled || x.Status == TripStatus.Boarding || x.Status == TripStatus.NeedsReschedule))
             .OrderBy(x => x.ScheduledDepartureUtc).Select(x => new TransferTripDto(x.Id, x.Boat.Name,
                 x.Boat.RegistrationNumber, x.Boat.Owner.DisplayName, x.ScheduledDepartureUtc,
                 x.Passengers.Count, x.Boat.MaximumCapacity, x.CrewAssignments.Count,
@@ -126,7 +126,7 @@ public sealed class TripTransfersController(WhaleWatchingDbContext db, IHubConte
                 x.TripId == source.Id && passengerIds.Contains(x.PassengerId)).ToListAsync(ct);
             if (passengerRows.Count != passengerIds.Length) return Conflict(new { message = "One or more selected passengers are no longer assigned to the source trip." });
             var duplicatePassenger = await db.TripPassengers.AnyAsync(x => passengerIds.Contains(x.PassengerId) &&
-                x.TripId != source.Id && (x.Trip.Status == TripStatus.Scheduled || x.Trip.Status == TripStatus.Boarding || x.Trip.Status == TripStatus.Ongoing), ct);
+                x.TripId != source.Id && (x.Trip.Status == TripStatus.Scheduled || x.Trip.Status == TripStatus.Boarding || x.Trip.Status == TripStatus.NeedsReschedule || x.Trip.Status == TripStatus.Ongoing), ct);
             if (duplicatePassenger) return Conflict(new { message = "A selected passenger is already assigned to another active trip." });
 
             var crewIds = request.CrewUserIds.Distinct().ToArray();
@@ -137,7 +137,7 @@ public sealed class TripTransfersController(WhaleWatchingDbContext db, IHubConte
                 crewIds.Contains(x.CrewUserId) && x.CrewUser.IsCrewCertified, ct);
             if (validCrew != crewIds.Length) return Conflict(new { message = "Every selected crew member must be certified and belong to the source boat owner's crew pool." });
             var duplicateCrew = await db.TripCrewAssignments.AnyAsync(x => crewIds.Contains(x.CrewUserId) &&
-                x.TripId != source.Id && (x.Trip.Status == TripStatus.Scheduled || x.Trip.Status == TripStatus.Boarding || x.Trip.Status == TripStatus.Ongoing), ct);
+                x.TripId != source.Id && (x.Trip.Status == TripStatus.Scheduled || x.Trip.Status == TripStatus.Boarding || x.Trip.Status == TripStatus.NeedsReschedule || x.Trip.Status == TripStatus.Ongoing), ct);
             if (duplicateCrew) return Conflict(new { message = "A selected crew member is already assigned to another active trip." });
 
             foreach (var row in passengerRows) row.TripId = destination.Id;
@@ -190,7 +190,7 @@ public sealed class TripTransfersController(WhaleWatchingDbContext db, IHubConte
     }
 
     private Guid UserId => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub")!);
-    private static bool Eligible(TripStatus status) => status is TripStatus.Scheduled or TripStatus.Boarding;
+    private static bool Eligible(TripStatus status) => status is TripStatus.Scheduled or TripStatus.Boarding or TripStatus.NeedsReschedule;
 }
 
 public sealed class TransferRequest

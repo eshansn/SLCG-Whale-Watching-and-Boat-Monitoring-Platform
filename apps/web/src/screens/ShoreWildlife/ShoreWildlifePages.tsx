@@ -17,8 +17,8 @@ export function WildlifeTrips(){
  const tripStateNow=useTripStateClock();
  useEffect(()=>{if(!session)return;let active=true;void wildlifeApi.trips(session.accessToken).then(nextItems=>{if(!active)return;setItems(nextItems);setError('')}).catch(loadError=>{if(!active)return;setError(loadError instanceof Error?loadError.message:'Unable to load Wildlife trips.')}).finally(()=>{if(active)setLoading(false)});return()=>{active=false}},[session,retryVersion]);
  const retry=()=>{setLoading(true);setRetryVersion(version=>version+1)};
- const visible=useMemo(()=>items.filter(x=>isOperationalTripVisible(x,tripStateNow)).filter(x=>[x.boatName,x.registrationNumber,x.ownerName,x.route,x.status,x.wildlifeShoreApproval].some(v=>v.toLowerCase().includes(query.trim().toLowerCase()))).sort((a,b)=>sort==='oldest'?+new Date(a.scheduledDepartureUtc)-+new Date(b.scheduledDepartureUtc):sort==='name'?a.boatName.localeCompare(b.boatName):sort==='approval'?a.wildlifeShoreApproval.localeCompare(b.wildlifeShoreApproval):+new Date(b.scheduledDepartureUtc)-+new Date(a.scheduledDepartureUtc)),[items,query,sort,tripStateNow]);
- return <Shell title="Trips" sub="Monitor attendance and complete Wildlife Shore approval"><section className="overflow-hidden rounded-xl bg-white shadow-sm"><div className="flex flex-col gap-3 border-b p-5 sm:flex-row"><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search vessel, owner, registration or route" className="min-w-0 flex-1 rounded-lg border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-indigo-400"/><select value={sort} onChange={e=>setSort(e.target.value)} className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm"><option value="newest">Newest first</option><option value="oldest">Oldest first</option><option value="name">Vessel A–Z</option><option value="approval">Approval status</option></select></div>{error&&<div role="alert" className="flex items-center justify-between gap-3 p-5 text-red-600"><span>{error}</span><button type="button" disabled={loading} onClick={retry} className="shrink-0 font-semibold underline disabled:opacity-50">{loading?'Retrying…':'Retry'}</button></div>}<div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead className="bg-slate-50/70 text-xs text-slate-500"><tr><th className="px-6 py-4">Vessel</th><th className="px-5 py-4">Owner</th><th className="px-5 py-4">Scheduled</th><th className="px-5 py-4">SLCG</th><th className="px-5 py-4">Wildlife Shore</th><th className="px-6 py-4 text-right">Action</th></tr></thead><tbody className="divide-y">{visible.map(x=><tr key={x.id} className="hover:bg-slate-50"><td className="px-6 py-5"><b>{x.boatName}</b><p className="text-xs text-slate-400">{x.registrationNumber}</p></td><td className="px-5 py-5">{x.ownerName}</td><td className="px-5 py-5">{formatDate(x.scheduledDepartureUtc)}</td><td className="px-5 py-5"><Badge value={x.shoreApproval}/></td><td className="px-5 py-5"><Badge value={x.wildlifeShoreApproval}/></td><td className="px-6 py-5 text-right"><button onClick={()=>nav(`/shore-wildlife/trips/${x.id}`)} aria-label={`Review ${x.boatName}`} title="Review" className="rounded-full border border-indigo-200 p-2 text-indigo-700 hover:bg-indigo-50"><Eye size={18}/></button></td></tr>)}</tbody></table></div>{loading&&!items.length&&!error&&<p className="p-12 text-center text-sm text-slate-400">Loading trips…</p>}{!loading&&!error&&visible.length===0&&<p className="p-12 text-center text-sm text-slate-400">No trips match your search.</p>}</section></Shell>;
+ const visible=useMemo(()=>items.filter(x=>isOperationalTripVisible(x,tripStateNow)).filter(x=>[x.boatName,x.registrationNumber,x.ownerName,x.route,x.status,x.monitoringStatus].some(v=>v.toLowerCase().includes(query.trim().toLowerCase()))).sort((a,b)=>sort==='oldest'?+new Date(a.scheduledDepartureUtc)-+new Date(b.scheduledDepartureUtc):sort==='name'?a.boatName.localeCompare(b.boatName):sort==='approval'?a.monitoringStatus.localeCompare(b.monitoringStatus):+new Date(b.scheduledDepartureUtc)-+new Date(a.scheduledDepartureUtc)),[items,query,sort,tripStateNow]);
+ return <Shell title="Trips" sub="Monitor attendance and complete Wildlife records"><section className="overflow-hidden rounded-xl bg-white shadow-sm"><div className="flex flex-col gap-3 border-b p-5 sm:flex-row"><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search vessel, owner, registration or route" className="min-w-0 flex-1 rounded-lg border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-indigo-400"/><select value={sort} onChange={e=>setSort(e.target.value)} className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm"><option value="newest">Newest first</option><option value="oldest">Oldest first</option><option value="name">Vessel A–Z</option><option value="approval">Monitoring status</option></select></div>{error&&<div role="alert" className="flex items-center justify-between gap-3 p-5 text-red-600"><span>{error}</span><button type="button" disabled={loading} onClick={retry} className="shrink-0 font-semibold underline disabled:opacity-50">{loading?'Retrying…':'Retry'}</button></div>}<div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead className="bg-slate-50/70 text-xs text-slate-500"><tr><th className="px-6 py-4">Vessel</th><th className="px-5 py-4">Owner</th><th className="px-5 py-4">Scheduled</th><th className="px-5 py-4">Trip status</th><th className="px-5 py-4">Monitoring</th><th className="px-6 py-4 text-right">Action</th></tr></thead><tbody className="divide-y">{visible.map(x=><tr key={x.id} className="hover:bg-slate-50"><td className="px-6 py-5"><b>{x.boatName}</b><p className="text-xs text-slate-400">{x.registrationNumber}</p></td><td className="px-5 py-5">{x.ownerName}</td><td className="px-5 py-5">{formatDate(x.scheduledDepartureUtc)}</td><td className="px-5 py-5"><Badge value={x.status}/></td><td className="px-5 py-5"><Badge value={x.monitoringStatus}/></td><td className="px-6 py-5 text-right"><button onClick={()=>nav(`/shore-wildlife/trips/${x.id}`)} aria-label={`Review ${x.boatName}`} title="Review" className="rounded-full border border-indigo-200 p-2 text-indigo-700 hover:bg-indigo-50"><Eye size={18}/></button></td></tr>)}</tbody></table></div>{loading&&!items.length&&!error&&<p className="p-12 text-center text-sm text-slate-400">Loading trips…</p>}{!loading&&!error&&visible.length===0&&<p className="p-12 text-center text-sm text-slate-400">No trips match your search.</p>}</section></Shell>;
 }
 
 function Breakdown({a}:{a:Attendance}){return <section className="rounded-xl bg-white p-6 shadow-sm"><div className="flex flex-wrap justify-between"><div><h2 className="text-xl font-semibold">Passenger Attendance</h2><p className="mt-1 text-sm font-semibold text-emerald-600">● Live Attendance</p></div><p className="text-xs text-slate-500">Last updated: {formatDate(a.lastUpdatedUtc)}</p></div><div className="mt-6 grid gap-4 md:grid-cols-2"><Group name="LOCAL" x={a.local}/><Group name="FOREIGN" x={a.foreign}/></div><div className="mt-5 rounded-xl bg-[#14223d] p-5 text-white"><p className="text-xs uppercase">Total present</p><p className="text-4xl font-bold">{a.totalPresent}</p></div></section>}
@@ -31,12 +31,11 @@ export function WildlifeTripDetails(){
  const retryRecords=()=>{setRecordsLoading(true);setRecordsRetry(version=>version+1)};
  const retryAttendance=()=>{setAttendanceLoading(true);load()};
  const request=async()=>{if(!session||recordLoading||recordError)return;setBusy(true);setError('');try{let r=record;if(!r){r=await wildlifeApi.create(session.accessToken,{tripId:id,...currentForm});setRecord(r)}setRecord(await wildlifeApi.requestSignature(session.accessToken,r.id,currentForm))}catch(e){setError(e instanceof Error?e.message:'Unable to save')}finally{setBusy(false)}};
- const approve=async(value:'Approved'|'Rejected')=>{if(!session)return;setBusy(true);setError('');try{await wildlifeApi.approve(session.accessToken,id,value);load()}catch(e){setError(e instanceof Error?e.message:'Approval failed')}finally{setBusy(false)}};
+ const finalizeRecord=async(action:'confirm'|'discard')=>{if(!session||!record)return;setBusy(true);setError('');try{const updated=action==='confirm'?await wildlifeApi.confirm(session.accessToken,record.id):await wildlifeApi.discard(session.accessToken,record.id);setRecord(updated)}catch(e){setError(e instanceof Error?e.message:'Unable to update the monitoring record')}finally{setBusy(false)}};
  const attendanceAlert=attendanceError&&<div role="alert" className="flex items-center justify-between gap-3 rounded-lg bg-red-50 p-4 text-sm text-red-700"><span>{attendanceError}</span><button type="button" disabled={attendanceLoading} onClick={retryAttendance} className="shrink-0 font-semibold underline disabled:opacity-50">{attendanceLoading?'Retrying…':'Retry'}</button></div>;
  if(!a)return <Shell title="Trip monitoring" sub={attendanceLoading?'Loading latest attendance…':'Attendance unavailable'}>{attendanceAlert||<p className="text-sm text-slate-400">Loading latest attendance…</p>}</Shell>;
- const boatApproval=a.certificationApproval==='Approved'||a.boatWildlifeApproval==='Approved'?'Approved':a.certificationApproval==='Rejected'&&a.boatWildlifeApproval==='Rejected'?'Rejected':'Pending';
  const signaturesComplete=Boolean(record?.monitoringOfficerSignature&&record?.supervisorSignature&&record?.harbourOfficerSignature&&record?.harbourOfficerName);
- return <Shell title={a.boatName} sub={`${a.registrationNumber} · ${formatDate(a.scheduledDepartureUtc)}`}><button onClick={()=>nav('/shore-wildlife')} className="mb-5 text-sm font-semibold text-indigo-700">← Trips</button>{attendanceAlert}<div className={`grid gap-6 lg:grid-cols-[1fr_.9fr] ${attendanceAlert?'mt-5':''}`}><div className="space-y-6"><section className="rounded-xl bg-white p-6 shadow-sm"><h2 className="font-semibold">Trip Information</h2><dl className="mt-4 grid gap-4 text-sm sm:grid-cols-2"><Info l="Trip reference" v={a.tripId}/><Info l="Boat operator" v={a.ownerName}/><Info l="Route" v={a.route}/><Info l="Status" v={a.tripStatus}/></dl><div className="mt-5 grid grid-cols-3 gap-3 text-sm"><div>Boat approval<br/><Badge value={boatApproval}/></div><div>SLCG Shore<br/><Badge value={a.shoreApproval}/></div><div>Wildlife Shore<br/><Badge value={a.wildlifeShoreApproval}/></div></div></section><Breakdown a={a}/></div><section className="rounded-xl bg-white p-6 shadow-sm"><h2 className="text-xl font-semibold">Monitoring Information</h2><div className="mt-5 grid gap-4">{(['ticketNumber','tidNumber','monitoringOfficer','supervisor'] as const).map(k=><label key={k} className="text-sm font-medium">{{ticketNumber:'Ticket Number',tidNumber:'TID Number',monitoringOfficer:'Monitoring Officer',supervisor:'Supervisor'}[k]}<input disabled={recordLoading||Boolean(recordError)||record?.status==='Completed'} value={currentForm[k]} onChange={e=>setForm({...currentForm,[k]:e.target.value})} maxLength={k==='ticketNumber'||k==='tidNumber'?80:160} className="mt-1 block w-full rounded-lg border px-3 py-2.5"/></label>)}</div>{recordLoading&&!recordError&&<p className="mt-4 text-sm text-slate-400">Loading monitoring information…</p>}{recordError&&<div role="alert" className="mt-4 flex items-center justify-between gap-3 rounded-lg bg-red-50 p-3 text-sm text-red-700"><span>{recordError}</span><button type="button" disabled={recordLoading} onClick={retryRecords} className="shrink-0 font-semibold underline disabled:opacity-50">{recordLoading?'Retrying…':'Retry'}</button></div>}{error&&<p className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}{record&&((record.status==='PendingHarbourSignature')||(record.status==='Completed'&&!signaturesComplete))?<SignatureSection record={record} token={session!.accessToken} done={r=>{setRecord(r);setError('')}}/>:<button disabled={recordLoading||Boolean(recordError)||busy||record?.status==='Completed'||Object.values(currentForm).some(v=>!v.trim())} onClick={request} className="mt-6 w-full rounded-lg bg-[#14223d] px-4 py-3 font-semibold text-white disabled:opacity-40">{busy?'Saving…':signaturesComplete?'All signatures completed':'Request Signatures'}</button>}{record?.status==='Completed'&&signaturesComplete&&<div className="mt-7 border-t pt-5"><h3 className="font-semibold">Wildlife Shore Approval</h3><p className="mt-1 text-xs text-slate-500">All monitoring fields and signatures are complete.</p><div className="mt-4 flex gap-3"><button disabled={busy} onClick={()=>approve('Rejected')} className="flex-1 rounded-lg border border-red-300 py-2.5 font-semibold text-red-700">Reject</button><button disabled={busy||a.wildlifeShoreApproval==='Approved'} onClick={()=>approve('Approved')} className="flex-1 rounded-lg bg-emerald-600 py-2.5 font-semibold text-white disabled:opacity-50">Approve Trip</button></div></div>}</section></div></Shell>;
+ return <Shell title={a.boatName} sub={`${a.registrationNumber} · ${formatDate(a.scheduledDepartureUtc)}`}><button onClick={()=>nav('/shore-wildlife')} className="mb-5 text-sm font-semibold text-indigo-700">← Trips</button>{attendanceAlert}<div className={`grid gap-6 lg:grid-cols-[1fr_.9fr] ${attendanceAlert?'mt-5':''}`}><div className="space-y-6"><section className="rounded-xl bg-white p-6 shadow-sm"><h2 className="font-semibold">Trip Information</h2><dl className="mt-4 grid gap-4 text-sm sm:grid-cols-2"><Info l="Trip reference" v={a.tripId}/><Info l="Boat operator" v={a.ownerName}/><Info l="Route" v={a.route}/><Info l="Status" v={a.tripStatus}/></dl><p className="mt-5 rounded-lg bg-slate-50 p-3 text-xs text-slate-600">Wildlife monitoring is independent of trip start authorization.</p></section><Breakdown a={a}/></div><section className="rounded-xl bg-white p-6 shadow-sm"><h2 className="text-xl font-semibold">Monitoring Information</h2><div className="mt-5 grid gap-4">{(['ticketNumber','tidNumber','monitoringOfficer','supervisor'] as const).map(k=><label key={k} className="text-sm font-medium">{{ticketNumber:'Ticket Number',tidNumber:'TID Number',monitoringOfficer:'Monitoring Officer',supervisor:'Supervisor'}[k]}<input disabled={recordLoading||Boolean(recordError)||record?.status==='Completed'||record?.status==='Discarded'} value={currentForm[k]} onChange={e=>setForm({...currentForm,[k]:e.target.value})} maxLength={k==='ticketNumber'||k==='tidNumber'?80:160} className="mt-1 block w-full rounded-lg border px-3 py-2.5"/></label>)}</div>{recordLoading&&!recordError&&<p className="mt-4 text-sm text-slate-400">Loading monitoring information…</p>}{recordError&&<div role="alert" className="mt-4 flex items-center justify-between gap-3 rounded-lg bg-red-50 p-3 text-sm text-red-700"><span>{recordError}</span><button type="button" disabled={recordLoading} onClick={retryRecords} className="shrink-0 font-semibold underline disabled:opacity-50">{recordLoading?'Retrying…':'Retry'}</button></div>}{error&&<p className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}{record&&record.status==='PendingHarbourSignature'&&!signaturesComplete?<SignatureSection record={record} token={session!.accessToken} done={r=>{setRecord(r);setError('')}}/>:<button disabled={recordLoading||Boolean(recordError)||busy||record?.status==='Completed'||record?.status==='Discarded'||signaturesComplete||Object.values(currentForm).some(v=>!v.trim())} onClick={request} className="mt-6 w-full rounded-lg bg-[#14223d] px-4 py-3 font-semibold text-white disabled:opacity-40">{busy?'Saving…':'Request Signatures'}</button>}{record&&signaturesComplete&&record.status!=='Completed'&&record.status!=='Discarded'&&<div className="mt-7 border-t pt-5"><h3 className="font-semibold">Finalize monitoring record</h3><p className="mt-1 text-xs text-slate-500">These actions affect only this Wildlife monitoring record.</p><div className="mt-4 flex gap-3"><button disabled={busy} onClick={()=>void finalizeRecord('discard')} className="flex-1 rounded-lg border border-red-300 py-2.5 font-semibold text-red-700">Discard</button><button disabled={busy} onClick={()=>void finalizeRecord('confirm')} className="flex-1 rounded-lg bg-emerald-600 py-2.5 font-semibold text-white disabled:opacity-50">Confirm</button></div></div>}{record?.status==='Completed'&&<p className="mt-6 rounded-lg bg-emerald-50 p-3 text-sm font-semibold text-emerald-700">Monitoring record confirmed.</p>}{record?.status==='Discarded'&&<p className="mt-6 rounded-lg bg-red-50 p-3 text-sm font-semibold text-red-700">Monitoring record discarded.</p>}</section></div></Shell>;
 }
 
 function SignaturePad({label,onChange}:{label:string;onChange:(v:string)=>void}){const ref=useRef<HTMLCanvasElement>(null);const[drawing,setDrawing]=useState(false);const[hasInk,setHasInk]=useState(false);const pos=(e:PointerEvent<HTMLCanvasElement>)=>{const c=ref.current!,r=c.getBoundingClientRect();return{x:(e.clientX-r.left)*c.width/r.width,y:(e.clientY-r.top)*c.height/r.height}};const start=(e:PointerEvent<HTMLCanvasElement>)=>{const c=ref.current!,p=pos(e),x=c.getContext('2d')!;x.beginPath();x.moveTo(p.x,p.y);setDrawing(true);e.currentTarget.setPointerCapture(e.pointerId)};const move=(e:PointerEvent<HTMLCanvasElement>)=>{if(!drawing)return;const c=ref.current!,p=pos(e),x=c.getContext('2d')!;x.lineWidth=3;x.lineCap='round';x.strokeStyle='#14223d';x.lineTo(p.x,p.y);x.stroke();setHasInk(true);onChange(c.toDataURL('image/png'))};const clear=()=>{ref.current?.getContext('2d')?.clearRect(0,0,700,180);setHasInk(false);onChange('')};return <div><div className="mb-2 flex justify-between"><label className="text-sm font-medium">{label}</label><button onClick={clear} className="text-xs text-indigo-700">Clear</button></div><canvas ref={ref} width="700" height="180" onPointerDown={start} onPointerMove={move} onPointerUp={()=>setDrawing(false)} onPointerCancel={()=>setDrawing(false)} className={`h-32 w-full touch-none rounded-lg border bg-white ${hasInk?'border-emerald-400':'border-slate-300'}`}/></div>}
@@ -90,7 +89,6 @@ async function downloadWildlifeRecordPdf(record: MonitoringRecord) {
   pdf.setFont('helvetica', 'normal');
   pdf.setFontSize(9);
   pdf.text(`Ticket ${record.ticketNumber}`, 16, 23);
-  pdf.text(`Generated ${new Date().toLocaleString('en-LK')}`, 16, 28);
 
   const value = (input: unknown) => {
     const text = input?.toString().trim();
@@ -113,31 +111,64 @@ async function downloadWildlifeRecordPdf(record: MonitoringRecord) {
     pdf.text(pdf.splitTextToSize(value(fieldValue), width), x, y + 5);
   };
 
-  field('Trip reference', record.tripId, 16, 45);
-  field('Status', record.status, 112, 45);
-  field('TID Number', record.tidNumber, 16, 62);
-  field('Created', formatDate(record.createdAtUtc), 112, 62);
-  field('Monitoring Officer', record.monitoringOfficer, 16, 79);
-  field('Supervisor', record.supervisor, 112, 79);
-  field('Harbour Officer', record.harbourOfficerName, 16, 96);
-  field(
-    'Completed',
-    record.completedAtUtc ? formatDate(record.completedAtUtc) : '-',
-    112,
-    96,
-  );
+  field('Ticket Number', record.ticketNumber, 16, 45);
+  field('TID Number', record.tidNumber, 112, 45);
+  field('Boat Name', record.boatName, 16, 61);
+  field('Registration Number', record.registrationNumber, 112, 61);
+  field('Scheduled Trip Date and Time', formatDate(record.scheduledDepartureUtc), 16, 77, 178);
+  field('Monitoring Officer', record.monitoringOfficer, 16, 93);
+  field('Supervisor', record.supervisor, 112, 93);
+  field('Harbour Officer', record.harbourOfficerName, 16, 109, 178);
 
-  pdf.setFillColor(232, 246, 241);
-  pdf.roundedRect(16, 113, 178, 27, 3, 3, 'F');
   pdf.setTextColor(18, 60, 50);
   pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(10);
-  pdf.text('ATTENDANCE SNAPSHOT', 22, 121);
-  pdf.setFontSize(9);
-  pdf.text(`Local: ${record.local.total}`, 22, 130);
-  pdf.text(`Foreign: ${record.foreign.total}`, 79, 130);
-  pdf.setFontSize(14);
-  pdf.text(`Total Present: ${record.totalPresent}`, 136, 130);
+  pdf.text('ATTENDANCE SNAPSHOT', 16, 127);
+
+  const attendanceGroup = (
+    title: string,
+    count: MonitoringRecord['local'],
+    x: number,
+  ) => {
+    pdf.setFillColor(244, 250, 247);
+    pdf.setDrawColor(203, 224, 216);
+    pdf.roundedRect(x, 132, 85, 47, 3, 3, 'FD');
+    pdf.setTextColor(18, 60, 50);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(9);
+    pdf.text(title, x + 6, 140);
+    const rows: Array<[string, number]> = [
+      ['Adult', count.adult],
+      ['Child', count.child],
+      ['Small (Under 6 Y)', count.small],
+    ];
+    pdf.setTextColor(71, 85, 105);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(8.5);
+    rows.forEach(([label, rowValue], index) => {
+      const y = 148 + index * 7;
+      pdf.text(label, x + 6, y);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text(String(rowValue), x + 79, y, { align: 'right' });
+      pdf.setFont('helvetica', 'normal');
+    });
+    pdf.setDrawColor(215, 231, 225);
+    pdf.line(x + 6, 166, x + 79, 166);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Total', x + 6, 173);
+    pdf.text(String(count.total), x + 79, 173, { align: 'right' });
+  };
+
+  attendanceGroup('LOCAL', record.local, 16);
+  attendanceGroup('FOREIGN', record.foreign, 109);
+  pdf.setFillColor(18, 60, 50);
+  pdf.roundedRect(16, 183, 178, 14, 3, 3, 'F');
+  pdf.setTextColor(255, 255, 255);
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(11);
+  pdf.text('TOTAL PRESENT', 22, 192);
+  pdf.setFontSize(15);
+  pdf.text(String(record.totalPresent), 188, 192, { align: 'right' });
 
   const signatures: Array<[string, string | undefined]> = [
     ['Monitoring Officer', record.monitoringOfficerSignature],
@@ -146,30 +177,30 @@ async function downloadWildlifeRecordPdf(record: MonitoringRecord) {
   ];
   pdf.setTextColor(20, 34, 61);
   pdf.setFontSize(10);
-  pdf.text('SIGNATURES', 16, 153);
+  pdf.text('SIGNATURES', 16, 210);
   signatures.forEach(([label, source], index) => {
     const x = 16 + index * 61;
     pdf.setDrawColor(203, 224, 216);
-    pdf.roundedRect(x, 158, 56, 35, 2, 2, 'S');
+    pdf.roundedRect(x, 215, 56, 32, 2, 2, 'S');
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(7.5);
-    pdf.text(label, x + 3, 164);
+    pdf.text(label, x + 3, 221);
     if (source) {
       try {
         const format = source.startsWith('data:image/jpeg') ? 'JPEG' : 'PNG';
-        pdf.addImage(source, format, x + 3, 167, 50, 22, undefined, 'FAST');
+        pdf.addImage(source, format, x + 3, 224, 50, 19, undefined, 'FAST');
       } catch {
         pdf.setFont('helvetica', 'normal');
-        pdf.text('Signature unavailable', x + 3, 178);
+        pdf.text('Signature unavailable', x + 3, 234);
       }
     } else {
       pdf.setFont('helvetica', 'normal');
-      pdf.text('Not signed', x + 3, 178);
+      pdf.text('Not signed', x + 3, 234);
     }
   });
 
   pdf.setFillColor(244, 248, 246);
-  pdf.roundedRect(16, 207, 178, 26, 3, 3, 'F');
+  pdf.roundedRect(16, 254, 178, 20, 3, 3, 'F');
   pdf.setTextColor(71, 85, 105);
   pdf.setFont('helvetica', 'normal');
   pdf.setFontSize(8.5);
@@ -179,10 +210,9 @@ async function downloadWildlifeRecordPdf(record: MonitoringRecord) {
       166,
     ),
     22,
-    217,
+    263,
   );
   pdf.setFontSize(7.5);
-  pdf.text(`Record ID: ${record.id}`, 16, 282);
   pdf.text('WWMS Wildlife Shore Portal', 194, 282, { align: 'right' });
 
   const safeTicket = record.ticketNumber.replace(/[<>:"/\\|?*]/g, '-');
@@ -270,8 +300,9 @@ export function WildlifeRecords() {
                 <div>
                   <b>{record.ticketNumber}</b>
                   <p className="text-xs text-slate-500">
-                    Trip {record.tripId.slice(0, 8)} · {record.totalPresent}{' '}
-                    present · {formatDate(record.createdAtUtc)}
+                    {record.boatName} ({record.registrationNumber}) ·{' '}
+                    {formatDate(record.scheduledDepartureUtc)} ·{' '}
+                    {record.totalPresent} present
                   </p>
                 </div>
                 <span className="flex items-center gap-1.5 text-indigo-700">
@@ -298,6 +329,9 @@ export function WildlifeRecords() {
                   >
                     <div className="border-t p-5">
                   <dl className="grid gap-4 text-sm sm:grid-cols-3">
+                    <Info l="Boat Name" v={record.boatName} />
+                    <Info l="Registration Number" v={record.registrationNumber} />
+                    <Info l="Scheduled Trip" v={formatDate(record.scheduledDepartureUtc)} />
                     <Info l="TID" v={record.tidNumber} />
                     <Info l="Monitoring Officer" v={record.monitoringOfficer} />
                     <Info l="Supervisor" v={record.supervisor} />
@@ -305,12 +339,18 @@ export function WildlifeRecords() {
                       l="Harbour Officer"
                       v={record.harbourOfficerName ?? '—'}
                     />
-                    <Info l="Local snapshot" v={String(record.local.total)} />
-                    <Info
-                      l="Foreign snapshot"
-                      v={String(record.foreign.total)}
-                    />
                   </dl>
+                  <div className="mt-6">
+                    <h3 className="text-sm font-semibold">Attendance Snapshot</h3>
+                    <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                      <Group name="LOCAL" x={record.local} />
+                      <Group name="FOREIGN" x={record.foreign} />
+                    </div>
+                    <div className="mt-3 flex items-center justify-between rounded-lg bg-[#14223d] px-5 py-3 text-white">
+                      <span className="text-sm font-semibold uppercase">Total Present</span>
+                      <b className="text-2xl">{record.totalPresent}</b>
+                    </div>
+                  </div>
                   <div className="mt-5 grid gap-3 sm:grid-cols-3">
                     {[
                       [record.monitoringOfficerSignature, 'Monitoring Officer'],

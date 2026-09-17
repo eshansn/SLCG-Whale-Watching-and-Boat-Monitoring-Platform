@@ -144,7 +144,7 @@ class _OwnerTripsScreenState extends State<OwnerTripsScreen> {
   }
 
   Widget _tripCard(Map<String, dynamic> trip) {
-    final approval = '${trip['shoreApproval']}';
+    final lifecycle = '${trip['status']}';
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
       child: OwnerCard(
@@ -172,7 +172,7 @@ class _OwnerTripsScreenState extends State<OwnerTripsScreen> {
                     ],
                   ),
                 ),
-                OwnerStatusBadge(approval),
+                OwnerStatusBadge(lifecycle),
               ],
             ),
             const SizedBox(height: 16),

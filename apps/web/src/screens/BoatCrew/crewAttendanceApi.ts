@@ -1,4 +1,4 @@
-const BASE=(import.meta.env.VITE_API_BASE_URL??'').replace(/\/$/,'');
+import { API_BASE_URL as BASE } from '../../api/httpClient';
 export type CrewAttendanceStatus='NotChecked'|'Present'|'NotPresent';
 export interface CrewAttendancePassenger{passengerId:string;status:CrewAttendanceStatus;checkedAtUtc?:string}
 export interface CrewAttendanceManifest{finalizedAtUtc?:string;finalizedBy?:string;summary:{present:number;notPresent:number;notChecked:number;total:number};passengers:CrewAttendancePassenger[]}

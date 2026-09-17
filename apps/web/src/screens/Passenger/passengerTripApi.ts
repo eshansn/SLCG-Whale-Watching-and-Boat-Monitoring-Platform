@@ -1,6 +1,6 @@
 import { getPassengerSessionToken } from './store/passengerStorage';
 
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '');
+import { API_BASE_URL } from '../../api/httpClient';
 
 export interface PassengerTripPreview {
   tripId: string;
@@ -8,7 +8,6 @@ export interface PassengerTripPreview {
   registrationNumber: string;
   scheduledDepartureUtc: string;
   status: string;
-  shoreApproval: string;
   maximumCapacity: number;
   acceptingPassengers: boolean;
   invitationCode: string;
@@ -29,11 +28,12 @@ export async function getActivePassengerTrip():Promise<PassengerTripPreview>{
   return response.json() as Promise<PassengerTripPreview>;
 }
 
-export interface RegisterPassengerDetails { name:string; identificationNumber:string; phoneNumber:string; passengerType:'local'|'foreign'; gender:'male'|'female'|'other'; ageCategory:'adult'|'child'|'small'|'specialneeds'; specialNeedType?:string; selfCareConfirmed?:boolean }
+export interface RegisterPassengerDetails { name:string; identificationNumber:string; phoneNumber:string; passengerType:'local'|'foreign'; countryCode?:string; gender:'male'|'female'|'other'; ageCategory:'adult'|'child'|'small'|'specialneeds'; specialNeedType?:string; selfCareConfirmed?:boolean }
 export interface RegisteredPassenger extends RegisterPassengerDetails { id:string; tripId:string; sessionToken:string; sessionExpiresAtUtc:string }
 export interface RegisteredCompanion extends RegisterPassengerDetails { id:string; tripId:string; primaryPassengerId:string }
 export interface PassengerPersonalQr { passengerId:string; passengerName:string; qrToken:string; qrValue:string }
 export interface PassengerPartyMember extends RegisterPassengerDetails { id:string }
+export interface PassengerBoatLocation { tripId:string; boatName:string; registrationNumber:string; tripStatus:string; latitude?:number; longitude?:number; coordinatesRecordedAtUtc?:string; coordinatesReceivedAtUtc?:string; trackerStatus:string; headingDegrees?:number; shouldRefresh:boolean; message:string }
 
 export async function registerTripPassenger(invitationCode:string, details:RegisterPassengerDetails):Promise<RegisteredPassenger> {
   const response=await fetch(`${API_BASE_URL}/api/passenger/trips/${encodeURIComponent(invitationCode)}/passengers`,{
@@ -65,6 +65,15 @@ export async function getPassengerParty():Promise<PassengerPartyMember[]>{
   const response=await fetch(`${API_BASE_URL}/api/passenger/session/party`,{headers:{'X-Passenger-Session':token}});
   if(!response.ok)throw new Error('Unable to load your passenger group.');
   return response.json() as Promise<PassengerPartyMember[]>;
+}
+
+export async function getPassengerBoatLocation():Promise<PassengerBoatLocation>{
+  const token=getPassengerSessionToken();
+  if(!token)throw new Error('Your passenger session is missing.');
+  const response=await fetch(`${API_BASE_URL}/api/passenger/session/boat-location`,{headers:{'X-Passenger-Session':token}});
+  if(response.status===401)throw new Error('Your passenger session has expired. Please scan the trip QR code again.');
+  if(!response.ok)throw new Error('Unable to load the boat location.');
+  return response.json() as Promise<PassengerBoatLocation>;
 }
 
 export async function verifyReturningPassenger(invitationCode:string,identifier:string):Promise<RegisteredPassenger>{

@@ -10,13 +10,14 @@ const AdminDashboard = () => {
   const { trips } = useOperations();
   const { owners, crew, boats } = useAdminRecords();
   const isWildlife = session?.roles.includes("Wildlife") ?? false;
+  const basePath = isWildlife ? "/wildlife" : "/admin";
 
   const handleManageUsers = (): void => {
-    navigate("/admin/manage-users");
+    navigate(`${basePath}/manage-users`);
   };
 
   const handleManageTrips = (): void => {
-    navigate("/admin/trips");
+    navigate(`${basePath}/trips`);
   };
 
   return (

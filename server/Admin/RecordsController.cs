@@ -141,12 +141,14 @@ public sealed class RecordsController(
                     CrewUserId = id,
                     Position = crew.CrewType,
                     IsActive = true,
+                    AssignedAtUtc = DateTimeOffset.UtcNow,
                 });
             }
             else
             {
                 assignment.Position = crew.CrewType;
                 assignment.IsActive = true;
+                assignment.AssignedAtUtc = DateTimeOffset.UtcNow;
             }
 
             var memberships = await db.OwnerCrewMemberships
@@ -166,7 +168,8 @@ public sealed class RecordsController(
         }
 
         var staleTripAssignments = db.TripCrewAssignments.Where(assignment => assignment.CrewUserId == id &&
-            (assignment.Trip.Status == TripStatus.Scheduled || assignment.Trip.Status == TripStatus.Boarding));
+            (assignment.Trip.Status == TripStatus.Scheduled || assignment.Trip.Status == TripStatus.Boarding ||
+             assignment.Trip.Status == TripStatus.NeedsReschedule));
         if (selectedBoat is not null)
             staleTripAssignments = staleTripAssignments.Where(assignment => assignment.Trip.BoatId != selectedBoat.Id);
         db.TripCrewAssignments.RemoveRange(await staleTripAssignments.ToListAsync(ct));
@@ -208,7 +211,8 @@ public sealed class RecordsController(
             .Where(membership => membership.CrewUserId == id).ToListAsync(ct));
         db.TripCrewAssignments.RemoveRange(await db.TripCrewAssignments
             .Where(assignment => assignment.CrewUserId == id &&
-                (assignment.Trip.Status == TripStatus.Scheduled || assignment.Trip.Status == TripStatus.Boarding))
+                (assignment.Trip.Status == TripStatus.Scheduled || assignment.Trip.Status == TripStatus.Boarding ||
+                 assignment.Trip.Status == TripStatus.NeedsReschedule))
             .ToListAsync(ct));
         crew.IsCrewCertified = false;
         await ArchiveRoleAsync(crew, PortalRoles.BoatCrew, ct);
@@ -280,26 +284,26 @@ public sealed class RecordsController(
 
 public sealed record UpdateAdminBoatRequest(
     Guid OwnerId,
-    [property: Required, StringLength(160, MinimumLength = 1)] string Name,
-    [property: Required, StringLength(64, MinimumLength = 1)] string RegistrationNumber,
+    [Required, StringLength(160, MinimumLength = 1)] string Name,
+    [Required, StringLength(64, MinimumLength = 1)] string RegistrationNumber,
     DateOnly RegistrationDate,
-    [property: Required, StringLength(64, MinimumLength = 1)] string HullNumber,
-    [property: Range(typeof(decimal), "0.01", "100000")] decimal LengthMeters,
-    [property: Range(typeof(decimal), "0.01", "100000")] decimal WidthMeters,
-    [property: Range(1, 100000)] int MaximumCapacity);
+    [Required, StringLength(64, MinimumLength = 1)] string HullNumber,
+    [Range(typeof(decimal), "0.01", "100000")] decimal LengthMeters,
+    [Range(typeof(decimal), "0.01", "100000")] decimal WidthMeters,
+    [Range(1, 100000)] int MaximumCapacity);
 
 public sealed record UpdateAdminOwnerRequest(
-    [property: Required, StringLength(160, MinimumLength = 1)] string Name,
-    [property: Required, StringLength(20, MinimumLength = 1)] string Nic,
-    [property: Required, EmailAddress] string Email,
-    [property: Required, StringLength(32, MinimumLength = 1)] string Phone,
-    [property: StringLength(1000)] string? Address);
+    [Required, StringLength(160, MinimumLength = 1)] string Name,
+    [Required, StringLength(20, MinimumLength = 1)] string Nic,
+    [Required, EmailAddress] string Email,
+    [Required, StringLength(32, MinimumLength = 1)] string Phone,
+    [StringLength(1000)] string? Address);
 
 public sealed record UpdateAdminCrewRequest(
-    [property: Required, StringLength(160, MinimumLength = 1)] string Name,
-    [property: Required, StringLength(20, MinimumLength = 1)] string Nic,
-    [property: Required, EmailAddress] string Email,
-    [property: Required, StringLength(32, MinimumLength = 1)] string Phone,
-    [property: StringLength(1000)] string? Address,
-    [property: Required, StringLength(100, MinimumLength = 1)] string Role,
+    [Required, StringLength(160, MinimumLength = 1)] string Name,
+    [Required, StringLength(20, MinimumLength = 1)] string Nic,
+    [Required, EmailAddress] string Email,
+    [Required, StringLength(32, MinimumLength = 1)] string Phone,
+    [StringLength(1000)] string? Address,
+    [Required, StringLength(100, MinimumLength = 1)] string Role,
     Guid? BoatId);

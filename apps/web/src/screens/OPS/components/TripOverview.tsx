@@ -1,5 +1,5 @@
 import { Search } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useAuth } from "../../../auth/useAuth";
 import {
   connectOperations,
@@ -11,9 +11,9 @@ import {
   type TripPassenger,
   type VesselMapRecord,
 } from "../../../operations/operationsApi";
-import TripStatusMap from "./TripStatusMap";
 import TripTrackingPanel from "./TripTrackingPanel";
 import TransferHistoryPanel from "./TransferHistoryPanel";
+import { PassengerCountryDisplay } from "../../../components/CountryFlag";
 
 const Info = ({ label, value }: { label: string; value: string }) => (
   <div className="grid grid-cols-[115px_1fr] gap-2">
@@ -189,7 +189,7 @@ function useTripActions(tripId: string) {
   return { actions, loading, error, retry, reload };
 }
 
-export default function TripOverview({ tripId, showTracking = false }: { tripId: string; showTracking?: boolean }) {
+export default function TripOverview({ tripId }: { tripId: string }) {
   const { session } = useAuth();
   const {
     emergency,
@@ -206,6 +206,8 @@ export default function TripOverview({ tripId, showTracking = false }: { tripId:
     reload: reloadActions,
   } = useTripActions(tripId);
   const [query, setQuery] = useState("");
+  const [responderName, setResponderName] = useState("");
+  const [responderIdNumber, setResponderIdNumber] = useState("");
   const [actionDetails, setActionDetails] = useState("");
   const [savingAction, setSavingAction] = useState(false);
   const [actionError, setActionError] = useState("");
@@ -221,11 +223,21 @@ export default function TripOverview({ tripId, showTracking = false }: { tripId:
   );
 
   const submitAction = async () => {
-    if (!session || !actionDetails.trim() || savingAction) return;
+    if (!session || savingAction) return;
+    if (!responderName.trim() || !responderIdNumber.trim() || !actionDetails.trim()) {
+      setActionError("Enter your name, ID number, and the action taken before submitting.");
+      return;
+    }
     setSavingAction(true);
     setActionError("");
     try {
-      await operationsApi.addSosAction(session.accessToken, tripId, actionDetails.trim());
+      await operationsApi.addSosAction(session.accessToken, tripId, {
+        responderName: responderName.trim(),
+        responderIdNumber: responderIdNumber.trim(),
+        details: actionDetails.trim(),
+      });
+      setResponderName("");
+      setResponderIdNumber("");
       setActionDetails("");
       await reloadActions();
     } catch (reason) {
@@ -258,19 +270,19 @@ export default function TripOverview({ tripId, showTracking = false }: { tripId:
     ["Crew assignment", "Exempt"],
   ] : [
     ["Certifications", boat?.approval ?? vessel?.certificationApproval ?? "Pending"],
-    ["Inspection", trip.shoreApproval],
-    ["Wildlife", trip.wildlifeShoreApproval],
+    ["Lifecycle", trip.status],
+    ["Passenger check", trip.passengerVerificationFinalizedAtUtc ? "Finalized" : "Pending"],
   ];
 
   return (
     <main className="mx-auto max-w-[1440px] px-5 py-5">
       {isPatrol && <section className="mb-3 flex flex-col gap-3 rounded-xl border border-indigo-100 bg-indigo-50 p-4 sm:flex-row sm:items-center sm:justify-between">
-        <div><h2 className="text-sm font-bold text-indigo-950">SLCG patrol mission</h2><p className="mt-1 text-xs text-indigo-700">Passenger, tourist crew, shore and wildlife approvals do not apply. GPS tracking remains active for the mission.</p></div>
+        <div><h2 className="text-sm font-bold text-indigo-950">SLCG patrol mission</h2><p className="mt-1 text-xs text-indigo-700">Tourist passenger processing does not apply. GPS tracking remains active for the mission.</p></div>
         {ongoing && canAddAction && <button type="button" onClick={() => void endPatrol()} disabled={endingPatrol} className="rounded-md bg-[#14223d] px-5 py-2.5 text-xs font-semibold text-white disabled:opacity-50">{endingPatrol ? "Ending…" : "End Patrol"}</button>}
         {patrolError && <p role="alert" className="text-xs text-red-600">{patrolError}</p>}
       </section>}
-      {showTracking && <TripTrackingPanel tripId={tripId} vesselName={trip.vesselName} fallbackLatitude={vessel?.latitude} fallbackLongitude={vessel?.longitude} />}
-      <div className={`grid items-start gap-3 xl:grid-cols-[315px_minmax(0,1fr)_300px] ${showTracking ? "mt-3" : ""}`}>
+      <TripTrackingPanel tripId={tripId} vesselName={trip.vesselName} />
+      <div className="mt-3 grid items-start gap-3 xl:grid-cols-[315px_minmax(0,1fr)_300px]">
         <VesselCard trip={trip} boat={boat} vessel={vessel} passengers={passengers} />
         <div className="min-w-0 space-y-3">
           {!isPatrol && <Card>
@@ -281,7 +293,7 @@ export default function TripOverview({ tripId, showTracking = false }: { tripId:
                 <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search" className="h-8 w-40 rounded bg-slate-50 pl-7 text-[10px]" />
               </label>
             </div>
-            <Table heads={["Name", "NIC or Passport", "Age", "Nationality"]} rows={visible.map((passenger) => [passenger.name, passenger.identificationNumber, formatValue(passenger.ageCategory), formatValue(passenger.passengerType)])} />
+            <Table heads={["Name", "NIC or Passport", "Age", "Nationality"]} rows={visible.map((passenger) => [passenger.name, passenger.identificationNumber, formatValue(passenger.ageCategory), <PassengerCountryDisplay key={passenger.id} passengerType={passenger.passengerType} countryCode={passenger.countryCode} />])} />
           </Card>}
           {!isPatrol && <Card>
             <div className="flex justify-between"><h2 className="font-bold">Crew</h2><select className="rounded bg-slate-50 px-3 text-[10px]"><option>Sort by: Name</option><option>Sort by: Role</option></select></div>
@@ -303,16 +315,25 @@ export default function TripOverview({ tripId, showTracking = false }: { tripId:
             {actionsLoadError && <div role="alert" className="mt-2 flex items-center justify-between gap-2 rounded-lg bg-red-50 p-2.5 text-[10px] text-red-700"><span>{actionsLoadError}</span><button type="button" disabled={actionsLoading} onClick={retryActions} className="shrink-0 font-semibold underline disabled:opacity-50">{actionsLoading ? "Retrying…" : "Retry"}</button></div>}
             {actions.length ? (
               <ol className="mt-2 max-h-44 space-y-2 overflow-y-auto">
-                {actions.map((action) => <li key={action.id} className="rounded-lg bg-slate-50 p-2.5 text-[10px]"><p className="whitespace-pre-wrap leading-4 text-slate-700">{action.details}</p><p className="mt-1 text-[9px] text-slate-400">{action.takenByName} · {formatActionTime(action.takenAtUtc, "short")}</p></li>)}
+                {actions.map((action) => <li key={action.id} className="rounded-lg bg-slate-50 p-2.5 text-[10px]"><p className="whitespace-pre-wrap leading-4 text-slate-700">{action.details}</p><p className="mt-1 text-[9px] text-slate-400">{action.takenByName} · ID: {action.takenByIdNumber} · {formatActionTime(action.takenAtUtc, "short")}</p></li>)}
               </ol>
             ) : actionsLoading ? <p className="mt-2 rounded-lg bg-slate-50 p-3 text-[10px] text-slate-400">Loading response actions…</p> : !actionsLoadError && <p className="mt-2 rounded-lg bg-slate-50 p-3 text-[10px] text-slate-400">No response actions have been recorded.</p>}
-            {canAddAction && <>
-              <textarea value={actionDetails} onChange={(event) => setActionDetails(event.target.value)} maxLength={1000} disabled={!emergency || savingAction} placeholder={emergency ? "Record the response action taken" : "An active SOS is required"} className="mt-3 h-16 w-full resize-none border-y border-dashed p-2 text-[10px] disabled:bg-slate-50" />
+            {canAddAction && <form className="mt-3" onSubmit={(event) => { event.preventDefault(); void submitAction(); }}>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <label className="text-[10px] font-semibold text-slate-700">Name
+                  <input type="text" value={responderName} onChange={(event) => setResponderName(event.target.value)} required maxLength={160} autoComplete="name" disabled={!emergency || savingAction} placeholder="Enter your name" className="mt-1 h-9 w-full rounded border border-slate-200 px-2 text-[10px] font-normal outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100 disabled:bg-slate-50" />
+                </label>
+                <label className="text-[10px] font-semibold text-slate-700">ID Number
+                  <input type="text" value={responderIdNumber} onChange={(event) => setResponderIdNumber(event.target.value)} required maxLength={32} autoComplete="off" disabled={!emergency || savingAction} placeholder="Enter your ID number" className="mt-1 h-9 w-full rounded border border-slate-200 px-2 text-[10px] font-normal outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100 disabled:bg-slate-50" />
+                </label>
+              </div>
+              <label className="mt-2 block text-[10px] font-semibold text-slate-700">Action Taken
+                <textarea value={actionDetails} onChange={(event) => setActionDetails(event.target.value)} required maxLength={1000} disabled={!emergency || savingAction} placeholder={emergency ? "Record the response action taken" : "An active SOS is required"} className="mt-1 h-16 w-full resize-none rounded border border-slate-200 p-2 text-[10px] font-normal outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100 disabled:bg-slate-50" />
+              </label>
               {actionError && <p role="alert" className="mt-2 text-[10px] text-red-600">{actionError}</p>}
-              <button type="button" onClick={() => void submitAction()} disabled={!emergency || !actionDetails.trim() || savingAction} className="mt-2 w-full rounded bg-red-500 py-2 text-[10px] font-bold text-white disabled:cursor-not-allowed disabled:opacity-40">{savingAction ? "Saving…" : "Submit"}</button>
-            </>}
+              <button type="submit" disabled={!emergency || !responderName.trim() || !responderIdNumber.trim() || !actionDetails.trim() || savingAction} className="mt-2 w-full rounded bg-red-500 py-2 text-[10px] font-bold text-white disabled:cursor-not-allowed disabled:opacity-40">{savingAction ? "Saving…" : "Submit"}</button>
+            </form>}
           </Card>
-          {!showTracking && <div className="h-[300px] rounded-xl bg-white p-2 shadow-sm"><TripStatusMap ongoing={ongoing} vesselName={trip.vesselName} latitude={vessel?.latitude} longitude={vessel?.longitude} /></div>}
         </div>
       </div>
       {!isPatrol && <TransferHistoryPanel tripId={tripId} />}
@@ -341,7 +362,7 @@ function VesselCard({ trip, boat, vessel, passengers }: { trip: Trip; boat?: Boa
 }
 
 function Card({ children }: { children: React.ReactNode }) { return <section className="rounded-xl bg-white p-5 shadow-sm">{children}</section>; }
-function Table({ heads, rows }: { heads: string[]; rows: string[][] }) { return <div className="mt-5 overflow-x-auto"><table className="w-full min-w-[480px] table-fixed text-left text-[10px]"><thead><tr className="border-b">{heads.map((head) => <th key={head} className="px-5 py-4 font-medium">{head}</th>)}</tr></thead><tbody>{rows.map((row, rowIndex) => <tr key={rowIndex} className="border-b border-slate-100">{row.map((value, cellIndex) => <td key={cellIndex} className="px-5 py-5">{value}</td>)}</tr>)}</tbody></table></div>; }
+function Table({ heads, rows }: { heads: string[]; rows: ReactNode[][] }) { return <div className="mt-5 overflow-x-auto"><table className="w-full min-w-[480px] table-fixed text-left text-[10px]"><thead><tr className="border-b">{heads.map((head) => <th key={head} className="px-5 py-4 font-medium">{head}</th>)}</tr></thead><tbody>{rows.map((row, rowIndex) => <tr key={rowIndex} className="border-b border-slate-100">{row.map((value, cellIndex) => <td key={cellIndex} className="px-5 py-5">{value}</td>)}</tr>)}</tbody></table></div>; }
 function formatValue(value: string) { return value ? value.charAt(0).toUpperCase() + value.slice(1) : "–"; }
 function formatActionTime(value: string, timeStyle: "short" | "medium") { return new Intl.DateTimeFormat("en-LK", { dateStyle: "medium", timeStyle }).format(new Date(value)); }
 function formatTripTime(value: string) { return new Intl.DateTimeFormat("en-LK", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false }).format(new Date(value)); }

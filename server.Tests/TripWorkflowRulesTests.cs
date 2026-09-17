@@ -5,34 +5,38 @@ namespace WhaleWatching.Api.Tests;
 
 public sealed class TripWorkflowRulesTests
 {
-    [Fact]
-    public void WhaleWatchingTrip_RequiresTouristClearance() =>
-        Assert.True(TripWorkflowRules.RequiresTouristClearance(TripType.WhaleWatching));
-
-    [Fact]
-    public void PatrolTrip_DoesNotRequireTouristClearance() =>
-        Assert.False(TripWorkflowRules.RequiresTouristClearance(TripType.Patrol));
+    [Theory]
+    [InlineData(TripStatus.Scheduled)]
+    [InlineData(TripStatus.Boarding)]
+    [InlineData(TripStatus.NeedsReschedule)]
+    public void ShoreCanStart_DepartureReadyLifecycleStates(TripStatus status) =>
+        Assert.True(TripWorkflowRules.CanStart(status));
 
     [Theory]
-    [InlineData(ApprovalStatus.Approved, ApprovalStatus.Pending)]
-    [InlineData(ApprovalStatus.Pending, ApprovalStatus.Approved)]
-    public void ThreeDepartureApprovals_AreComplete_WhenEitherBoatAuthorityApproved(
-        ApprovalStatus administrativeBoatApproval, ApprovalStatus wildlifeBoatApproval) =>
-        Assert.Empty(TripWorkflowRules.GetIncompleteTouristApprovals(
-            administrativeBoatApproval, wildlifeBoatApproval,
-            ApprovalStatus.Approved, ApprovalStatus.Approved));
+    [InlineData(TripStatus.Ongoing)]
+    [InlineData(TripStatus.Completed)]
+    [InlineData(TripStatus.Declined)]
+    [InlineData(TripStatus.Cancelled)]
+    public void ShoreCannotStart_ClosedOrActiveLifecycleStates(TripStatus status) =>
+        Assert.False(TripWorkflowRules.CanStart(status));
 
-    [Fact]
-    public void MissingDepartureApproval_IsReported()
-    {
-        var incomplete = TripWorkflowRules.GetIncompleteTouristApprovals(
-            ApprovalStatus.Pending, ApprovalStatus.Pending,
-            ApprovalStatus.Approved, ApprovalStatus.Pending);
+    [Theory]
+    [InlineData(TripStatus.Scheduled, true)]
+    [InlineData(TripStatus.Boarding, true)]
+    [InlineData(TripStatus.NeedsReschedule, true)]
+    [InlineData(TripStatus.Ongoing, false)]
+    [InlineData(TripStatus.Completed, false)]
+    [InlineData(TripStatus.Declined, false)]
+    public void ShoreDecline_FollowsPreStartLifecycle(TripStatus status, bool expected) =>
+        Assert.Equal(expected, TripWorkflowRules.CanDecline(status));
 
-        Assert.Equal(2, incomplete.Count);
-        Assert.Contains("boat approval from either Administration or the Wildlife Authority", incomplete);
-        Assert.Contains("wildlife shore approval", incomplete);
-    }
+    [Theory]
+    [InlineData(TripStatus.Ongoing, true)]
+    [InlineData(TripStatus.Scheduled, false)]
+    [InlineData(TripStatus.Completed, false)]
+    [InlineData(TripStatus.Declined, false)]
+    public void EndTrip_IsOnlyAvailableWhileOngoing(TripStatus status, bool expected) =>
+        Assert.Equal(expected, TripWorkflowRules.CanEnd(status));
 
     [Fact]
     public void ScheduledTripBeforeNow_IsExpired() =>
@@ -62,10 +66,11 @@ public sealed class TripWorkflowRulesTests
             DateTimeOffset.Parse("2026-08-01T04:00:00Z"), DateTimeOffset.Parse("2026-08-02T04:00:00Z")));
 
     [Fact]
-    public void OnlyScheduledTrip_CanBeRescheduled()
+    public void OnlyPreStartLifecycleStates_CanBeRescheduled()
     {
         Assert.True(TripWorkflowRules.CanReschedule(TripStatus.Scheduled));
         Assert.True(TripWorkflowRules.CanReschedule(TripStatus.Boarding));
+        Assert.True(TripWorkflowRules.CanReschedule(TripStatus.NeedsReschedule));
         Assert.False(TripWorkflowRules.CanReschedule(TripStatus.Ongoing));
         Assert.False(TripWorkflowRules.CanReschedule(TripStatus.Completed));
     }

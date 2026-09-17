@@ -302,8 +302,9 @@ async function createBoatReportPdf({
     await field('Route', trip.route);
     await field('Passenger count', trip.passengerCount);
     await field('Status', trip.status);
-    await field('Shore approval', trip.shoreApproval);
-    await field('Wildlife Shore approval', trip.wildlifeShoreApproval);
+    await field('Passenger confirmation', trip.passengerVerificationFinalizedAtUtc ? 'Finalized' : 'Pending');
+    await field('Started by role', trip.startedByRole);
+    await field('Decline reason', trip.declineReason);
     await field('Shore notes', trip.shoreNotes);
     await field('Active SOS', trip.hasActiveSos ? 'Yes' : 'No');
     await field('Assigned crew', trip.crew.length ? trip.crew.map((member) => `${member.name} (${member.position}, ${member.certified ? 'Certified' : 'Not certified'})`).join(', ') : 'None recorded');

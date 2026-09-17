@@ -1,6 +1,6 @@
 import { getPassengerSessionToken } from './store/passengerStorage';
 
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '');
+import { API_BASE_URL } from '../../api/httpClient';
 
 export interface Complaint {
   id: string; passengerName: string; contact: string; boatId: string; boatName: string;
