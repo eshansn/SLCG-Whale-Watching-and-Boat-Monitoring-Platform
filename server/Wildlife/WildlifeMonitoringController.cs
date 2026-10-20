@@ -21,7 +21,7 @@ public sealed class WildlifeMonitoringController(WhaleWatchingDbContext db, IHub
     public async Task<ActionResult<IReadOnlyList<WildlifeTripDto>>> Trips(CancellationToken ct)
     {
         var currentSriLankaDayStartUtc = TripWorkflowRules.GetSriLankaDayStartUtc(DateTimeOffset.UtcNow);
-        return Ok(await db.Trips.AsNoTracking()
+        var trips = await db.Trips.AsNoTracking()
             .Where(x => x.Status != TripStatus.Completed && x.Status != TripStatus.Cancelled &&
                 x.Status != TripStatus.Declined &&
                 ((x.Status != TripStatus.Scheduled && x.Status != TripStatus.Boarding) ||
@@ -30,7 +30,11 @@ public sealed class WildlifeMonitoringController(WhaleWatchingDbContext db, IHub
             .Select(x => new WildlifeTripDto(x.Id, x.Boat.Name, x.Boat.RegistrationNumber,
                 x.Boat.Owner.DisplayName, x.ScheduledDepartureUtc, x.Route, x.Status.ToString(),
                 x.Passengers.Count, db.WildlifeMonitoringRecords.Where(r => r.TripId == x.Id)
-                    .Select(r => r.Status.ToString()).FirstOrDefault() ?? WildlifeMonitoringStatus.Draft.ToString())).ToListAsync(ct));
+                    .Select(r => r.Status.ToString()).FirstOrDefault() ?? WildlifeMonitoringStatus.Draft.ToString(), x.BoatId, null)).ToListAsync(ct);
+        var boatIds = trips.Select(x => x.BoatId).ToArray();
+        var images = await BoatDisplayImage.GetUrlsAsync(db.BoatDocuments.AsNoTracking()
+            .Where(x => boatIds.Contains(x.BoatId)), ct);
+        return Ok(trips.Select(trip => trip with { ImageUrl = images.GetValueOrDefault(trip.BoatId) }));
     }
 
     [HttpGet("trips/{tripId:guid}/attendance")]
@@ -277,10 +281,12 @@ public sealed class WildlifeMonitoringController(WhaleWatchingDbContext db, IHub
 
     private async Task<WildlifeAttendanceDto?> BuildAttendance(Guid tripId, CancellationToken ct)
     {
-        var trip = await db.Trips.AsNoTracking().Where(x => x.Id == tripId).Select(x => new { x.Id,
+        var trip = await db.Trips.AsNoTracking().Where(x => x.Id == tripId).Select(x => new { x.Id, x.BoatId,
             BoatName = x.Boat.Name, x.Boat.RegistrationNumber, OwnerName = x.Boat.Owner.DisplayName,
             x.ScheduledDepartureUtc, x.Route, Status = x.Status.ToString() }).SingleOrDefaultAsync(ct);
         if (trip is null) return null;
+        var images = await BoatDisplayImage.GetUrlsAsync(db.BoatDocuments.AsNoTracking()
+            .Where(x => x.BoatId == trip.BoatId), ct);
         var rows = await db.TripPassengers.AsNoTracking().Where(x => x.TripId == tripId &&
                 x.Attendance != null && x.Attendance.Status == PassengerAttendanceStatus.Present)
             .Select(x => new { Nationality = x.Passenger.PassengerType, Type = x.Passenger.AgeCategory,
@@ -292,7 +298,7 @@ public sealed class WildlifeMonitoringController(WhaleWatchingDbContext db, IHub
         var local = Count("local"); var foreign = Count("foreign");
         return new WildlifeAttendanceDto(trip.Id, trip.BoatName, trip.RegistrationNumber, trip.OwnerName,
             trip.ScheduledDepartureUtc, trip.Route, trip.Status, local, foreign, local.Total + foreign.Total,
-            rows.Count == 0 ? DateTimeOffset.UtcNow : rows.Max(x => x.Updated));
+            rows.Count == 0 ? DateTimeOffset.UtcNow : rows.Max(x => x.Updated), images.GetValueOrDefault(trip.BoatId));
     }
 
     private IQueryable<WildlifeMonitoringRecord> RecordsWithSignatureRequests(bool tracking = false)
@@ -332,11 +338,11 @@ public sealed class WildlifeMonitoringController(WhaleWatchingDbContext db, IHub
 
 public sealed record WildlifeTripDto(Guid Id, string BoatName, string RegistrationNumber, string OwnerName,
     DateTimeOffset ScheduledDepartureUtc, string Route, string Status, int RegisteredPassengers,
-    string MonitoringStatus);
+    string MonitoringStatus, Guid BoatId, string? ImageUrl);
 public sealed record CountDto(int Adult, int Child, int Small) { public int Total => Adult + Child + Small; }
 public sealed record WildlifeAttendanceDto(Guid TripId, string BoatName, string RegistrationNumber, string OwnerName,
     DateTimeOffset ScheduledDepartureUtc, string Route, string TripStatus, CountDto Local, CountDto Foreign,
-    int TotalPresent, DateTimeOffset LastUpdatedUtc);
+    int TotalPresent, DateTimeOffset LastUpdatedUtc, string? ImageUrl);
 public sealed record WildlifeRecordDto(Guid Id, Guid TripId, string BoatName, string RegistrationNumber,
     DateTimeOffset ScheduledDepartureUtc, string TicketNumber, string TidNumber,
     string MonitoringOfficer, string Supervisor, string Status, CountDto Local, CountDto Foreign, int TotalPresent,

@@ -1,5 +1,7 @@
 # Whale Watching and Boat Monitoring Platform
 
+SLTDA monitoring, complaint accountability, rollout instructions, APIs and verification results are documented in [SLTDA_IMPLEMENTATION.md](SLTDA_IMPLEMENTATION.md).
+
 ## TrackMyCar GPS configuration
 
 TrackMyCar is called only by the ASP.NET Core backend. Never place its API key in

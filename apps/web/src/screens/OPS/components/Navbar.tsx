@@ -2,7 +2,7 @@ import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../auth/useAuth';
 import { Icon } from '../../../components/ui/icon';
-import { House, LogOut, Radar, Ship, Siren } from 'lucide-react';
+import { FileWarning, House, LogOut, Radar, Ship, Siren } from 'lucide-react';
 
 const OPS_HOME_PATH = '/ops'; 
 
@@ -17,10 +17,11 @@ export default function Navbar() {
     { name: 'SOS', path: `${OPS_HOME_PATH}/sos`, icon: Siren },
     { name: 'Trips', path: `${OPS_HOME_PATH}/trips`, icon: Ship },
     { name: 'Monitor', path: `${OPS_HOME_PATH}/monitor`, icon: Radar },
+    { name: 'Complaints', path: `${OPS_HOME_PATH}/complaints`, icon: FileWarning },
   ];
 
   return (
-    <header className="w-full flex items-center justify-between px-8 py-4 bg-[#F8F9FA] z-50 font-['Poppins']">
+    <header className="w-full flex flex-wrap items-center justify-between gap-3 px-4 py-4 bg-[#F8F9FA] z-50 font-['Poppins'] sm:px-8">
       
       {/* 1. Brand / Logo Area */}
       <div className="flex items-center gap-3">
@@ -35,7 +36,7 @@ export default function Navbar() {
       </div>
       
       {/* 2. Navigation Links & Actions */}
-      <nav className="flex items-center gap-8 text-sm font-medium">
+      <nav className="flex flex-wrap items-center gap-3 text-xs font-medium sm:gap-6 sm:text-sm">
         
         {/* Notification Bell (Imported from Icon.tsx) */}
         <Link 

@@ -1,3 +1,4 @@
+import BoatImage from "../../components/BoatImage";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Mic, Search, Ship } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -195,7 +196,7 @@ export default function BoatCrewTrips() {
                       </div>
                     </div>
                     {boat?.imageUrl ? (
-                      <img
+                      <BoatImage
                         src={boat.imageUrl}
                         alt={`${trip.vesselName} boat`}
                         className="h-[145px] w-full rounded-[12px] object-cover object-center sm:h-[180px] md:h-[170px] xl:h-[180px]"

@@ -1,3 +1,4 @@
+import BoatImage from "../../components/BoatImage";
 import {
   useEffect,
   useMemo,
@@ -119,7 +120,7 @@ function BoatOwnerTripsPage() {
       time: new Intl.DateTimeFormat('en-LK', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(trip.scheduledDepartureUtc)),
       state,
       needsReschedule: state === "NeedsReschedule",
-      image: boats.find((boat) => boat.id === trip.boatId)?.imageUrl || '/OwnerBoat1.png',
+      image: boats.find((boat) => boat.id === trip.boatId)?.imageUrl || '/boat-placeholder.svg',
     };
   }), [boats, savedTrips, tripStateNow]);
 
@@ -636,7 +637,7 @@ function BoatOwnerTripsPage() {
                     </div>
                   </div>
 
-                  <img
+                  <BoatImage
                     src={trip.image}
                     alt={`${trip.boatName} boat`}
                     className="

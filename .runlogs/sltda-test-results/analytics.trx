@@ -1,0 +1,34 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="1714c408-73e1-49f5-ba5d-66d665426dbc" name="Admin@DESKTOP-1P8ID0I 2026-10-20 10:13:24" runUser="DESKTOP-1P8ID0I\Admin" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-10-20T10:13:24.6973605+05:30" queuing="2026-10-20T10:13:24.6973607+05:30" start="2026-10-20T10:13:21.2817676+05:30" finish="2026-10-20T10:13:24.7003795+05:30" />
+  <TestSettings name="default" id="bfee8e32-ae09-42cf-8451-b55104a26d7a">
+    <Deployment runDeploymentRoot="Admin_DESKTOP-1P8ID0I_2026-10-20_10_13_24" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="d4ea39ee-c881-4a81-8beb-33aeb375538c" testId="5bd07135-30a9-3942-e26e-357bfa8bf17e" testName="WhaleWatching.Api.Tests.ComplaintAccountabilityTests.Analytics_UsesColomboDaysRealClassificationZeroBucketsAndMatchingDrillDowns" computerName="DESKTOP-1P8ID0I" duration="00:00:02.9404913" startTime="2026-10-20T10:13:24.6362723+05:30" endTime="2026-10-20T10:13:24.6363176+05:30" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="d4ea39ee-c881-4a81-8beb-33aeb375538c" />
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="WhaleWatching.Api.Tests.ComplaintAccountabilityTests.Analytics_UsesColomboDaysRealClassificationZeroBucketsAndMatchingDrillDowns" storage="d:\slcg-whale-watching-and-boat-monitoring-platform\server.tests\bin\debug\net8.0\whalewatching.api.tests.dll" id="5bd07135-30a9-3942-e26e-357bfa8bf17e">
+      <Execution id="d4ea39ee-c881-4a81-8beb-33aeb375538c" />
+      <TestMethod codeBase="D:\SLCG-Whale-Watching-and-Boat-Monitoring-Platform\server.Tests\bin\Debug\net8.0\WhaleWatching.Api.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="WhaleWatching.Api.Tests.ComplaintAccountabilityTests" name="Analytics_UsesColomboDaysRealClassificationZeroBucketsAndMatchingDrillDowns" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="5bd07135-30a9-3942-e26e-357bfa8bf17e" executionId="d4ea39ee-c881-4a81-8beb-33aeb375538c" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="Results Not in a List" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="All Loaded Results" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Completed">
+    <Counters total="1" executed="1" passed="1" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v2.8.2+699d445a1a (64-bit .NET 10.0.12)&#xD;
+[xUnit.net 00:00:00.09]   Discovering: WhaleWatching.Api.Tests&#xD;
+[xUnit.net 00:00:00.13]   Discovered:  WhaleWatching.Api.Tests&#xD;
+[xUnit.net 00:00:00.13]   Starting:    WhaleWatching.Api.Tests&#xD;
+[xUnit.net 00:00:03.10]   Finished:    WhaleWatching.Api.Tests&#xD;
+</StdOut>
+    </Output>
+  </ResultSummary>
+</TestRun>

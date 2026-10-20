@@ -1,3 +1,4 @@
+import BoatImage from "../../../components/BoatImage";
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
@@ -55,7 +56,7 @@ export default function Sidebar() {
         <>
           <div className="relative h-48 w-full shrink-0 bg-slate-200">
             <div className="absolute inset-0 z-10 bg-gradient-to-t from-white via-white/20 to-transparent" />
-            <img src={selectedVessel.imageUrl || '/gallery-2.jpg'} alt={selectedVessel.name} className="h-full w-full object-cover" />
+            <BoatImage src={selectedVessel.imageUrl || '/boat-placeholder.svg'} alt={selectedVessel.name} className="h-full w-full object-cover" />
           </div>
 
           <div className="relative z-20 -mt-4 px-6 pb-6">

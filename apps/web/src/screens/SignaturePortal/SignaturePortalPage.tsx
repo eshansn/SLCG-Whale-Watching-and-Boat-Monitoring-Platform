@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { CheckCircle2, FileSignature, LogOut, X } from 'lucide-react';
+import { CheckCircle2, FileSignature, X } from 'lucide-react';
 import { useAuth } from '../../auth/useAuth';
 import SignaturePad from '../../components/SignaturePad';
 import { signatureRequestsApi, watchSignatureRequests, type SignatureRequestDetails } from './signatureRequestsApi';
@@ -10,12 +10,11 @@ const formatDate = (value: string) => new Intl.DateTimeFormat('en-LK', {
 }).format(new Date(value));
 
 export default function SignaturePortalPage({ portalRole }: { portalRole: 'Supervisor' | 'HarbourOfficer' }) {
-  const { session, logout } = useAuth();
+  const { session } = useAuth();
   const [requests, setRequests] = useState<SignatureRequestDetails[]>([]);
   const [selected, setSelected] = useState<SignatureRequestDetails>();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const label = portalRole === 'Supervisor' ? 'Supervisor' : 'Harbour Officer';
 
   const load = useCallback(async () => {
     if (!session) return;
@@ -50,39 +49,6 @@ export default function SignaturePortalPage({ portalRole }: { portalRole: 'Super
 
   return (
     <div className="signature-portal min-h-screen min-w-0 overflow-x-hidden bg-[#f8f9fb] font-[Poppins] text-[#14223d]">
-      <header className="border-b border-slate-200 bg-white shadow-sm">
-        <div className="mx-auto flex min-h-16 max-w-6xl items-center justify-between gap-2 px-4 py-2 sm:gap-4 sm:px-6">
-          <div className="flex min-w-0 items-center gap-3">
-            <img
-              src="/WildlifeAuthority.png"
-              alt="Department of Wildlife Conservation"
-              className="h-9 w-auto shrink-0 sm:h-10"
-            />
-            <div className="hidden min-w-0 border-l pl-3 sm:block">
-              <p className="text-xs text-slate-400">WWMS</p>
-              <p className="truncate text-sm font-semibold">{label} Portal</p>
-            </div>
-          </div>
-          <div className="flex min-w-0 items-center gap-2 sm:gap-3">
-            <p className="hidden min-w-0 text-right text-xs sm:block">
-              <span className="block font-semibold">{label}</span>
-              <span className="block max-w-56 truncate text-slate-400">{session?.email}</span>
-            </p>
-            <button
-              type="button"
-              onClick={() => {
-                logout();
-                window.location.assign('/login');
-              }}
-              className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-lg bg-[#14223d] px-3 text-sm font-semibold text-white sm:px-4"
-            >
-              <LogOut size={17} aria-hidden="true" />
-              <span className="hidden min-[360px]:inline">Log out</span>
-            </button>
-          </div>
-        </div>
-      </header>
-
       <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
         <h1 className="text-2xl font-semibold sm:text-3xl">Signature Requests</h1>
         <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-500">

@@ -34,6 +34,9 @@ public sealed class BoatDocumentService(WhaleWatchingDbContext db, TimeProvider 
 
         var fileValidation = await ReadAndValidateFileAsync(file, ct);
         if (fileValidation.Error is not null) return (null, fileValidation.Error, false);
+        if (requirement.Type == BoatDocumentRequirements.VesselPhotographOrDiagram &&
+            fileValidation.ContentType is not ("image/jpeg" or "image/png"))
+            return (null, "The vessel photograph or diagram must be a JPEG or PNG image.", false);
 
         var strategy = db.Database.CreateExecutionStrategy();
         return await strategy.ExecuteAsync(async () =>
@@ -73,6 +76,13 @@ public sealed class BoatDocumentService(WhaleWatchingDbContext db, TimeProvider 
                 UpdatedAtUtc = now,
             };
             db.BoatDocuments.Add(document);
+            if (requirement.Type == BoatDocumentRequirements.VesselPhotographOrDiagram)
+            {
+                // The file is stored only on the document; both references point to that file.
+                document.FileUrl = BoatDisplayImage.DocumentUrl(boatId, document.Id);
+                var imageBoat = await db.Boats.SingleAsync(x => x.Id == boatId, ct);
+                imageBoat.ImageUrl = document.FileUrl;
+            }
             await db.SaveChangesAsync(ct);
             await transaction.CommitAsync(ct);
             return (document, (string?)null, false);

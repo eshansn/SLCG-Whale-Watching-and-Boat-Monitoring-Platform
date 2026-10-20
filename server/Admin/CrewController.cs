@@ -11,6 +11,20 @@ namespace WhaleWatching.Api.Admin;
 [Authorize(Roles = PortalRoles.Admin)]
 public sealed class CrewController(WhaleWatchingDbContext db) : ControllerBase
 {
+    [HttpGet("{id:guid}/certificates")]
+    public async Task<IActionResult> Certificates(Guid id, CancellationToken ct) =>
+        Ok(await db.CrewCertificates.AsNoTracking().Where(x => x.CrewUserId == id)
+            .OrderByDescending(x => x.UploadedAtUtc)
+            .Select(x => new WhaleWatching.Api.Profiles.CrewCertificateDto(x.Id, x.Name, x.ContentType, x.UploadedAtUtc)).ToListAsync(ct));
+
+    [HttpGet("{id:guid}/certificates/{certificateId:guid}")]
+    public async Task<IActionResult> DownloadCertificate(Guid id, Guid certificateId, CancellationToken ct)
+    {
+        var document = await db.CrewCertificates.AsNoTracking()
+            .SingleOrDefaultAsync(x => x.CrewUserId == id && x.Id == certificateId, ct);
+        return document is null ? NotFound() : File(document.Content, document.ContentType, document.Name);
+    }
+
     [HttpGet]
     public async Task<ActionResult<IReadOnlyList<AdminCrewDto>>> List(CancellationToken ct)
     {

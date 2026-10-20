@@ -1,3 +1,4 @@
+import BoatImage from "../../components/BoatImage";
 import {
   useEffect,
   useState,
@@ -254,8 +255,8 @@ function BoatOwnerBoatInfoPage() {
           </div>
 
           {/* Boat image */}
-          <img
-            src={selectedBoat.imageUrl || "/OwnerBoat1.png"}
+          <BoatImage
+            src={selectedBoat.imageUrl || "/boat-placeholder.svg"}
             alt={`${selectedBoat.name} boat`}
             className="
               h-[152px] w-full
@@ -310,8 +311,10 @@ function BoatOwnerBoatInfoPage() {
                 const versions = selectedBoat.documents
                   .filter((item) => item.documentType === requirement.documentType)
                   .sort((a, b) => b.version - a.version);
-                const document = versions.find((item) => item.isCurrent)
-                  ?? versions.find((item) => item.status === 'PendingReview') ?? versions[0];
+                const document = requirement.documentType === 'VesselPhotographOrDiagram'
+                  ? versions[0]
+                  : versions.find((item) => item.isCurrent)
+                    ?? versions.find((item) => item.status === 'PendingReview') ?? versions[0];
                 return <article key={requirement.documentType} className="rounded-[12px] border border-[#e8e2e2] bg-white p-4 text-sm">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">

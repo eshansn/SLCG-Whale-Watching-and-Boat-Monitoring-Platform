@@ -1,3 +1,4 @@
+import BoatImage from "../../components/BoatImage";
 import {
   useEffect,
   useState,
@@ -12,7 +13,7 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../auth/useAuth";
-import { operationsApi, type Boat, type Trip } from "../../operations/operationsApi";
+import { useOperations } from "../../operations/useOperations";
 import { ownerProfileApi } from "../../profiles/ownerProfileApi";
 
 import infoIcon from "../../assets/icons/info.svg";
@@ -98,31 +99,9 @@ function BoatOwnerDashboard() {
   const navigate = useNavigate();
   const { session } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [boats, setBoats] = useState<Boat[]>([]);
-  const [trips, setTrips] = useState<Trip[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const { boats, trips, loading, error } = useOperations();
   const [profileName, setProfileName] = useState("");
   const [profilePhoto, setProfilePhoto] = useState(userIcon);
-
-  useEffect(() => {
-    if (!session) return;
-    let active = true;
-    Promise.all([
-      operationsApi.boats(session.accessToken),
-      operationsApi.trips(session.accessToken),
-    ]).then(([nextBoats, nextTrips]) => {
-      if (!active) return;
-      setBoats(nextBoats);
-      setTrips(nextTrips);
-      setError("");
-    }).catch((requestError: unknown) => {
-      if (active) setError(requestError instanceof Error ? requestError.message : "Unable to load owner data.");
-    }).finally(() => {
-      if (active) setLoading(false);
-    });
-    return () => { active = false; };
-  }, [session]);
 
   useEffect(() => {
     if (!session) return;
@@ -410,8 +389,8 @@ function BoatOwnerDashboard() {
                   </div>
                 </div>
 
-                <img
-                  src={boat.imageUrl || "/OwnerBoat1.png"}
+                <BoatImage
+                  src={boat.imageUrl || "/boat-placeholder.svg"}
                   alt={`${boat.name} boat`}
                   className="
                     h-[145px] w-full

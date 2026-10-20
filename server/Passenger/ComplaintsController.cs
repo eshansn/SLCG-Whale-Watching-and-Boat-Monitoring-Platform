@@ -4,15 +4,17 @@ using System.Text;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Data.SqlClient;
 using WhaleWatching.Api.Auth;
 using WhaleWatching.Api.Data;
 using WhaleWatching.Api.Domain;
+using WhaleWatching.Api.Complaints;
 
 namespace WhaleWatching.Api.Passenger;
 
 [ApiController]
 [Route("api/complaints")]
-public sealed class ComplaintsController(WhaleWatchingDbContext db) : ControllerBase
+public sealed class ComplaintsController(WhaleWatchingDbContext db, ComplaintAccess access, ComplaintWorkflow workflow) : ControllerBase
 {
     private static readonly HashSet<string> AllowedTypes = new(StringComparer.Ordinal)
     {
@@ -27,6 +29,9 @@ public sealed class ComplaintsController(WhaleWatchingDbContext db) : Controller
     {
         if (!AllowedTypes.Contains(request.Type))
             return BadRequest(new { message = "Select a valid complaint type." });
+        if (request.Kind is not ("Complaint" or "Inquiry") || string.IsNullOrWhiteSpace(request.Message))
+            return BadRequest(new { message = "Supply a valid record kind and message." });
+        if (request.RequestId == Guid.Empty) return BadRequest(new { message = "Supply a valid submission request ID." });
 
         var rawToken = Request.Headers["X-Passenger-Session"].ToString();
         if (string.IsNullOrWhiteSpace(rawToken)) return Unauthorized();
@@ -47,25 +52,48 @@ public sealed class ComplaintsController(WhaleWatchingDbContext db) : Controller
             image = new ComplaintImage { Id = Guid.NewGuid(), FileName = Path.GetFileName(request.Evidence.FileName), ContentType = request.Evidence.ContentType, Content = memory.ToArray() };
         }
 
+        var complaintId = request.RequestId ?? Guid.NewGuid();
+        async Task<ActionResult?> ReplayAsync()
+        {
+            var prior = await db.PassengerComplaints.AsNoTracking().Include(x => x.Images).SingleOrDefaultAsync(x => x.Id == complaintId, ct);
+            if (prior is null) return null;
+            var sameEvidence = image is null ? prior.Images.Count == 0 : prior.Images.Count == 1 && prior.Images.Any(i =>
+                i.FileName == image.FileName && i.ContentType == image.ContentType && i.Content.AsSpan().SequenceEqual(image.Content));
+            return prior.PassengerId == session.PassengerId && prior.TripId == session.TripId &&
+                prior.Kind == request.Kind && prior.Type == request.Type && prior.Message == request.Message.Trim() && sameEvidence
+                ? Ok(new { prior.Id }) : Conflict(new { message = "This submission request ID was already used. Start a new submission." });
+        }
+        if (request.RequestId is not null && await ReplayAsync() is { } replay) return replay;
         var complaint = new PassengerComplaint
         {
-            Id = Guid.NewGuid(), PassengerId = session.PassengerId, TripId = session.TripId,
-            Type = request.Type, Message = request.Message.Trim(), CreatedAtUtc = DateTimeOffset.UtcNow
+            Id = complaintId, PassengerId = session.PassengerId, TripId = session.TripId,
+            Type = request.Type, Kind = request.Kind, Message = request.Message.Trim(), CreatedAtUtc = DateTimeOffset.UtcNow
         };
         if (image is not null) complaint.Images.Add(image);
         db.PassengerComplaints.Add(complaint);
-        await db.SaveChangesAsync(ct);
+        await workflow.RecordSubmissionAsync(complaint, ct);
+        try { await db.SaveChangesAsync(ct); }
+        catch (DbUpdateException ex) when (request.RequestId is not null && ex.InnerException is SqlException { Number: 2601 or 2627 })
+        {
+            // A concurrent retry lost the unique complaint-ID race. SaveChanges rolled back the whole event/notification batch.
+            db.ChangeTracker.Clear();
+            return await ReplayAsync() ?? Conflict(new { message = "Please retry the submission." });
+        }
+        await workflow.PublishAsync(await access.EligibleUsersAsync(ComplaintAccess.MonitorRoles, ct), ct);
         return Created($"/api/complaints/{complaint.Id}", new { complaint.Id });
     }
 
     [HttpGet]
-    [Authorize(Roles = PortalRoles.Admin + "," + PortalRoles.Wildlife)]
+    [Authorize(Policy = PortalPolicies.PassengerMonitoring)]
     public async Task<ActionResult<IReadOnlyList<ComplaintDto>>> List(CancellationToken ct)
     {
+        var actor = await access.ActorAsync(User, ct);
+        if (actor is not { Monitor: true }) return Forbid();
         var entities = await db.PassengerComplaints.AsNoTracking()
             .Include(x => x.Passenger).Include(x => x.Trip).ThenInclude(x => x.Boat).ThenInclude(x => x.Owner)
             .Include(x => x.Images)
             .OrderByDescending(x => x.CreatedAtUtc)
+            .Take(100)
             .ToListAsync(ct);
         var complaints = entities.Select(x => new ComplaintDto(x.Id, x.Passenger.Name, x.Passenger.PhoneNumber,
                 x.Trip.Boat.Id, x.Trip.Boat.Name, x.Trip.Boat.RegistrationNumber,
@@ -78,6 +106,8 @@ public sealed class ComplaintsController(WhaleWatchingDbContext db) : Controller
 
 public sealed class CreateComplaintRequest
 {
+    public Guid? RequestId { get; init; }
+    [MaxLength(16)] public string Kind { get; init; } = "Complaint";
     [Required, MaxLength(64)] public required string Type { get; init; }
     [Required, MaxLength(2000)] public required string Message { get; init; }
     public IFormFile? Evidence { get; init; }

@@ -6,6 +6,8 @@ import ApprovalControls from './components/ApprovalControls';
 import EditRecordModal from './components/EditRecordModal';
 import { RecordUnavailable, RecordsErrorNotice } from './components/RecordsLoadState';
 import TripHistory from './components/TripHistory';
+import CrewCertificates from './components/CrewCertificates';
+import { crewPositions } from '../BoatCrew/crewApi';
 
 export default function CrewDetailsPage() {
   const { crewId } = useParams();
@@ -43,6 +45,7 @@ export default function CrewDetailsPage() {
         <p className="text-sm text-slate-400">{member.role}</p>
         <div className="mt-7 space-y-5">{[['NIC', member.nic], ['Email', member.email], ['Phone', member.phone], ['Address', member.address]].map(([label, value]) => <div key={label}><p className="text-xs uppercase text-slate-400">{label}</p><p className="font-medium">{value}</p></div>)}</div>
         <h2 className="mt-7 border-t pt-6 text-sm font-semibold">Certifications</h2>
+        <CrewCertificates key={member.apiId ?? member.id} crewId={member.apiId ?? member.id}/>
         {member.certifications.map((certification) => <p key={certification} className="mt-3 rounded-lg bg-slate-50 p-3 text-sm">{certification}</p>)}
       </section>
       <div className="space-y-6">
@@ -55,7 +58,7 @@ export default function CrewDetailsPage() {
       </div>
     </div>
     {editing && (
-      <EditRecordModal title="crew member" fields={[{key:'name',label:'Full name'},{key:'nic',label:'NIC'},{key:'email',label:'Email',type:'email'},{key:'phone',label:'Phone'},{key:'address',label:'Address'},{key:'role',label:'Role',type:'select',options:['Captain','Life Saver','Deck Hand'].map((role)=>({label:role,value:role}))},{key:'boatId',label:'Current boat',type:'select',options:[{label:'Unassigned',value:''},...records.boats.map((item)=>({label:item.name,value:item.id}))]}]} initial={member} onClose={() => setEditing(false)} onSave={async (values) => { try { await records.updateCrew(member.id, {...values, role: values.role as typeof member.role, boatId: values.boatId ? String(values.boatId) : undefined}); setEditing(false); } catch (reason) { alert(reason instanceof Error ? reason.message : 'The crew member could not be updated.'); } }}/>
+      <EditRecordModal title="crew member" fields={[{key:'name',label:'Full name'},{key:'nic',label:'NIC'},{key:'email',label:'Email',type:'email'},{key:'phone',label:'Phone'},{key:'address',label:'Address'},{key:'role',label:'Role',type:'select',options:crewPositions.map((role)=>({label:role,value:role}))},{key:'boatId',label:'Current boat',type:'select',options:[{label:'Unassigned',value:''},...records.boats.map((item)=>({label:item.name,value:item.id}))]}]} initial={member} onClose={() => setEditing(false)} onSave={async (values) => { try { await records.updateCrew(member.id, {...values, role: values.role as typeof member.role, boatId: values.boatId ? String(values.boatId) : undefined}); setEditing(false); } catch (reason) { alert(reason instanceof Error ? reason.message : 'The crew member could not be updated.'); } }}/>
     )}
   </main>;
 }

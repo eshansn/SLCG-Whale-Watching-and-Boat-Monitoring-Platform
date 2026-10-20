@@ -408,7 +408,6 @@ function BoatOwnerNewBoatPage() {
         name: boatForm.name, registrationNumber: boatForm.registrationNumber,
         registrationDate: boatForm.registrationDate, hullNumber: boatForm.hullNumber,
         lengthMeters, widthMeters, maximumCapacity,
-        imageUrl: boatPhotoPreview.length <= 1_000_000 ? boatPhotoPreview || undefined : undefined,
         maximumSpeedKnots,
         lifeJacketCount,
       });

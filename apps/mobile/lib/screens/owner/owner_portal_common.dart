@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../widgets/owner_layout.dart';
+import '../../services/api_service.dart';
 
 String ownerError(Object error) =>
     error.toString().replaceFirst(RegExp(r'^Exception:\s*'), '');
@@ -281,6 +282,15 @@ class OwnerBoatImage extends StatelessWidget {
       } catch (_) {
         image = _placeholder();
       }
+    } else if (RegExp(r'^/api/operations/boats/[\da-f-]+/image/[\da-f-]+$',
+            caseSensitive: false)
+        .hasMatch(source)) {
+      final token = ApiService.instance.session?.accessToken;
+      image = token == null
+          ? _placeholder()
+          : Image.network('${ApiService.baseUrl.replaceAll(RegExp(r'/$'), '')}$source',
+              headers: {'Authorization': 'Bearer $token'},
+              fit: BoxFit.cover, errorBuilder: (_, __, ___) => _placeholder());
     } else if (source.startsWith('http://') || source.startsWith('https://')) {
       image = Image.network(source,
           fit: BoxFit.cover, errorBuilder: (_, __, ___) => _placeholder());

@@ -1,3 +1,4 @@
+import BoatImage from "../../components/BoatImage";
 import {
   useEffect,
   useState,
@@ -82,7 +83,7 @@ function BoatOwnerBoatsPage() {
     if(!session)return;
     let active=true;
     let requestVersion=0;
-    const load=()=>{const currentRequest=++requestVersion;void operationsApi.boats(session.accessToken).then(records=>{if(active&&currentRequest===requestVersion){setBoats(records.map(boat=>({id:boat.id,name:boat.name,registrationNumber:boat.registrationNumber,image:boat.imageUrl??"/OwnerBoat1.png",approval:boat.approval,wildlifeApproval:boat.wildlifeApproval})));setError("")}}).catch(loadError=>{if(active&&currentRequest===requestVersion)setError(loadError instanceof Error?loadError.message:"Unable to load boats.")}).finally(()=>{if(active&&currentRequest===requestVersion)setLoading(false)})};
+    const load=()=>{const currentRequest=++requestVersion;void operationsApi.boats(session.accessToken).then(records=>{if(active&&currentRequest===requestVersion){setBoats(records.map(boat=>({id:boat.id,name:boat.name,registrationNumber:boat.registrationNumber,image:boat.imageUrl??"/boat-placeholder.svg",approval:boat.approval,wildlifeApproval:boat.wildlifeApproval})));setError("")}}).catch(loadError=>{if(active&&currentRequest===requestVersion)setError(loadError instanceof Error?loadError.message:"Unable to load boats.")}).finally(()=>{if(active&&currentRequest===requestVersion)setLoading(false)})};
     load();const disconnect=connectOperations(session.accessToken,load);
     return()=>{active=false;disconnect()};
   },[session,retryVersion]);
@@ -265,7 +266,7 @@ function BoatOwnerBoatsPage() {
                   </div>
                 </div>
 
-                <img
+                <BoatImage
                   src={boat.image}
                   alt={`${boat.name} boat`}
                   className="
@@ -475,7 +476,7 @@ function BoatCard({boat,onOpen}:{boat:Boat;onOpen:()=>void}){
  return <article className="w-full overflow-hidden rounded-[22px] bg-white p-3 shadow-[0_6px_9px_rgba(0,0,0,0.22)] sm:p-4">
   <div className="grid grid-cols-[minmax(0,0.8fr)_minmax(145px,1.2fr)] items-center gap-3 sm:grid-cols-[minmax(130px,0.8fr)_minmax(210px,1.2fr)] sm:gap-5 lg:grid-cols-[minmax(130px,0.8fr)_minmax(190px,1.2fr)] xl:grid-cols-[minmax(150px,0.8fr)_minmax(230px,1.2fr)]">
    <div className="min-w-0"><p className="text-[16px] font-semibold sm:text-[18px]">Name</p><p className="mt-1 truncate text-[16px] sm:text-[18px]">{boat.name}</p><p className="mt-3 text-[16px] font-semibold sm:text-[18px]">Reg No</p><p className="mt-1 text-[16px] sm:text-[18px]">{boat.registrationNumber}</p><div className="mt-3 flex items-start gap-1"><span className={`mt-1 h-2 w-2 shrink-0 rounded-full ${declined?"bg-red-500":"bg-amber-400"}`} aria-hidden="true"/><span className={`text-[8px] font-medium uppercase leading-4 sm:text-[9px] ${declined?"text-red-500":"text-amber-600"}`}>Admin: {boat.approval}<br/>Wildlife: {boat.wildlifeApproval}</span></div></div>
-   <img src={boat.image} alt={`${boat.name} boat`} className="h-[145px] w-full rounded-[12px] object-cover object-center sm:h-[180px] lg:h-[190px] xl:h-[210px]"/>
+   <BoatImage src={boat.image} alt={`${boat.name} boat`} className="h-[145px] w-full rounded-[12px] object-cover object-center sm:h-[180px] lg:h-[190px] xl:h-[210px]"/>
   </div>
   <button type="button" onClick={onOpen} aria-label={`Open ${boat.name} details`} title="Open details" className="mt-3 flex min-h-9 w-full items-center justify-center gap-2 rounded-[9px] bg-[#162d54] px-4 py-2 text-white transition-colors hover:bg-[#203d6c] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#162d54] focus-visible:ring-offset-2 sm:min-h-10"><img src={infoIcon} alt="" aria-hidden="true" className="h-5 w-5 brightness-0 invert"/><span>Info</span></button>
  </article>;

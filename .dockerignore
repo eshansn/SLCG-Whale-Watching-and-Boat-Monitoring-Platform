@@ -1,6 +1,8 @@
 .git
 .gitignore
 .env
+wwms-gps-transfer
+wwms-maintenance
 .vs
 **/bin
 **/obj

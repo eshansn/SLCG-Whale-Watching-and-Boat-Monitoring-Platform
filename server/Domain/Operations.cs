@@ -33,6 +33,7 @@ public sealed class Boat
     public ApprovalStatus Approval { get; set; }
     public ApprovalStatus WildlifeApproval { get; set; }
     public bool IsDeleted { get; set; }
+    // Compatibility reference updated by aerial-document uploads. API reads derive it from documents.
     public string? ImageUrl { get; set; }
     public int DocumentRequirementsVersion { get; set; } = 1;
     public DateTimeOffset? RegistrationSubmittedAtUtc { get; set; }

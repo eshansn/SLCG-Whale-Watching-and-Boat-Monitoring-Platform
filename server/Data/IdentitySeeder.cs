@@ -15,6 +15,16 @@ public sealed class IdentitySeeder(
 {
     public async Task SeedAsync()
     {
+        await SeedRequiredDataAsync();
+        if (environment.IsDevelopment() &&
+            configuration.GetValue<bool>("DevelopmentMockData:Enabled"))
+        {
+            await SeedDevelopmentMockDataAsync();
+        }
+    }
+
+    private async Task SeedRequiredDataAsync()
+    {
         foreach (var roleName in PortalRoles.All)
         {
             if (!await roleManager.RoleExistsAsync(roleName))
@@ -25,6 +35,11 @@ public sealed class IdentitySeeder(
             }
         }
 
+        await SeedPortalUserAsync(
+            "IdentitySeed:SltdaEmail",
+            "IdentitySeed:SltdaPassword",
+            PortalRoles.Sltda,
+            "SLTDA monitoring officer");
         await SeedPortalUserAsync(
             "IdentitySeed:AdminEmail",
             "IdentitySeed:AdminPassword",
@@ -50,6 +65,10 @@ public sealed class IdentitySeeder(
             "IdentitySeed:ShoreWildlifePassword",
             PortalRoles.ShoreWildlife,
             "development wildlife shore officer");
+    }
+
+    private async Task SeedDevelopmentMockDataAsync()
+    {
         await SeedPortalUserAsync(
             "IdentitySeed:SupervisorEmail",
             "IdentitySeed:SupervisorPassword",
@@ -68,11 +87,8 @@ public sealed class IdentitySeeder(
             PortalRoles.BoatCrew, "development boat crew member", "Nimal Perera");
         await SeedPortalUserAsync("IdentitySeed:PassengerEmail", "IdentitySeed:PassengerPassword",
             PortalRoles.Passenger, "development passenger", "Amara Fernando");
-        if (environment.IsDevelopment())
-        {
-            await SeedDemoAccountsAsync();
-            await SeedOperationsAsync();
-        }
+        await SeedDemoAccountsAsync();
+        await SeedOperationsAsync();
     }
 
     private async Task<ApplicationUser?> SeedPortalUserAsync(
@@ -80,8 +96,7 @@ public sealed class IdentitySeeder(
         string passwordKey,
         string role,
         string description,
-        string? displayName = null,
-        bool ensureConfiguredPassword = false)
+        string? displayName = null)
     {
         var email = configuration[emailKey]?.Trim();
         var password = configuration[passwordKey];
@@ -92,6 +107,9 @@ public sealed class IdentitySeeder(
         }
 
         var user = await userManager.FindByEmailAsync(email);
+        // Existing authorities retain their complete identity and security state.
+        // Seeding is provisioning, never a password reset or role repair operation.
+        if (user is not null) return user;
         if (user is null)
         {
             user = new ApplicationUser
@@ -105,17 +123,6 @@ public sealed class IdentitySeeder(
             EnsureSucceeded(
                 await userManager.CreateAsync(user, password),
                 $"create {description}");
-        }
-        else if (!string.IsNullOrWhiteSpace(displayName) && user.DisplayName != displayName)
-        {
-            user.DisplayName = displayName;
-            EnsureSucceeded(await userManager.UpdateAsync(user), $"update {description}");
-        }
-        if (ensureConfiguredPassword && !await userManager.CheckPasswordAsync(user, password))
-        {
-            var resetToken = await userManager.GeneratePasswordResetTokenAsync(user);
-            EnsureSucceeded(await userManager.ResetPasswordAsync(user, resetToken, password),
-                $"reset {description} password");
         }
 
         if (!await userManager.IsInRoleAsync(user, role))
@@ -150,8 +157,7 @@ public sealed class IdentitySeeder(
                 $"DemoIdentitySeed:{key}Password",
                 role,
                 $"development demo {role} user",
-                displayName,
-                ensureConfiguredPassword: true);
+                displayName);
         }
     }
 
@@ -233,7 +239,6 @@ public sealed class IdentitySeeder(
             boat.WildlifeApproval = ApprovalStatus.Approved;
             boat.MaximumSpeedKnots = 28 + boats.Count;
             boat.LifeJacketCount = item.Item7 + 5; boat.GpsDeviceId = $"WWMS-{item.Item3}";
-            boat.ImageUrl = item.Item8;
             boats.Add(boat);
         }
         await db.SaveChangesAsync();

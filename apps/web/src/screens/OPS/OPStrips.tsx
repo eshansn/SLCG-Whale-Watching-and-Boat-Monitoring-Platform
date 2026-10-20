@@ -1,3 +1,4 @@
+import BoatImage from "../../components/BoatImage";
 import {
   ChangeEvent,
   useMemo,
@@ -23,6 +24,7 @@ type SortOption =
   | "approval-not-approved";
 
 interface Trip {
+  imageUrl?: string;
   id: string;
   vesselName: string;
   registrationNumber: string;
@@ -90,6 +92,7 @@ const OPStrips = () => {
   const trips = useMemo<Trip[]>(() => operationTrips.map((trip:OperationTrip) => {
     const lifecycleState=getTripDisplayState(trip,tripStateNow);
     return {id:trip.id,vesselName:trip.vesselName,registrationNumber:trip.registrationNumber,
+      imageUrl:boats.find(boat=>boat.id===trip.boatId)?.imageUrl,
       departureTime:new Intl.DateTimeFormat('en-LK',{dateStyle:'medium',timeStyle:'short'}).format(new Date(trip.scheduledDepartureUtc)),
       type:trip.type,state:lifecycleState, approval:lifecycleState};
   }),[operationTrips,boats,tripStateNow]);
@@ -383,6 +386,7 @@ const OPStrips = () => {
                     className="border-b border-slate-100 text-xs hover:bg-[#F9FBFF]"
                   >
                     <td className="px-3 py-4 text-center font-medium">
+                      <BoatImage src={trip.imageUrl} alt={trip.vesselName} className="mx-auto mb-2 h-12 w-16 rounded-lg object-cover"/>
                       {trip.vesselName}
                     </td>
 

@@ -1,3 +1,4 @@
+import BoatImage from "../../components/BoatImage";
 import { useState, type ReactNode } from 'react';
 import { ArrowLeft, Download, Eye, Pencil, Ship, Trash2 } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
@@ -53,7 +54,7 @@ export default function BoatDetailsPage() {
     <div className="mt-6 grid gap-6 lg:grid-cols-[360px_1fr]">
       <aside className="space-y-6">
         <section className="overflow-hidden rounded-2xl bg-white shadow-sm">
-          {boat.imageUrl ? <img src={boat.imageUrl} alt={boat.name} className="h-48 w-full object-cover"/> : <div className="grid h-48 place-items-center bg-blue-50"><Ship size={55} className="text-blue-300"/></div>}
+          {boat.imageUrl ? <BoatImage src={boat.imageUrl} alt={boat.name} className="h-48 w-full object-cover"/> : <div className="grid h-48 place-items-center bg-blue-50"><Ship size={55} className="text-blue-300"/></div>}
           <div className="p-6">
             <h1 className="text-2xl font-semibold">{boat.name}</h1>
             <p className="text-sm text-slate-500">{boat.registrationNumber}</p>

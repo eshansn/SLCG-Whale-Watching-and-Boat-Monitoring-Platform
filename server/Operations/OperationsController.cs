@@ -22,7 +22,6 @@ public sealed class OperationsController(WhaleWatchingDbContext db, IHubContext<
     GpsHistoryService gpsHistory, GpsTrackerStatus trackerStatus, TripTrackingService tripTracking,
     BoatDocumentService boatDocuments) : ControllerBase
 {
-    private const int MaxInlineImageUrlLength = 1_000_000;
     private static readonly TimeSpan MaximumRouteHistoryRange = TimeSpan.FromDays(30);
     private static readonly TimeSpan UnassignedRouteBreak = TimeSpan.FromMinutes(30);
 
@@ -185,10 +184,11 @@ public sealed class OperationsController(WhaleWatchingDbContext db, IHubContext<
             x.Id, x.OwnerId, OwnerName = x.Owner.DisplayName, x.Name, x.RegistrationNumber,
             x.RegistrationDate, x.HullNumber, x.LengthMeters, x.WidthMeters, x.MaximumSpeedKnots,
             x.MaximumCapacity, x.LifeJacketCount, x.GpsDeviceId, x.IsPatrolBoat, x.Approval, x.WildlifeApproval,
-            x.DocumentRequirementsVersion, x.RegistrationSubmittedAtUtc,
-            ImageUrl = x.ImageUrl != null && x.ImageUrl.Length <= MaxInlineImageUrlLength ? x.ImageUrl : null
+            x.DocumentRequirementsVersion, x.RegistrationSubmittedAtUtc
         }).ToListAsync(ct);
         var boatIds = boats.Select(boat => boat.Id).ToArray();
+        var imageUrls = await BoatDisplayImage.GetUrlsAsync(db.BoatDocuments.AsNoTracking()
+            .Where(document => boatIds.Contains(document.BoatId)), ct);
         var documents = await db.BoatDocuments.AsNoTracking().Where(document => boatIds.Contains(document.BoatId))
             .Include(document => document.UploadedByUser).Include(document => document.VerifiedByUser)
             .OrderBy(document => document.Name).ThenByDescending(document => document.Version).ToListAsync(ct);
@@ -197,7 +197,7 @@ public sealed class OperationsController(WhaleWatchingDbContext db, IHubContext<
         return Ok(boats.Select(boat => new BoatDto(boat.Id, boat.OwnerId, boat.OwnerName, boat.Name,
             boat.RegistrationNumber, boat.RegistrationDate, boat.HullNumber, boat.LengthMeters, boat.WidthMeters,
             boat.MaximumSpeedKnots, boat.MaximumCapacity, boat.LifeJacketCount, boat.GpsDeviceId, boat.IsPatrolBoat,
-            boat.Approval.ToString(), boat.WildlifeApproval.ToString(), boat.ImageUrl,
+            boat.Approval.ToString(), boat.WildlifeApproval.ToString(), imageUrls.GetValueOrDefault(boat.Id),
             boat.DocumentRequirementsVersion, boat.RegistrationSubmittedAtUtc,
             documentsByBoat[boat.Id].ToArray())).ToList());
     }
@@ -209,6 +209,8 @@ public sealed class OperationsController(WhaleWatchingDbContext db, IHubContext<
         var boats = await ScopeBoats(db.Boats.AsNoTracking()).OrderBy(x => x.Name)
             .ToListAsync(ct);
         var boatIds = boats.Select(x => x.Id).ToArray();
+        var imageUrls = await BoatDisplayImage.GetUrlsAsync(db.BoatDocuments.AsNoTracking()
+            .Where(document => boatIds.Contains(document.BoatId)), ct);
         var trips = await ScopeTrips(db.Trips.AsNoTracking()).Where(x =>
                 boatIds.Contains(x.BoatId) && x.Status == TripStatus.Ongoing)
             .Include(x => x.CrewAssignments).ThenInclude(x => x.CrewUser)
@@ -237,7 +239,7 @@ public sealed class OperationsController(WhaleWatchingDbContext db, IHubContext<
             var onboard = trip is not null && onboardByTrip.TryGetValue(trip.Id, out var counts) ? counts : null;
             var gps = telemetry.FirstOrDefault(x => x.DeviceId == boat.GpsDeviceId);
             var crew = trip?.CrewAssignments ?? [];
-            return new VesselMapDto(boat.Id, boat.Name, boat.RegistrationNumber, boat.ImageUrl, boat.IsPatrolBoat,
+            return new VesselMapDto(boat.Id, boat.Name, boat.RegistrationNumber, imageUrls.GetValueOrDefault(boat.Id), boat.IsPatrolBoat,
                 trip?.Id,
                 boat.Approval.ToString(), boat.WildlifeApproval.ToString(),
                 trip?.Status.ToString() ?? "Idle",
@@ -275,6 +277,7 @@ public sealed class OperationsController(WhaleWatchingDbContext db, IHubContext<
     }
 
     [HttpGet("trips/{id:guid}/crew")]
+    [Authorize(Roles = $"{PortalRoles.Admin},{PortalRoles.Wildlife},{PortalRoles.Ops},{PortalRoles.ShoreCrew},{PortalRoles.BoatOwner},{PortalRoles.BoatCrew}")]
     public async Task<ActionResult<IReadOnlyList<TripCrewDto>>> TripCrew(Guid id, CancellationToken ct)
     {
         if (!await ScopeTrips(db.Trips.AsNoTracking()).AnyAsync(x => x.Id == id, ct)) return NotFound();
@@ -558,7 +561,7 @@ public sealed class OperationsController(WhaleWatchingDbContext db, IHubContext<
             WidthMeters = request.WidthMeters, MaximumCapacity = request.MaximumCapacity,
             MaximumSpeedKnots = request.MaximumSpeedKnots,
             LifeJacketCount = request.LifeJacketCount, GpsDeviceId = gpsDeviceId,
-            Approval = ApprovalStatus.Pending, WildlifeApproval = ApprovalStatus.Pending, ImageUrl = request.ImageUrl,
+            Approval = ApprovalStatus.Pending, WildlifeApproval = ApprovalStatus.Pending,
             DocumentRequirementsVersion = BoatDocumentRequirements.CurrentVersion };
         db.Boats.Add(boat);
         try
@@ -709,6 +712,21 @@ public sealed class OperationsController(WhaleWatchingDbContext db, IHubContext<
         if (!result.Succeeded) return Conflict(new { message = result.Error });
         await hub.Clients.All.SendAsync("operationsChanged", new { entity = "boatDocument", id = documentId, boatId }, ct);
         return NoContent();
+    }
+
+    [HttpGet("boats/{boatId:guid}/image/{documentId:guid}")]
+    [Authorize(Roles = $"{PortalRoles.Admin},{PortalRoles.Wildlife},{PortalRoles.ShoreWildlife},{PortalRoles.Ops},{PortalRoles.ShoreCrew},{PortalRoles.BoatOwner},{PortalRoles.BoatCrew}")]
+    public async Task<IActionResult> BoatImage(Guid boatId, Guid documentId, CancellationToken ct)
+    {
+        var allowedBoats = ScopeBoats(db.Boats.AsNoTracking()).Select(x => x.Id);
+        var document = await BoatDisplayImage.Photographs(db.BoatDocuments.AsNoTracking())
+            .Where(x => x.BoatId == boatId && x.Id == documentId && allowedBoats.Contains(x.BoatId))
+            .Select(x => new { x.Content, x.ContentType }).SingleOrDefaultAsync(ct);
+        Response.Headers.CacheControl = "private, no-store";
+        Response.Headers["X-Content-Type-Options"] = "nosniff";
+        return document?.Content is { Length: > 0 }
+            ? File(document.Content, document.ContentType)
+            : NotFound();
     }
 
     [HttpGet("boats/{boatId:guid}/documents/{documentId:guid}")]
@@ -1163,7 +1181,6 @@ public sealed record CreateBoatRequest(
     [Range(typeof(decimal), "0.01", "100000")] decimal LengthMeters,
     [Range(typeof(decimal), "0.01", "100000")] decimal WidthMeters,
     [Range(1, 100000)] int MaximumCapacity,
-    string? ImageUrl,
     [Range(typeof(decimal), "0", "9999.99")] decimal MaximumSpeedKnots = 0,
     [Range(0, 100000)] int LifeJacketCount = 0,
     [StringLength(128)] string? GpsDeviceId = null);

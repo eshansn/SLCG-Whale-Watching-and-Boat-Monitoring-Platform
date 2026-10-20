@@ -3,6 +3,7 @@ namespace WhaleWatching.Api.Auth;
 public static class PortalRoles
 {
     public const string Admin = "Admin";
+    public const string Sltda = "SLTDA";
     public const string Ops = "OPS";
     public const string ShoreCrew = "ShoreCrew";
     public const string Wildlife = "Wildlife";
@@ -16,6 +17,7 @@ public static class PortalRoles
     public static readonly string[] All =
     [
         Admin,
+        Sltda,
         Ops,
         ShoreCrew,
         Wildlife,

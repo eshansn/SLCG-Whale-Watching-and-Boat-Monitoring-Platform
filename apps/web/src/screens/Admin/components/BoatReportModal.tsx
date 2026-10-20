@@ -1,3 +1,4 @@
+import { fetchBoatImage } from "../../../operations/boatImage";
 import { useEffect, useMemo, useState } from 'react';
 import { CalendarDays, Download, LoaderCircle, X } from 'lucide-react';
 import { jsPDF } from 'jspdf';
@@ -251,7 +252,10 @@ async function createBoatReportPdf({
 
   const boatImageSource = apiBoat?.imageUrl ?? boat.imageUrl;
   const boatImage = boatImageSource
-    ? await preparePdfImage(boatImageSource).catch(() => undefined)
+    ? await (async () => {
+        const url = URL.createObjectURL(await fetchBoatImage(boatImageSource, token));
+        try { return await preparePdfImage(url); } finally { URL.revokeObjectURL(url); }
+      })().catch(() => undefined)
     : undefined;
   const vesselImageHeight = Math.max(24, Math.min(78, 266 - y));
   await attachedImage('Vessel photograph', boatImage, vesselImageHeight);

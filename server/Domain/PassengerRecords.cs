@@ -29,8 +29,14 @@ public sealed class PassengerComplaint
     public Guid TripId { get; set; }
     public Trip Trip { get; set; } = null!;
     public string Type { get; set; } = string.Empty;
+    public string Kind { get; set; } = "Complaint";
     public string Message { get; set; } = string.Empty;
     public DateTimeOffset CreatedAtUtc { get; set; }
+    public ComplaintStatus Status { get; set; }
+    public DateTimeOffset UpdatedAtUtc { get; set; }
+    public Guid Version { get; set; } = Guid.NewGuid();
+    public ICollection<ComplaintAssignment> Assignments { get; set; } = [];
+    public ICollection<ComplaintEvent> Events { get; set; } = [];
     public ICollection<ComplaintImage> Images { get; set; } = [];
 }
 

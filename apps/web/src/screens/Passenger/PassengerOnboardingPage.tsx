@@ -88,6 +88,7 @@ function PassengerOnboardingPage() {
 
   const [message, setMessage] = useState("");
   const [complaintType, setComplaintType] = useState("");
+  const [recordKind, setRecordKind] = useState<'Complaint' | 'Inquiry'>('Complaint');
   const [evidenceFile, setEvidenceFile] = useState<File | null>(
     null,
   );
@@ -260,7 +261,7 @@ function PassengerOnboardingPage() {
     try {
       setSubmittingComplaint(true);
       setFormStatus("");
-      await submitComplaint(complaintType, message.trim(), evidenceFile);
+      await submitComplaint(complaintType, message.trim(), evidenceFile, recordKind);
       setFormStatus("Your report has been recorded successfully.");
       setComplaintType("");
       setMessage("");
@@ -410,13 +411,16 @@ function PassengerOnboardingPage() {
           </section>
 
           <section className="mt-[31px]">
-            <h2 className="m-0 font-montserrat text-[16px] leading-[150%] font-bold text-white min-[1200px]:text-[clamp(22px,1.4vw,30px)]">Submit a Complaint</h2>
+            <h2 className="m-0 font-montserrat text-[16px] leading-[150%] font-bold text-white min-[1200px]:text-[clamp(22px,1.4vw,30px)]">Submit a Complaint or Inquiry</h2>
 
             <form
               className="mt-[9px]"
               onSubmit={handleComplaintSubmit}
             >
               <label className="sr-only" htmlFor="complaintType">Complaint type</label>
+              <label className="sr-only" htmlFor="recordKind">Complaint or inquiry</label>
+              <select id="recordKind" aria-describedby="case-kind-help" value={recordKind} onChange={event => setRecordKind(event.target.value as 'Complaint' | 'Inquiry')} className="mb-[7px] h-[33px] w-full rounded-[4px] border border-white bg-black/30 px-[10px] font-poppins text-[9px] text-white min-[1200px]:text-[clamp(12px,.85vw,17px)]"><option value="Complaint">Complaint</option><option value="Inquiry">Inquiry</option></select>
+              <p id="case-kind-help" className="mb-3 text-[11px] leading-5 text-white/80">{recordKind === 'Complaint' ? 'Report a problem, safety concern, service issue, or misconduct requiring review or corrective action.' : 'Request information, clarification, assistance, or an explanation.'}</p>
               <select id="complaintType" value={complaintType} onChange={(event)=>{setComplaintType(event.target.value);setFormStatus("")}} className="mb-[7px] h-[33px] w-full rounded-[4px] border border-white bg-black/30 px-[10px] font-poppins text-[9px] text-white outline-none focus:border-[#5cefdc] min-[1200px]:text-[clamp(12px,.85vw,17px)]" required>
                 <option value="">Choose complaint type</option>
                 <option value="Safety concern">Safety concern</option>

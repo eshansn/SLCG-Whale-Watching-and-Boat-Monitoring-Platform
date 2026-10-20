@@ -1,3 +1,4 @@
+import BoatImage from "../../components/BoatImage";
 import { useEffect, useMemo, useState } from 'react';
 import { CalendarDays, CircleAlert, Clock3, Ship } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -73,7 +74,7 @@ export default function BoatCrewDashboard() {
             <div className="mt-3 space-y-1.5 text-[10px] text-slate-500"><p className="flex items-center gap-1.5"><CalendarDays size={12} className="text-blue-500"/>{departure.toLocaleDateString('en-LK', { day: '2-digit', month: 'short' })}</p><p className="flex items-center gap-1.5"><Clock3 size={12} className="text-blue-500"/>{departure.toLocaleTimeString('en-LK', { hour: '2-digit', minute: '2-digit' })}</p></div>
             <div className="mt-2"><Status value={trip.status}/></div>
           </div>
-          {boat?.imageUrl ? <img src={boat.imageUrl} alt={boat.name} className="h-[112px] w-full rounded-2xl object-cover"/> : <div className="flex h-[112px] w-full items-center justify-center rounded-2xl bg-gradient-to-br from-blue-50 to-slate-100"><Ship className="text-blue-300"/></div>}
+          {boat?.imageUrl ? <BoatImage src={boat.imageUrl} alt={boat.name} className="h-[112px] w-full rounded-2xl object-cover"/> : <div className="flex h-[112px] w-full items-center justify-center rounded-2xl bg-gradient-to-br from-blue-50 to-slate-100"><Ship className="text-blue-300"/></div>}
         </div>
         <button onClick={() => nav(`/crew/trip-info/${trip.id}`)} className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-xl bg-[#162d54] py-2.5 text-[10px] font-semibold text-white transition hover:bg-[#203d6c]">Trip information <CircleAlert size={13}/></button>
       </article>;

@@ -27,6 +27,11 @@ const Login = () => {
         return;
       }
 
+      if (session.roles.includes('SLTDA')) {
+        navigate(requestedPath?.startsWith('/sltda') ? requestedPath : '/sltda', { replace: true });
+        return;
+      }
+
       if (session.roles.includes('OPS')) {
         navigate(requestedPath?.startsWith('/ops') ? requestedPath : '/ops', { replace: true });
         return;

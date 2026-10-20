@@ -1,3 +1,4 @@
+import BoatImage from "../../components/BoatImage";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Copy, Download, Mic, Search, Square } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
@@ -70,7 +71,7 @@ async function copyText(text: string) {
 
 export default function BoatCrewTripDetails() {
   const { tripId } = useParams<{ tripId: string }>();
-  const { trips, loading, error, reload, token } = useOperations();
+  const { trips, boats, loading, error, reload, token } = useOperations();
   const trip = trips.find((item) => item.id === tripId);
   const [passengers, setPassengers] = useState<TripPassenger[]>([]);
   const [passengerError, setPassengerError] = useState("");
@@ -279,6 +280,7 @@ export default function BoatCrewTripDetails() {
       <div className="mx-auto w-full max-w-[1200px] px-4 pb-20 sm:px-7 lg:px-10">
         <section className="grid grid-cols-[130px_minmax(0,1fr)] items-center gap-5 sm:grid-cols-[220px_minmax(0,1fr)] sm:gap-10 lg:grid-cols-[280px_minmax(0,320px)] lg:justify-center">
           <div>
+            <BoatImage src={boats.find(boat => boat.id === trip.boatId)?.imageUrl} alt={trip.vesselName} className="mb-4 h-40 w-full rounded-xl object-cover"/>
             <Label label="Boat" value={trip.vesselName} />
             <Label
               label="Time"

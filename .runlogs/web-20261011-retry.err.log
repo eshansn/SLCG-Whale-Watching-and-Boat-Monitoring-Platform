@@ -1,0 +1,122 @@
+10:54:42 AM [vite] http proxy error: /api/auth/login
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1430:18)
+    at afterConnectMultiple (node:net:2099:7)
+10:54:48 AM [vite] http proxy error: /api/auth/login
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1430:18)
+    at afterConnectMultiple (node:net:2099:7)
+10:54:49 AM [vite] http proxy error: /api/auth/login
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1430:18)
+    at afterConnectMultiple (node:net:2099:7)
+10:54:50 AM [vite] http proxy error: /api/auth/login
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1430:18)
+    at afterConnectMultiple (node:net:2099:7)
+10:54:51 AM [vite] http proxy error: /api/auth/login
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1430:18)
+    at afterConnectMultiple (node:net:2099:7)
+10:58:06 AM [vite] http proxy error: /api/auth/login
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1430:18)
+    at afterConnectMultiple (node:net:2099:7)
+10:58:40 AM [vite] http proxy error: /api/auth/login
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1430:18)
+    at afterConnectMultiple (node:net:2099:7)
+10:58:50 AM [vite] http proxy error: /api/auth/login
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1430:18)
+    at afterConnectMultiple (node:net:2099:7)
+10:58:57 AM [vite] http proxy error: /api/auth/login
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1430:18)
+    at afterConnectMultiple (node:net:2099:7)
+10:58:58 AM [vite] http proxy error: /api/auth/login
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1430:18)
+    at afterConnectMultiple (node:net:2099:7)
+11:00:36 AM [vite] http proxy error: /api/auth/register
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1430:18)
+    at afterConnectMultiple (node:net:2099:7)
+11:00:42 AM [vite] http proxy error: /api/auth/register
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1430:18)
+    at afterConnectMultiple (node:net:2099:7)
+11:00:59 AM [vite] http proxy error: /api/auth/register
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1430:18)
+    at afterConnectMultiple (node:net:2099:7)
+11:02:53 AM [vite] http proxy error: /api/auth/login
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1430:18)
+    at afterConnectMultiple (node:net:2099:7)
+11:03:51 AM [vite] (client) [console.warn] THREE.WebGLRenderer: WEBGL_lose_context extension not supported.
+11:04:06 AM [vite] http proxy error: /api/auth/login
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1430:18)
+    at afterConnectMultiple (node:net:2099:7)
+11:04:08 AM [vite] http proxy error: /api/auth/login
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1430:18)
+    at afterConnectMultiple (node:net:2099:7)
+11:04:08 AM [vite] http proxy error: /api/auth/login
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1430:18)
+    at afterConnectMultiple (node:net:2099:7)
+11:04:09 AM [vite] http proxy error: /api/auth/login
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1430:18)
+    at afterConnectMultiple (node:net:2099:7)
+11:04:09 AM [vite] http proxy error: /api/auth/login
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1430:18)
+    at afterConnectMultiple (node:net:2099:7)
+11:04:09 AM [vite] http proxy error: /api/auth/login
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1430:18)
+    at afterConnectMultiple (node:net:2099:7)
+11:12:48 AM [vite] (client) [console.error] [2026-10-11T05:42:48.063Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+11:17:48 AM [vite] (client) [console.error] [2026-10-11T05:47:47.844Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+11:17:56 AM [vite] (client) [console.error] [2026-10-11T05:47:55.733Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+11:18:02 AM [vite] (client) [console.error] [2026-10-11T05:48:02.574Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+11:18:08 AM [vite] (client) [console.error] [2026-10-11T05:48:07.800Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+11:18:08 AM [vite] (client) [console.error] [2026-10-11T05:48:07.859Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+11:18:08 AM [vite] (client) [console.error] [2026-10-11T05:48:07.860Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+11:18:17 AM [vite] (client) [console.error] [2026-10-11T05:48:17.213Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+11:18:36 AM [vite] (client) [console.error] [2026-10-11T05:48:36.511Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+11:19:41 AM [vite] (client) [console.error] [2026-10-11T05:49:41.264Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+11:19:55 AM [vite] (client) [console.error] [2026-10-11T05:49:55.629Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+11:19:59 AM [vite] (client) [console.error] [2026-10-11T05:49:59.504Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+11:20:02 AM [vite] (client) [console.error] [2026-10-11T05:50:01.934Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+11:22:57 AM [vite] (client) [console.error] [2026-10-11T05:52:56.944Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+11:23:27 AM [vite] (client) [console.error] [2026-10-11T05:53:27.387Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+11:23:30 AM [vite] (client) [console.error] [2026-10-11T05:53:30.106Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+11:23:30 AM [vite] (client) [console.error] [2026-10-11T05:53:30.110Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+11:23:30 AM [vite] (client) [console.error] [2026-10-11T05:53:30.110Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+11:24:55 AM [vite] (client) [console.error] [2026-10-11T05:54:55.557Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+11:25:03 AM [vite] (client) [console.error] [2026-10-11T05:55:02.966Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+11:27:35 AM [vite] (client) [console.error] [2026-10-11T05:57:34.974Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+11:27:37 AM [vite] (client) [console.error] [2026-10-11T05:57:36.917Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+11:31:40 AM [vite] (client) [console.warn] [2026-10-11T06:01:40.258Z] Warning: The page is being frozen, this will likely lead to the connection being closed and messages being lost. For more information see the docs at https://learn.microsoft.com/aspnet/core/signalr/javascript-client#bsleep
+11:31:40 AM [vite] (client) [console.warn] [2026-10-11T06:01:40.259Z] Warning: The page is being frozen, this will likely lead to the connection being closed and messages being lost. For more information see the docs at https://learn.microsoft.com/aspnet/core/signalr/javascript-client#bsleep
+11:40:34 AM [vite] (client) [console.error] [2026-10-11T06:10:34.588Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+8:45:11 AM [vite] (client) [console.error] [2026-10-12T03:15:13.767Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+8:48:52 AM [vite] (client) [console.error] [2026-10-12T03:18:54.413Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+12:21:17 PM [vite] (client) [console.error] [2026-10-12T06:51:17.961Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+12:21:27 PM [vite] (client) [console.error] [2026-10-12T06:51:28.233Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+12:21:29 PM [vite] (client) [console.error] [2026-10-12T06:51:30.533Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+12:21:38 PM [vite] (client) [console.error] [2026-10-12T06:51:39.242Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+12:21:41 PM [vite] (client) [console.error] [2026-10-12T06:51:42.140Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+12:21:58 PM [vite] (client) [console.error] [2026-10-12T06:51:59.338Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+12:22:22 PM [vite] (client) [console.error] [2026-10-12T06:52:23.605Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+12:22:43 PM [vite] (client) [console.error] [2026-10-12T06:52:43.930Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+12:22:57 PM [vite] (client) [console.error] [2026-10-12T06:52:58.199Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+12:24:24 PM [vite] (client) [console.error] [2026-10-12T06:54:25.539Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+12:24:35 PM [vite] (client) [console.error] [2026-10-12T06:54:36.714Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+12:24:38 PM [vite] (client) [console.error] [2026-10-12T06:54:39.421Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+12:55:47 PM [vite] (client) [console.error] [2026-10-12T07:25:48.353Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.
+12:55:57 PM [vite] (client) [console.error] [2026-10-12T07:25:58.737Z] Error: Failed to start the connection: Error: The connection was stopped during negotiation.

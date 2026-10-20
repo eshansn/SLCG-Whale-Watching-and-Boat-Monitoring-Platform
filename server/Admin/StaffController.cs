@@ -16,7 +16,7 @@ public sealed class StaffController(UserManager<ApplicationUser> users) : Contro
 {
     internal static readonly string[] StaffRoles =
     [
-        PortalRoles.Admin, PortalRoles.Ops, PortalRoles.ShoreCrew, PortalRoles.Wildlife,
+        PortalRoles.Admin, PortalRoles.Sltda, PortalRoles.Ops, PortalRoles.ShoreCrew, PortalRoles.Wildlife,
         PortalRoles.ShoreWildlife, PortalRoles.Supervisor, PortalRoles.HarbourOfficer
     ];
     internal static readonly string[] WildlifeManagedRoles =
@@ -152,17 +152,17 @@ public sealed class StaffController(UserManager<ApplicationUser> users) : Contro
 public sealed record StaffDto(Guid Id, string DisplayName, string UserName, string Role,
     string? PhoneNumber, string Email, bool IsActive);
 public sealed record CreateStaffRequest(
-    [property: Required, StringLength(160, MinimumLength = 1)] string DisplayName,
-    [property: StringLength(256, MinimumLength = 1)] string? UserName,
-    [property: Required, EmailAddress, StringLength(256)] string Email,
-    [property: Required, StringLength(32)] string Role,
-    [property: Required, MinLength(12)] string Password,
-    [property: StringLength(32)] string? PhoneNumber);
+    [Required, StringLength(160, MinimumLength = 1)] string DisplayName,
+    [StringLength(256, MinimumLength = 1)] string? UserName,
+    [Required, EmailAddress, StringLength(256)] string Email,
+    [Required, StringLength(32)] string Role,
+    [Required, MinLength(12)] string Password,
+    [StringLength(32)] string? PhoneNumber);
 public sealed record UpdateStaffRequest(
-    [property: Required, StringLength(160, MinimumLength = 1)] string DisplayName,
-    [property: StringLength(256, MinimumLength = 1)] string? UserName,
-    [property: Required, EmailAddress, StringLength(256)] string Email,
-    [property: Required, StringLength(32)] string Role,
-    [property: StringLength(32)] string? PhoneNumber,
+    [Required, StringLength(160, MinimumLength = 1)] string DisplayName,
+    [StringLength(256, MinimumLength = 1)] string? UserName,
+    [Required, EmailAddress, StringLength(256)] string Email,
+    [Required, StringLength(32)] string Role,
+    [StringLength(32)] string? PhoneNumber,
     bool IsActive);
-public sealed record ResetStaffPasswordRequest([property: Required, MinLength(12)] string TemporaryPassword);
+public sealed record ResetStaffPasswordRequest([Required, MinLength(12)] string TemporaryPassword);

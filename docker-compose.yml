@@ -40,6 +40,8 @@ services:
         Encrypt=True;TrustServerCertificate=True;
       Jwt__SigningKey: "${JWT_SIGNING_KEY:?Set JWT_SIGNING_KEY in your .env file}"
       TrackMyCar__ApiKey: "${TrackMyCar__ApiKey:-}"
+      TrackMyCar__Enabled: "${TrackMyCar__Enabled:-true}"
+      DevelopmentMockData__Enabled: "${DevelopmentMockData__Enabled:-false}"
       IdentitySeed__AdminEmail: "${INITIAL_ADMIN_EMAIL:-admin@wwms.test}"
       IdentitySeed__AdminPassword: "${INITIAL_ADMIN_PASSWORD:-Admin#WWMS2026!Secure}"
       IdentitySeed__OpsEmail: "${INITIAL_OPS_EMAIL:-ops@wwms.test}"

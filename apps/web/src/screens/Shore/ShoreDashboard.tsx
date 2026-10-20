@@ -1,3 +1,4 @@
+import BoatImage from "../../components/BoatImage";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../auth/useAuth";
 import { Icon } from "../../components/ui/icon";
@@ -8,7 +9,7 @@ import { useTripStateClock } from "../../operations/useTripStateClock";
 const ShoreDashboard = () => {
   const navigate = useNavigate();
   const { session } = useAuth();
-  const { trips: shoreTrips } = useOperations();
+  const { trips: shoreTrips, boats } = useOperations();
   const tripStateNow = useTripStateClock();
   const activeShoreTrips = shoreTrips.filter((trip) => isOperationalTripVisible(trip, tripStateNow));
   const name = session?.email.split("@")[0] ?? "Shore Officer";
@@ -44,7 +45,7 @@ const ShoreDashboard = () => {
             <div className="mt-5 space-y-3">
               {activeShoreTrips.slice(0, 3).map((trip) => (
                 <button key={trip.id} type="button" onClick={() => navigate(`/shore/trips/${trip.id}`)} className="flex w-full items-center gap-3 rounded-xl bg-indigo-50/80 p-3 text-left transition hover:bg-indigo-100">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white text-indigo-700"><Icon name="vessel" size={23} /></span>
+                  <BoatImage src={boats.find(boat => boat.id === trip.boatId)?.imageUrl} alt={trip.vesselName} className="h-10 w-14 shrink-0 rounded-lg object-cover"/>
                   <span className="min-w-0 flex-1"><strong className="block truncate text-xs text-[#14223d]">{trip.vesselName}</strong><span className="mt-1 block text-[10px] text-slate-500">{formatTripDate(trip.scheduledDepartureUtc)}</span></span>
                   <span className="rounded-full border border-indigo-300 bg-white px-2 py-1 text-[9px] text-indigo-700">Info</span>
                 </button>

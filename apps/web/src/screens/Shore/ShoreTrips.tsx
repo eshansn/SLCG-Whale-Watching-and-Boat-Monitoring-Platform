@@ -1,3 +1,4 @@
+import BoatImage from "../../components/BoatImage";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Icon } from "../../components/ui/icon";
@@ -10,7 +11,7 @@ const ShoreTrips = () => {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState("time");
-  const { trips: shoreTrips } = useOperations();
+  const { trips: shoreTrips, boats } = useOperations();
   const tripStateNow = useTripStateClock();
   const visibleTrips = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -39,7 +40,7 @@ const ShoreTrips = () => {
           <table className="w-full min-w-[760px] text-left text-sm">
             <thead className="bg-slate-50/70 text-xs text-slate-500"><tr><th className="px-8 py-4 font-medium">Vessel</th><th className="px-5 py-4 font-medium">Owner</th><th className="px-5 py-4 font-medium">Registration No.</th><th className="px-5 py-4 font-medium">Scheduled Time</th><th className="px-5 py-4 font-medium">Approval</th><th className="px-8 py-4 text-right font-medium">Action</th></tr></thead>
             <tbody className="divide-y divide-slate-100">
-              {visibleTrips.map((trip) => <TripRow key={trip.id} trip={trip} onOpen={() => navigate(`/shore/trips/${trip.id}`)} />)}
+              {visibleTrips.map((trip) => <TripRow key={trip.id} trip={trip} imageUrl={boats.find(boat => boat.id === trip.boatId)?.imageUrl} onOpen={() => navigate(`/shore/trips/${trip.id}`)} />)}
             </tbody>
           </table>
         </div>
@@ -47,7 +48,7 @@ const ShoreTrips = () => {
         <div className="divide-y divide-slate-100 md:hidden">
           {visibleTrips.map((trip) => (
             <button key={trip.id} type="button" onClick={() => navigate(`/shore/trips/${trip.id}`)} className="block w-full p-5 text-left transition hover:bg-slate-50">
-              <div className="flex items-start justify-between gap-3"><strong className="text-sm text-[#14223d]">{trip.vesselName}</strong><Status status={trip.status} /></div>
+              <div className="flex items-start justify-between gap-3"><strong className="flex items-center gap-3 text-sm text-[#14223d]"><BoatImage src={boats.find(boat => boat.id === trip.boatId)?.imageUrl} alt={trip.vesselName} className="h-12 w-16 rounded-lg object-cover"/>{trip.vesselName}</strong><Status status={trip.status} /></div>
               <p className="mt-2 text-xs text-slate-500">{trip.registrationNumber} · {trip.ownerName}</p><p className="mt-1 text-xs text-slate-400">{formatTripDate(trip.scheduledDepartureUtc)}</p>
             </button>
           ))}
@@ -58,8 +59,8 @@ const ShoreTrips = () => {
   );
 };
 
-function TripRow({ trip, onOpen }: { trip: Trip; onOpen: () => void }) {
-  return <tr className="transition hover:bg-slate-50/70"><td className="px-8 py-5 font-medium text-[#14223d]">{trip.vesselName}</td><td className="px-5 py-5 text-slate-600">{trip.ownerName}</td><td className="px-5 py-5 text-slate-600">{trip.registrationNumber}</td><td className="px-5 py-5 text-slate-600">{formatTripDate(trip.scheduledDepartureUtc)}</td><td className="px-5 py-5"><Status status={trip.status} /></td><td className="px-8 py-5 text-right"><button type="button" onClick={onOpen} aria-label={`Review ${trip.vesselName}`} title="Review" className="rounded-full border border-indigo-200 p-2 text-indigo-700 transition hover:bg-indigo-50"><Eye size={18}/></button></td></tr>;
+function TripRow({ trip, imageUrl, onOpen }: { trip: Trip; imageUrl?: string; onOpen: () => void }) {
+  return <tr className="transition hover:bg-slate-50/70"><td className="px-8 py-5 font-medium text-[#14223d]"><span className="flex items-center gap-3"><BoatImage src={imageUrl} alt={trip.vesselName} className="h-12 w-16 rounded-lg object-cover"/>{trip.vesselName}</span></td><td className="px-5 py-5 text-slate-600">{trip.ownerName}</td><td className="px-5 py-5 text-slate-600">{trip.registrationNumber}</td><td className="px-5 py-5 text-slate-600">{formatTripDate(trip.scheduledDepartureUtc)}</td><td className="px-5 py-5"><Status status={trip.status} /></td><td className="px-8 py-5 text-right"><button type="button" onClick={onOpen} aria-label={`Review ${trip.vesselName}`} title="Review" className="rounded-full border border-indigo-200 p-2 text-indigo-700 transition hover:bg-indigo-50"><Eye size={18}/></button></td></tr>;
 }
 
 function Status({ status }: { status: string }) {

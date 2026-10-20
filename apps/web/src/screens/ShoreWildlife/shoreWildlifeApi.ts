@@ -2,8 +2,8 @@ import { HubConnectionBuilder } from '@microsoft/signalr';
 import { API_BASE_URL as BASE } from '../../api/httpClient';
 const CONNECTION_RETRY_DELAYS_MS=[1000,5000,10000,30000] as const;
 export interface Count{adult:number;child:number;small:number;total:number}
-export interface WildlifeTrip{id:string;boatName:string;registrationNumber:string;ownerName:string;scheduledDepartureUtc:string;route:string;status:string;registeredPassengers:number;monitoringStatus:string}
-export interface Attendance{tripId:string;boatName:string;registrationNumber:string;ownerName:string;scheduledDepartureUtc:string;route:string;tripStatus:string;local:Count;foreign:Count;totalPresent:number;lastUpdatedUtc:string}
+export interface WildlifeTrip{id:string;boatId:string;imageUrl?:string;boatName:string;registrationNumber:string;ownerName:string;scheduledDepartureUtc:string;route:string;status:string;registeredPassengers:number;monitoringStatus:string}
+export interface Attendance{tripId:string;imageUrl?:string;boatName:string;registrationNumber:string;ownerName:string;scheduledDepartureUtc:string;route:string;tripStatus:string;local:Count;foreign:Count;totalPresent:number;lastUpdatedUtc:string}
 export type SignatureType='Supervisor'|'HarbourOfficer';
 export type SignatureRequestStatus='Pending'|'Signed'|'Declined'|'Cancelled'|'Superseded';
 export interface SignatureUser{id:string;fullName:string;username:string;email:string;role:SignatureType}
@@ -33,7 +33,7 @@ export function watchAttendance(token:string,onChange:()=>void){
   if(refreshAfterStart)notifyChange();
   refreshAfterStart=false;
  };
- connection.on('operationsChanged',(event:{entity?:string})=>{if(event?.entity?.startsWith('passengerAttendance'))notifyChange()});
+ connection.on('operationsChanged',(event:{entity?:string})=>{if(event?.entity?.startsWith('passengerAttendance')||event?.entity==='boatDocument'||event?.entity==='boat')notifyChange()});
  connection.on('wildlifeRecordChanged',notifyChange);
  connection.on('signatureRequestChanged',notifyChange);
  connection.onreconnected(notifyChange);

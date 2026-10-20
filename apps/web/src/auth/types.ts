@@ -1,5 +1,6 @@
 export const PORTAL_ROLES = [
   'Admin',
+  'SLTDA',
   'OPS',
   'ShoreCrew',
   'Wildlife',

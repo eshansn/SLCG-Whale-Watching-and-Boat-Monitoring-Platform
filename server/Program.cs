@@ -17,6 +17,7 @@ using WhaleWatching.Api.Gps;
 using WhaleWatching.Api.Health;
 using WhaleWatching.Api.Operations;
 using WhaleWatching.Api.Realtime;
+using WhaleWatching.Api.Complaints;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -108,6 +109,8 @@ builder.Services.AddAuthentication(options =>
     });
 
 builder.Services.AddAuthorizationBuilder()
+    .AddPolicy(PortalPolicies.PassengerMonitoring, policy => policy.RequireRole(ComplaintAccess.MonitorRoles))
+    .AddPolicy(PortalPolicies.ComplaintAccess, policy => policy.RequireRole(ComplaintAccess.AllRoles))
     .SetFallbackPolicy(new AuthorizationPolicyBuilder()
         .RequireAuthenticatedUser()
         .Build())
@@ -195,6 +198,8 @@ builder.Services.AddHostedService<TrackMyCarSyncWorker>();
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IdentitySeeder>();
+builder.Services.AddScoped<ComplaintAccess>();
+builder.Services.AddScoped<ComplaintWorkflow>();
 
 var app = builder.Build();
 

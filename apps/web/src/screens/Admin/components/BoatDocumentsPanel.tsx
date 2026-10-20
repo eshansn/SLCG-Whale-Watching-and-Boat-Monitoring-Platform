@@ -63,7 +63,8 @@ export default function BoatDocumentsPanel({ boatId, requirementsVersion, docume
           .sort((a, b) => b.version - a.version);
         const pending = versions.find((item) => item.status === 'PendingReview');
         const current = versions.find((item) => item.isCurrent);
-        const displayed = pending ?? current ?? versions[0];
+        const displayed = definition.documentType === 'VesselPhotographOrDiagram'
+          ? versions[0] : pending ?? current ?? versions[0];
         return <article key={definition.documentType} className="rounded-xl border border-slate-200 p-4">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0">

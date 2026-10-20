@@ -1,0 +1,20 @@
+.sltda-portal { color: #17243e; background: #f7f8fb; font-family: 'Geist Variable', 'Poppins', sans-serif; min-height: 100dvh; }
+.sltda-portal :is(a, button, input, select, summary):focus-visible { outline: 3px solid #a5b4fc; outline-offset: 3px; }
+.sltda-portal button, .sltda-portal a { -webkit-tap-highlight-color: transparent; }
+.sltda-portal button:not(:disabled), .sltda-portal summary { cursor: pointer; }
+.sltda-panel { min-width: 0; border: 1px solid #e5e9f1; border-radius: 16px; background: #fff; box-shadow: 0 2px 3px #17243e03; }
+.sltda-muted { color: #65718a; }
+.sltda-portal .text-slate-400 { color: #65718a; }
+.sltda-portal .sltda-navigation a { transition: color 160ms ease, background 160ms ease; }
+.sltda-portal .sltda-metric { transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease; }
+.sltda-portal .sltda-metric:hover { transform: translateY(-2px); box-shadow: 0 8px 22px #1e305e0a; }
+.sltda-portal .sltda-metric:active { transform: translateY(0); }
+.sltda-portal .sltda-skeleton { animation: sltda-pulse 1.6s ease-in-out infinite; }
+.sltda-portal .recharts-wrapper:focus-visible { outline: 2px solid #a5b4fc; border-radius: 8px; }
+.sltda-portal .recharts-default-tooltip { border-radius: 10px !important; border-color: #e2e8f0 !important; box-shadow: 0 8px 22px #17243e12; font-size: 12px; }
+.sltda-portal .recharts-tooltip-label { margin-bottom: 6px !important; color: #17243e; font-weight: 600; }
+@keyframes sltda-pulse { 50% { opacity: .5; } }
+@media (prefers-reduced-motion: reduce) {
+  .sltda-portal *, .sltda-portal *::before, .sltda-portal *::after { animation-duration: 0s !important; transition-duration: 0s !important; scroll-behavior: auto !important; }
+  .sltda-portal .sltda-metric:hover { transform: none; }
+}

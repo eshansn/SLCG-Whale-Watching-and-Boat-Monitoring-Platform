@@ -1,3 +1,4 @@
+import BoatImage from "../../components/BoatImage";
 import {
   useMemo,
   useState,
@@ -32,6 +33,7 @@ type SortOption =
   | "not-approved-first";
 
 interface ScheduledTrip {
+  imageUrl?: string;
   id: string;
   vesselName: string;
   owner: string;
@@ -179,13 +181,14 @@ const Trips = () => {
 
   const trips = useMemo<ScheduledTrip[]>(() => databaseTrips.map((trip) => ({
       id: trip.id,
+      imageUrl: databaseBoats.find(boat => boat.id === trip.boatId)?.imageUrl,
       vesselName: trip.vesselName,
       owner: trip.ownerName,
       registrationNumber: trip.registrationNumber,
       scheduledDateTime: trip.scheduledDepartureUtc,
       state: getTripDisplayState(trip, tripStateNow),
       approval: getTripDisplayState(trip, tripStateNow),
-    })), [databaseTrips, tripStateNow]);
+    })), [databaseTrips, databaseBoats, tripStateNow]);
 
   const [searchValue, setSearchValue] =
     useState("");
@@ -772,7 +775,7 @@ const Trips = () => {
                     className="border-b border-slate-100 text-xs transition-colors hover:bg-[#F9FBFF]"
                   >
                     <td className="px-4 py-5 font-medium">
-                      {trip.vesselName}
+                      <BoatImage src={trip.imageUrl} alt={trip.vesselName} className="mb-2 h-12 w-16 rounded-lg object-cover"/>{trip.vesselName}
                     </td>
 
                     <td className="px-4 py-5 text-slate-600">
@@ -859,7 +862,7 @@ const Trips = () => {
                 className="rounded-lg border border-slate-100 bg-white p-5 shadow-sm"
               >
                 <h2 className="text-sm font-semibold">
-                  {trip.vesselName}
+                  <BoatImage src={trip.imageUrl} alt={trip.vesselName} className="mb-2 h-12 w-16 rounded-lg object-cover"/>{trip.vesselName}
                 </h2>
 
                 <div className="mt-4 space-y-2 text-xs text-slate-600">

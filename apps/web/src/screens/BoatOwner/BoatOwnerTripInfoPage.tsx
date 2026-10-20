@@ -1,3 +1,4 @@
+import BoatImage from "../../components/BoatImage";
 import {
   useEffect,
   useMemo,
@@ -107,9 +108,10 @@ function BoatOwnerTripInfoPage() {
   const navigate = useNavigate();
   const { tripId } =
     useParams<{ tripId: string }>();
-  const { trips, loading, error, reload, token } = useOperations();
+  const { trips, boats, loading, error, reload, token } = useOperations();
   const tripStateNow = useTripStateClock();
   const trip = trips.find((item) => item.id === tripId);
+  const boat = boats.find(item => item.id === trip?.boatId);
   const needsReschedule = trip ? trip.status === "NeedsReschedule" || isExpiredScheduledTrip(trip, tripStateNow) : false;
   const invitationUrl = trip?.invitationCode ? `${window.location.origin}/passenger/trip/${trip.invitationCode}` : '';
 
@@ -493,6 +495,7 @@ function BoatOwnerTripInfoPage() {
             </p>
 
             <p className="mt-1 text-[16px] font-normal sm:text-[20px]">
+              <BoatImage src={boat?.imageUrl} alt={trip.vesselName} className="mb-4 h-40 w-full rounded-xl object-cover"/>
               {trip.vesselName}
             </p>
 

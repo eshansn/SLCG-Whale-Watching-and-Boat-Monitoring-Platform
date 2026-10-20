@@ -12,6 +12,7 @@ public sealed class WhaleWatchingDbContext(DbContextOptions<WhaleWatchingDbConte
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<Boat> Boats => Set<Boat>();
     public DbSet<BoatDocument> BoatDocuments => Set<BoatDocument>();
+    public DbSet<CrewCertificate> CrewCertificates => Set<CrewCertificate>();
     public DbSet<CrewAssignment> CrewAssignments => Set<CrewAssignment>();
     public DbSet<OwnerCrewMembership> OwnerCrewMemberships => Set<OwnerCrewMembership>();
     public DbSet<TripCrewAssignment> TripCrewAssignments => Set<TripCrewAssignment>();
@@ -24,6 +25,9 @@ public sealed class WhaleWatchingDbContext(DbContextOptions<WhaleWatchingDbConte
     public DbSet<WildlifeSignatureRequest> WildlifeSignatureRequests => Set<WildlifeSignatureRequest>();
     public DbSet<PassengerComplaint> PassengerComplaints => Set<PassengerComplaint>();
     public DbSet<ComplaintImage> ComplaintImages => Set<ComplaintImage>();
+    public DbSet<ComplaintAssignment> ComplaintAssignments => Set<ComplaintAssignment>();
+    public DbSet<ComplaintEvent> ComplaintEvents => Set<ComplaintEvent>();
+    public DbSet<ComplaintNotification> ComplaintNotifications => Set<ComplaintNotification>();
     public DbSet<Trip> Trips => Set<Trip>();
     public DbSet<SosEvent> SosEvents => Set<SosEvent>();
     public DbSet<SosAction> SosActions => Set<SosAction>();
@@ -33,6 +37,12 @@ public sealed class WhaleWatchingDbContext(DbContextOptions<WhaleWatchingDbConte
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+        ComplaintModelConfiguration.Configure(modelBuilder);
+
+        var certificate = modelBuilder.Entity<CrewCertificate>();
+        certificate.Property(x => x.Name).HasMaxLength(255).IsRequired();
+        certificate.Property(x => x.ContentType).HasMaxLength(64).IsRequired();
+        certificate.HasOne(x => x.CrewUser).WithMany().HasForeignKey(x => x.CrewUserId).OnDelete(DeleteBehavior.Cascade);
 
         var user = modelBuilder.Entity<ApplicationUser>();
         user.Property(x => x.DisplayName).HasMaxLength(160);

@@ -25,7 +25,17 @@ import BoatDetailsPage from './screens/Admin/BoatDetailsPage';
 import OwnerDetailsPage from './screens/Admin/OwnerDetailsPage';
 import CrewDetailsPage from './screens/Admin/CrewDetailsPage';
 import { AdminRecordsProvider } from './screens/Admin/AdminRecordsContext';
-import ComplaintsInquiriesPage from './screens/Admin/ComplaintsInquiriesPage';
+import SltdaLayout from './screens/SLTDA/SltdaLayout';
+import SltdaDashboard from './screens/SLTDA/SltdaDashboard';
+import TripHistoryPage from './screens/SLTDA/TripHistoryPage';
+import PassengerMonitoringPage from './screens/SLTDA/PassengerMonitoringPage';
+import PassengerProfilePage from './screens/SLTDA/PassengerProfilePage';
+import MonitoringTripPage from './screens/SLTDA/MonitoringTripPage';
+import ComplaintListPage from './screens/Complaints/ComplaintListPage';
+import ComplaintDetailPage from './screens/Complaints/ComplaintDetailPage';
+import ComplaintNotificationsPage from './screens/Complaints/ComplaintNotificationsPage';
+import OpsNavbar from './screens/OPS/components/Navbar';
+import SignaturePortalHeader from './screens/SignaturePortal/SignaturePortalHeader';
 import Trips from './screens/Admin/TripsPage';
 import TripInfo from './screens/Admin/TripDetailsPage';
 import OPSDashboard from './screens/OPS/OPSdashboard';
@@ -135,7 +145,21 @@ function ShoreWildlifeRoute({ children }: { children: ReactElement }) {
 
 function SignatureRoute({ children, role }: { children: ReactElement; role: 'Supervisor' | 'HarbourOfficer' }) {
   const allowedRoles = role === 'Supervisor' ? [...SUPERVISOR_ROLES] : [...HARBOUR_OFFICER_ROLES];
-  return <ProtectedRoute allowedRoles={allowedRoles}>{children}</ProtectedRoute>;
+  return <ProtectedRoute allowedRoles={allowedRoles}><div className="min-h-screen bg-[#f8f9fb] font-[Poppins] text-[#14223d]"><SignaturePortalHeader portalRole={role} />{children}</div></ProtectedRoute>;
+}
+
+function SltdaRoute({ children }: { children: ReactElement }) {
+  return <ProtectedRoute allowedRoles={['SLTDA']}><SltdaLayout>{children}</SltdaLayout></ProtectedRoute>;
+}
+
+function ComplaintRoute({ portal, children }: { portal: string; children: ReactElement }) {
+  switch (portal) {
+    case 'admin': return <AdminRoute adminOnly>{children}</AdminRoute>;
+    case 'sltda': return <SltdaRoute>{children}</SltdaRoute>;
+    case 'ops': return <OpsRoute><div className="min-h-screen bg-[#f8f9fb] font-[Poppins] text-[#14223d]"><OpsNavbar />{children}</div></OpsRoute>;
+    case 'wildlife': return <WildlifeRoute>{children}</WildlifeRoute>;
+    default: return <SignatureRoute role="HarbourOfficer">{children}</SignatureRoute>;
+  }
 }
 
 function OwnerRoute({ children }: { children: ReactElement }) {
@@ -172,6 +196,19 @@ export default function App() {
             <Route path="/auth" element={<AuthLanding />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<SignUp />} />
+            <Route path="/sltda" element={<SltdaRoute><SltdaDashboard /></SltdaRoute>} />
+            <Route path="/sltda/trips" element={<SltdaRoute><TripHistoryPage /></SltdaRoute>} />
+            {['admin', 'sltda'].flatMap(portal => [
+              <Route key={`${portal}-passengers`} path={`/${portal}/passengers`} element={<ComplaintRoute portal={portal}><PassengerMonitoringPage /></ComplaintRoute>} />,
+              <Route key={`${portal}-passenger`} path={`/${portal}/passengers/:id`} element={<ComplaintRoute portal={portal}><PassengerProfilePage /></ComplaintRoute>} />,
+              <Route key={`${portal}-monitoring-trip`} path={`/${portal}/monitoring-trips/:id`} element={<ComplaintRoute portal={portal}><MonitoringTripPage /></ComplaintRoute>} />,
+            ])}
+            {['admin', 'sltda', 'ops', 'wildlife', 'harbour-officer'].flatMap(portal => [
+              <Route key={`${portal}-complaints`} path={`/${portal}/complaints`} element={<ComplaintRoute portal={portal}><ComplaintListPage /></ComplaintRoute>} />,
+              <Route key={`${portal}-complaint`} path={`/${portal}/complaints/:id`} element={<ComplaintRoute portal={portal}><ComplaintDetailPage /></ComplaintRoute>} />,
+              <Route key={`${portal}-complaint-notifications`} path={`/${portal}/complaint-notifications`} element={<ComplaintRoute portal={portal}><ComplaintNotificationsPage /></ComplaintRoute>} />,
+            ])}
+            <Route path="/sltda/notifications" element={<Navigate to="/sltda/complaint-notifications" replace />} />
 
             <Route path="/passenger" element={<PassengerLandingPage />} />
             <Route path="/passenger/trip/:invitationCode" element={<PassengerTripLandingPage />} />
@@ -196,7 +233,6 @@ export default function App() {
             <Route path="/admin/boat-owner-info/:ownerId" element={<AdminRoute><OwnerDetailsPage /></AdminRoute>} />
             <Route path="/admin/boat-crew-info/:crewId" element={<AdminRoute><CrewDetailsPage /></AdminRoute>} />
             <Route path="/admin/trips" element={<AdminRoute><Trips /></AdminRoute>} />
-            <Route path="/admin/complaints" element={<AdminRoute><ComplaintsInquiriesPage /></AdminRoute>} />
             <Route path="/admin/notifications" element={<AdminRoute adminOnly><PortalNotificationsPage portal="admin" /></AdminRoute>} />
             <Route path="/admin/inquiries" element={<Navigate to="/admin/complaints" replace />} />
             <Route path="/admin/complaints-inquiries" element={<Navigate to="/admin/complaints" replace />} />
@@ -256,7 +292,6 @@ export default function App() {
             <Route path="/wildlife/crew/:crewId" element={<WildlifeRoute><CrewDetailsPage /></WildlifeRoute>} />
             <Route path="/wildlife/trips" element={<WildlifeRoute><Trips /></WildlifeRoute>} />
             <Route path="/wildlife/trip-info/:tripId" element={<WildlifeRoute><TripInfo /></WildlifeRoute>} />
-            <Route path="/wildlife/complaints" element={<WildlifeRoute><ComplaintsInquiriesPage /></WildlifeRoute>} />
             <Route path="/wildlife/notifications" element={<WildlifeRoute><PortalNotificationsPage portal="wildlife" /></WildlifeRoute>} />
             <Route path="/wildlife/manage-staff" element={<AdminRoute><StaffPage /></AdminRoute>} />
             <Route path="/wildlife/staff-info/:staffId" element={<AdminRoute><StaffDetailsPage /></AdminRoute>} />

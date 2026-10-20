@@ -1,5 +1,5 @@
 import { API_BASE_URL as BASE } from '../../api/httpClient';
-export const STAFF_ROLES = ['Admin', 'OPS', 'ShoreCrew', 'Wildlife', 'ShoreWildlife', 'Supervisor', 'HarbourOfficer'] as const;
+export const STAFF_ROLES = ['Admin', 'SLTDA', 'OPS', 'ShoreCrew', 'Wildlife', 'ShoreWildlife', 'Supervisor', 'HarbourOfficer'] as const;
 export const WILDLIFE_STAFF_ROLES = ['Supervisor', 'HarbourOfficer'] as const;
 export type StaffRole = typeof STAFF_ROLES[number];
 export interface StaffMember { id: string; displayName: string; userName: string; role: StaffRole; phoneNumber?: string; email: string; isActive: boolean }

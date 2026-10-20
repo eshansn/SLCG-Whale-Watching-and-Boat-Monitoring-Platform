@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
@@ -216,8 +215,6 @@ class _OwnerNewBoatScreenState extends State<OwnerNewBoatScreen> {
       _status = 'Submitting your boat approval request...';
     });
     try {
-      final photoUrl =
-          'data:${_photo!.contentType};base64,${base64Encode(_photo!.bytes)}';
       final created = await _api.createOwnerBoat({
         'name': _name.text.trim(),
         'registrationNumber': _registration.text.trim(),
@@ -226,7 +223,6 @@ class _OwnerNewBoatScreenState extends State<OwnerNewBoatScreen> {
         'lengthMeters': length,
         'widthMeters': width,
         'maximumCapacity': capacity,
-        'imageUrl': photoUrl.length <= 1000000 ? photoUrl : null,
         'maximumSpeedKnots': speed,
         'lifeJacketCount': jackets,
       });

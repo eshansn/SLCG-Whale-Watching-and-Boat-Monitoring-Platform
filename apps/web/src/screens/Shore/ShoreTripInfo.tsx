@@ -1,3 +1,4 @@
+import BoatImage from "../../components/BoatImage";
 import { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { formatTripDate, operationsApi } from "../../operations/operationsApi";
@@ -36,7 +37,7 @@ const ShoreTripInfo = () => {
 
   return <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
     <div className="grid gap-5 xl:grid-cols-[320px_1fr]">
-      <aside className="overflow-hidden rounded-xl bg-white shadow-sm"><img src="/gallery-2.jpg" alt="Whale watching vessel at sea" className="h-52 w-full object-cover"/><div className="p-6"><h1 className="text-2xl font-semibold text-[#14223d]">{trip.vesselName}</h1><p className="mt-1 text-xs text-slate-400">{trip.registrationNumber}</p><dl className="mt-6 grid grid-cols-2 gap-x-4 gap-y-4 text-xs"><Detail label="Owner" value={trip.ownerName}/><Detail label="Departure" value={formatTripDate(trip.scheduledDepartureUtc)}/><Detail label="Length" value={`${boat?.lengthMeters ?? 0} M`}/><Detail label="Capacity" value={`${boat?.maximumCapacity ?? trip.passengerCount} Passengers`}/><Detail label="Passengers" value={`${trip.passengerCount}`}/><Detail label="Status" value={trip.status}/></dl></div></aside>
+      <aside className="overflow-hidden rounded-xl bg-white shadow-sm"><BoatImage src={boat?.imageUrl} alt={trip.vesselName} className="h-52 w-full object-cover"/><div className="p-6"><h1 className="text-2xl font-semibold text-[#14223d]">{trip.vesselName}</h1><p className="mt-1 text-xs text-slate-400">{trip.registrationNumber}</p><dl className="mt-6 grid grid-cols-2 gap-x-4 gap-y-4 text-xs"><Detail label="Owner" value={trip.ownerName}/><Detail label="Departure" value={formatTripDate(trip.scheduledDepartureUtc)}/><Detail label="Length" value={`${boat?.lengthMeters ?? 0} M`}/><Detail label="Capacity" value={`${boat?.maximumCapacity ?? trip.passengerCount} Passengers`}/><Detail label="Passengers" value={`${trip.passengerCount}`}/><Detail label="Status" value={trip.status}/></dl></div></aside>
       <div className="grid gap-5">
         {token&&tripId&&<PassengerAttendancePanel token={token} tripId={tripId}/>}
         <div className="grid gap-5 lg:grid-cols-[1fr_270px]">

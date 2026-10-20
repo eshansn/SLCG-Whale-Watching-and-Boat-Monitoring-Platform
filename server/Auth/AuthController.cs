@@ -25,13 +25,6 @@ public sealed class AuthController(IAuthService authService, UserManager<Applica
         var result = await authService.RegisterPublicPortalUserAsync(request, cancellationToken);
         if (!result.Succeeded)
         {
-            if (result.Errors.Any(error =>
-                    error.Code is "DuplicateEmail" or "DuplicateUserName"))
-            {
-                return Accepted(new RegisterResponse(
-                    "Registration accepted. You can now sign in."));
-            }
-
             foreach (var error in result.Errors)
             {
                 ModelState.AddModelError(error.Code, error.Description);

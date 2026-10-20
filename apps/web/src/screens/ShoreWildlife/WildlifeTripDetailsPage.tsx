@@ -1,3 +1,4 @@
+import BoatImage from "../../components/BoatImage";
 import { useCallback, useEffect, useState } from 'react';
 import { Check, ChevronLeft, Search, UserRound } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -108,6 +109,7 @@ export default function WildlifeTripDetailsPage() {
         <div className="space-y-6">
           <section className="rounded-xl bg-white p-6 shadow-sm">
             <h2 className="font-semibold">Trip Information</h2>
+            <BoatImage src={attendance.imageUrl} alt={attendance.boatName} className="mt-4 h-48 w-full rounded-xl object-cover"/>
             <dl className="mt-4 grid gap-4 text-sm sm:grid-cols-2">
               <Info label="Trip reference" value={attendance.tripId} />
               <Info label="Boat operator" value={attendance.ownerName} />
