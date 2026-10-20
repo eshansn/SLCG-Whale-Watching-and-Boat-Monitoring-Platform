@@ -57,6 +57,18 @@ public sealed class ComplaintWorkflow(WhaleWatchingDbContext db, ComplaintAccess
                     return new WorkflowResult(409, "Reopen this complaint before forwarding it.");
                 var ids = command.AuthorityRoleIds?.Distinct().Order().ToArray() ?? [];
                 if (ids.Length == 0) return new WorkflowResult(400, "Select at least one receiving authority.");
+                if (ids.Contains(ComplaintAuthorities.SlcgId))
+                {
+                    var slcgIds = await db.Roles.Where(x => ComplaintAuthorities.SlcgRoles.Contains(x.Name!))
+                        .Select(x => x.Id).ToArrayAsync(ct);
+                    if (slcgIds.Length != ComplaintAuthorities.SlcgRoles.Length)
+                        return new WorkflowResult(400, "SLCG is not available for forwarding.");
+                    // A legacy referral may already cover one receiving role. Complete it without duplicating assignments.
+                    ids = ids.Except([ComplaintAuthorities.SlcgId]).Concat(slcgIds)
+                        .Where(id => !slcgIds.Contains(id) || !complaint.Assignments.Any(a => a.AuthorityRoleId == id))
+                        .Distinct().Order().ToArray();
+                    if (ids.Length == 0) return new WorkflowResult(409, "This complaint is already assigned to SLCG.");
+                }
                 var roles = await db.Roles.Where(x => ids.Contains(x.Id) && ComplaintAccess.AuthorityRoles.Contains(x.Name!)).ToListAsync(ct);
                 if (roles.Count != ids.Length) return new WorkflowResult(400, "A selected authority is not eligible.");
                 if (complaint.Assignments.Any(x => ids.Contains(x.AuthorityRoleId)))

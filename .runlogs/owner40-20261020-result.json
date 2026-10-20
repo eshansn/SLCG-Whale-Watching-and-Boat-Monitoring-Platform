@@ -1,0 +1,15 @@
+﻿{
+    "OwnerEmail":  "owner40.20261020@wwms.test",
+    "OwnerId":  "2af84291-fc26-43f5-8040-f10f216317ab",
+    "BoatName":  "Ocean Horizon 40 - TEST",
+    "BoatId":  "b800b29b-eea2-4c71-96b5-191a68999823",
+    "RegistrationNumber":  "TEST-WWMS-20261020-40",
+    "TripId":  "6e42f023-ffb9-4d76-902d-6d99d05cc852",
+    "DepartureSriLanka":  "2026-10-21 07:00 +05:30",
+    "PassengerTotal":  40,
+    "LocalPassengers":  10,
+    "ForeignPassengers":  30,
+    "CrewEmail":  "coxwainlocal@wwms.test",
+    "Approvals":  "Pending",
+    "Manifest":  ".runlogs/owner40-20261020-manifest.csv"
+}

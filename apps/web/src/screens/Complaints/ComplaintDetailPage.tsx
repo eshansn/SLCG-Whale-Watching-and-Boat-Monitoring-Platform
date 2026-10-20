@@ -82,7 +82,7 @@ function MonitorActions({ detail, busy, act }: { detail: ComplaintDetail; busy: 
   const [note, setNote] = useState('');
   const [text, setText] = useState('');
   const [status, setStatus] = useState('');
-  const available = authorities.data?.filter(a => a.activeUsers > 0 && !detail.assignments.some(s => s.authorityRoleId === a.id)) ?? [];
+  const available = authorities.data?.filter(a => a.activeUsers > 0 && a.roleIds.some(roleId => !detail.assignments.some(s => s.authorityRoleId === roleId))) ?? [];
   const recipients = available.filter(a => selected.includes(a.id));
   const canForward = !['Resolved', 'Closed'].includes(detail.complaint.status);
   return <section className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm"><h2 className="text-lg font-semibold">Review and coordinate</h2>
@@ -93,7 +93,7 @@ function MonitorActions({ detail, busy, act }: { detail: ComplaintDetail; busy: 
     </form>}
     {canForward && <form className="mt-6 space-y-3 border-t border-slate-100 pt-5" onSubmit={e => { e.preventDefault(); void act({ action: 'forward', authorityRoleIds: recipients.map(a => a.id), note }); }}>
       <h3 className="text-sm font-semibold">Forward to relevant authorities</h3><LoadState {...authorities} />
-      <fieldset disabled={busy} className="space-y-2"><legend className="sr-only">Select receiving authorities</legend>{available.map(a => <label key={a.id} className="flex items-center gap-3 rounded-xl border border-slate-100 p-3 text-sm"><input type="checkbox" checked={selected.includes(a.id)} onChange={e => setSelected(s => e.target.checked ? [...s, a.id] : s.filter(id => id !== a.id))} /><span>{a.name}<span className="ml-2 text-xs text-slate-400">{a.activeUsers} active users</span></span></label>)}</fieldset>
+      <fieldset disabled={busy} className="space-y-2"><legend className="sr-only">Select receiving authorities</legend>{available.map(a => <label key={a.id} className="flex items-center gap-3 rounded-xl border border-slate-100 p-3 text-sm"><input type="checkbox" checked={selected.includes(a.id)} onChange={e => setSelected(s => e.target.checked ? [...s, a.id] : s.filter(id => id !== a.id))} /><span>{a.name}</span></label>)}</fieldset>
       {!available.length && !authorities.loading && <p className="text-xs text-slate-500">No additional active authorities are available.</p>}
       <label className="block text-xs text-slate-500">Forwarding note (optional)<textarea maxLength={2000} value={note} onChange={e => setNote(e.target.value)} rows={3} className={`mt-1 ${inputClass}`} /></label>
       {recipients.length > 0 && <div className="rounded-xl bg-indigo-50 p-3 text-xs leading-6 text-indigo-800"><p className="break-all">Confirm referral: {detail.complaint.reference}</p><p>Receiving authorities: {recipients.map(a => a.name).join(', ')}</p></div>}

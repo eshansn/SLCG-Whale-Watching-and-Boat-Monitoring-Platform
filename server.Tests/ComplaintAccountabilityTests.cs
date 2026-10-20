@@ -111,14 +111,14 @@ public sealed class ComplaintAccountabilityTests
     }
 
     [SqlServerFact]
-    public async Task ReceivingAuthorities_IncludeOnlyOpsAdminWildlifeSltdaAndHarbour_WithIndependentResponses()
+    public async Task ReceivingAuthorities_GroupSlcgAndRetainIndependentResponses()
     {
         await using var test = await Harness.CreateAsync();
         var id = test.ComplaintId;
         var expected = new[] { PortalRoles.Ops, PortalRoles.Admin, PortalRoles.Wildlife, PortalRoles.Sltda, PortalRoles.HarbourOfficer };
         var available = (await test.Json(PortalRoles.Admin, "/api/complaint-workflow/authorities"))
             .EnumerateArray().Select(x => x.GetProperty("name").GetString()).Order().ToArray();
-        Assert.Equal(expected.Order(), available);
+        Assert.Equal(new[] { "SLCG", PortalRoles.Wildlife, PortalRoles.Sltda, PortalRoles.HarbourOfficer }.Order(), available);
         foreach (var role in new[] { PortalRoles.ShoreCrew, PortalRoles.ShoreWildlife, PortalRoles.Supervisor })
         {
             Assert.Equal(HttpStatusCode.Forbidden, (await test.Send(role, HttpMethod.Get, "/api/complaint-workflow")).StatusCode);
@@ -141,6 +141,70 @@ public sealed class ComplaintAccountabilityTests
         }
         Assert.Equal(ComplaintStatus.Responded, (await test.Current(id)).Status);
         Assert.Equal(1, await test.Db.PassengerComplaints.CountAsync());
+    }
+
+    [SqlServerFact]
+    public async Task SlcgReferral_RoutesToBothRolesWithoutExposingInternalAuthorityNames()
+    {
+        await using var test = await Harness.CreateAsync();
+        var id = test.ComplaintId;
+        var available = await test.Json(PortalRoles.Sltda, "/api/complaint-workflow/authorities");
+        var slcg = Assert.Single(available.EnumerateArray(), x => x.GetProperty("name").GetString() == "SLCG");
+        Assert.Equal(ComplaintAuthorities.SlcgId, slcg.GetProperty("id").GetGuid());
+        Assert.Equal(2, slcg.GetProperty("roleIds").GetArrayLength());
+        Assert.DoesNotContain(available.EnumerateArray(), x => x.GetProperty("name").GetString() is PortalRoles.Admin or PortalRoles.Ops);
+
+        var command = await test.Command(id, "forward", roles: [ComplaintAuthorities.SlcgId]);
+        await test.Ok(PortalRoles.Sltda, HttpMethod.Post, $"/api/complaint-workflow/{id}/actions", command);
+        await test.Ok(PortalRoles.Sltda, HttpMethod.Post, $"/api/complaint-workflow/{id}/actions", command);
+        var assignments = await test.Db.ComplaintAssignments.AsNoTracking().ToListAsync();
+        Assert.Equal(2, assignments.Count);
+        Assert.Equal(ComplaintAuthorities.SlcgRoles.Select(r => test.Roles[r]).Order(), assignments.Select(x => x.AuthorityRoleId).Order());
+        var detail = await test.Json(PortalRoles.Sltda, $"/api/complaint-workflow/{id}");
+        Assert.All(detail.GetProperty("assignments").EnumerateArray(), a => Assert.Equal("SLCG", a.GetProperty("authority").GetString()));
+        Assert.All(detail.GetProperty("timeline").EnumerateArray(), e => Assert.Equal("SLCG", e.GetProperty("authority").GetString()));
+        foreach (var role in ComplaintAuthorities.SlcgRoles)
+        {
+            var assignment = assignments.Single(x => x.AuthorityRoleId == test.Roles[role]);
+            var notices = await test.Json(role, "/api/complaint-notifications");
+            Assert.Contains(notices.GetProperty("items").EnumerateArray(), n => n.GetProperty("assignmentId").GetGuid() == assignment.Id);
+            await test.Action(role, id, "assignment", assignment: assignment.Id, status: "Acknowledged");
+            await test.Action(role, id, "assignment", assignment: assignment.Id, status: "Responded", text: "Official SLCG response");
+        }
+        Assert.Equal(ComplaintStatus.Responded, (await test.Current(id)).Status);
+        var filtered = await test.Json(PortalRoles.Sltda, $"/api/complaint-workflow?authorityRoleId={ComplaintAuthorities.SlcgId}");
+        Assert.Equal(id, Assert.Single(filtered.GetProperty("items").EnumerateArray()).GetProperty("id").GetGuid());
+        Assert.Equal(HttpStatusCode.Conflict, (await test.Send(PortalRoles.Sltda, HttpMethod.Post,
+            $"/api/complaint-workflow/{id}/actions", await test.Command(id, "forward", roles: [ComplaintAuthorities.SlcgId]))).StatusCode);
+    }
+
+    [SqlServerFact]
+    public async Task SlcgReferral_CompletesLegacyReferralWithoutDuplicatingExistingAssignment()
+    {
+        await using var test = await Harness.CreateAsync();
+        await test.Action(PortalRoles.Sltda, test.ComplaintId, "forward", roles: [test.Roles[PortalRoles.Ops]]);
+        await test.Action(PortalRoles.Sltda, test.ComplaintId, "forward", roles: [ComplaintAuthorities.SlcgId]);
+        var assignments = await test.Db.ComplaintAssignments.AsNoTracking().ToListAsync();
+        Assert.Equal(2, assignments.Count);
+        Assert.Single(assignments, x => x.AuthorityRoleId == test.Roles[PortalRoles.Ops]);
+        Assert.Single(assignments, x => x.AuthorityRoleId == test.Roles[PortalRoles.Admin]);
+    }
+
+    [SqlServerFact]
+    public async Task SlcgReferral_RequiresBothReceivingGroupsBeforeRecordingAnyAssignment()
+    {
+        await using var test = await Harness.CreateAsync();
+        var admin = await test.Db.Users.SingleAsync(x => x.Id == test.Users[PortalRoles.Admin]);
+        admin.LockoutEnd = DateTimeOffset.UtcNow.AddDays(1);
+        await test.Db.SaveChangesAsync();
+        var slcg = Assert.Single((await test.Json(PortalRoles.Sltda, "/api/complaint-workflow/authorities"))
+            .EnumerateArray(), x => x.GetProperty("name").GetString() == "SLCG");
+        Assert.Equal(0, slcg.GetProperty("activeUsers").GetInt32());
+        Assert.Equal(HttpStatusCode.BadRequest, (await test.Send(PortalRoles.Sltda, HttpMethod.Post,
+            $"/api/complaint-workflow/{test.ComplaintId}/actions",
+            await test.Command(test.ComplaintId, "forward", roles: [ComplaintAuthorities.SlcgId]))).StatusCode);
+        Assert.Empty(await test.Db.ComplaintAssignments.AsNoTracking().ToListAsync());
+        Assert.Empty(await test.Db.ComplaintNotifications.AsNoTracking().ToListAsync());
     }
 
     [SqlServerFact]
@@ -398,7 +462,7 @@ public sealed class ComplaintAccountabilityTests
         catch (OperationCanceledException) { process.Kill(entireProcessTree: true); throw; }
         Assert.True(process.ExitCode == 0, $"Browser workflow failed: {await output}\n{await errors}");
         Assert.Equal(ComplaintStatus.Reopened, (await test.Current(test.ComplaintId)).Status);
-        Assert.Equal(2, await test.Db.ComplaintAssignments.CountAsync());
+        Assert.Equal(3, await test.Db.ComplaintAssignments.CountAsync());
         Assert.True(await test.Db.ComplaintEvents.AnyAsync(x => x.Text == "Browser follow-up response"));
     }
 

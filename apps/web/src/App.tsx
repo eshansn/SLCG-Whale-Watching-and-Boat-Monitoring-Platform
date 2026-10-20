@@ -55,6 +55,7 @@ import PassengerTripLandingPage from './screens/Passenger/PassengerTripLandingPa
 import PassengerVerificationPage from './screens/Passenger/PassengerVerificationPage';
 import PassengerRegistrationPage from './screens/Passenger/PassengerRegistrationPage';
 import PassengerOnboardingPage from './screens/Passenger/PassengerOnboardingPage';
+import PassengerLocaleProvider from './screens/Passenger/i18n/PassengerLocaleProvider';
 import WildlifeNavbar from './screens/Wildlife/WildlifeNavbar';
 import ShoreWildlifeNavbar from './screens/ShoreWildlife/ShoreWildlifeNavbar';
 import { WildlifeRecords as ShoreWildlifeRecords, WildlifeTrips as ShoreWildlifeTrips } from './screens/ShoreWildlife/ShoreWildlifePages';
@@ -210,12 +211,14 @@ export default function App() {
             ])}
             <Route path="/sltda/notifications" element={<Navigate to="/sltda/complaint-notifications" replace />} />
 
-            <Route path="/passenger" element={<PassengerLandingPage />} />
-            <Route path="/passenger/trip/:invitationCode" element={<PassengerTripLandingPage />} />
-            <Route path="/passenger/verification" element={<PassengerVerificationPage />} />
-            <Route path="/passenger/register" element={<PassengerRegistrationPage />} />
-            <Route path="/passenger/onboarding" element={<PassengerOnboardingPage />} />
-            <Route path="/passenger/details" element={<Navigate to="/passenger/onboarding" replace />} />
+            <Route element={<PassengerLocaleProvider />}>
+              <Route path="/passenger" element={<PassengerLandingPage />} />
+              <Route path="/passenger/trip/:invitationCode" element={<PassengerTripLandingPage />} />
+              <Route path="/passenger/verification" element={<PassengerVerificationPage />} />
+              <Route path="/passenger/register" element={<PassengerRegistrationPage />} />
+              <Route path="/passenger/onboarding" element={<PassengerOnboardingPage />} />
+              <Route path="/passenger/details" element={<Navigate to="/passenger/onboarding" replace />} />
+            </Route>
 
             <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
             <Route path="/admin/manage-users" element={<AdminRoute><ManageUsers /></AdminRoute>} />

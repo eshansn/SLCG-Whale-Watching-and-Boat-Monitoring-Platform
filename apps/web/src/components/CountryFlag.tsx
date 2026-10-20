@@ -4,9 +4,11 @@ import { findCountry } from "../data/countries";
 interface CountryFlagProps {
   countryCode?: string;
   large?: boolean;
+  label?: string;
+  flagLabel?: string;
 }
 
-export function CountryFlag({ countryCode, large = false }: CountryFlagProps) {
+export function CountryFlag({ countryCode, large = false, label, flagLabel }: CountryFlagProps) {
   const country = findCountry(countryCode);
   if (!country) return null;
 
@@ -14,8 +16,8 @@ export function CountryFlag({ countryCode, large = false }: CountryFlagProps) {
     <ReactCountryFlag
       countryCode={country.code}
       svg
-      title={country.name}
-      aria-label={`${country.name} flag`}
+      title={label ?? country.name}
+      aria-label={flagLabel ?? `${country.name} flag`}
       className="inline-block shrink-0 rounded-[2px] object-cover shadow-sm ring-1 ring-black/10"
       style={{
         width: large ? "1.75rem" : "1.5rem",

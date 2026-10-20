@@ -1,6 +1,7 @@
+import { usePassengerLocale } from '../i18n/usePassengerLocale';
 import { useId, useMemo, useRef, useState } from "react";
 import { Check, ChevronDown, Search } from "lucide-react";
-import { countries, filterCountries, findCountry } from "../../../data/countries";
+import { countries, findCountry } from "../../../data/countries";
 import { CountryFlag } from "../../../components/CountryFlag";
 
 interface CountryComboboxProps {
@@ -16,6 +17,7 @@ export default function CountryCombobox({
   tone = "light",
   id,
 }: CountryComboboxProps) {
+  const { t, countryName } = usePassengerLocale();
   const generatedId = useId();
   const inputId = id ?? `country-${generatedId}`;
   const listId = `${inputId}-listbox`;
@@ -28,8 +30,9 @@ export default function CountryCombobox({
   const matches = useMemo(() => {
     const normalized = query.trim().toLowerCase();
     if (!normalized || selected && query === selected.name) return countries;
-    return filterCountries(normalized);
-  }, [query, selected]);
+    return countries.filter(country => [country.name, country.code, countryName(country.code, country.name)]
+      .some(name => name.toLowerCase().includes(normalized)));
+  }, [query, selected, countryName]);
 
   const choose = (index: number): void => {
     const country = matches[index];
@@ -45,13 +48,11 @@ export default function CountryCombobox({
 
   return (
     <div className="relative" ref={containerRef}>
-      <label className={tone === "dark" ? "sr-only" : "mb-2 block font-poppins text-xs font-medium text-slate-700"} htmlFor={inputId}>
-        Country
-      </label>
+      <label className={tone === "dark" ? "sr-only" : "mb-2 block font-poppins text-xs font-medium text-slate-700"} htmlFor={inputId}>{t('country')}</label>
       <div className="relative">
         {selected ? (
           <span className="pointer-events-none absolute top-1/2 left-3 z-10 -translate-y-1/2">
-            <CountryFlag countryCode={selected.code} />
+            <CountryFlag countryCode={selected.code} label={countryName(selected.code, selected.name)} flagLabel={t('flag', { country: countryName(selected.code, selected.name) })} />
           </span>
         ) : (
           <Search className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-slate-400" size={16} aria-hidden="true" />
@@ -59,8 +60,8 @@ export default function CountryCombobox({
         <input
           id={inputId}
           className={inputClasses}
-          value={query}
-          placeholder="Search country"
+          value={selected && query === selected.name ? countryName(selected.code, selected.name) : query}
+          placeholder={t('searchCountry')}
           autoComplete="country-name"
           role="combobox"
           aria-autocomplete="list"
@@ -105,7 +106,7 @@ export default function CountryCombobox({
           id={listId}
           className="absolute z-[1100] mt-1 max-h-52 w-full overflow-y-auto rounded-xl border border-slate-200 bg-white p-1 shadow-2xl"
           role="listbox"
-          aria-label="Countries"
+          aria-label={t('countries')}
         >
           {matches.length ? matches.map((country, index) => (
             <li
@@ -119,13 +120,13 @@ export default function CountryCombobox({
               onMouseEnter={() => setActiveIndex(index)}
               onClick={() => choose(index)}
             >
-              <CountryFlag countryCode={country.code} large />
-              <span className="min-w-0 flex-1 truncate">{country.name}</span>
+              <CountryFlag countryCode={country.code} large label={countryName(country.code, country.name)} flagLabel={t('flag', { country: countryName(country.code, country.name) })} />
+              <span className="min-w-0 flex-1 truncate">{countryName(country.code, country.name)}</span>
               <span className="text-xs text-slate-400">{country.code}</span>
               {country.code === value && <Check size={15} aria-hidden="true" />}
             </li>
           )) : (
-            <li className="px-3 py-4 text-center font-poppins text-sm text-slate-500">No matching country</li>
+            <li className="px-3 py-4 text-center font-poppins text-sm text-slate-500">{t('noCountry')}</li>
           )}
         </ul>
       )}

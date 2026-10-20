@@ -47,8 +47,15 @@ public sealed class ComplaintWorkflowController(WhaleWatchingDbContext db, Compl
         };
         if (query.AuthorityRoleId is { } roleId)
         {
-            if (!actor.Monitor && !actor.AuthorityRoleIds.Contains(roleId)) return Forbid();
-            records = records.Where(x => x.Assignments.Any(a => a.AuthorityRoleId == roleId));
+            var roleIds = roleId == ComplaintAuthorities.SlcgId
+                ? await db.Roles.Where(x => ComplaintAuthorities.SlcgRoles.Contains(x.Name!)).Select(x => x.Id).ToArrayAsync(ct)
+                : new[] { roleId };
+            if (!actor.Monitor)
+            {
+                roleIds = roleIds.Intersect(actor.AuthorityRoleIds).ToArray();
+                if (roleIds.Length == 0) return Forbid();
+            }
+            records = records.Where(x => x.Assignments.Any(a => roleIds.Contains(a.AuthorityRoleId)));
         }
         if (query.From is { } from) records = records.Where(x => x.CreatedAtUtc >= from);
         if (query.To is { } to) records = records.Where(x => x.CreatedAtUtc < to);
@@ -80,7 +87,14 @@ public sealed class ComplaintWorkflowController(WhaleWatchingDbContext db, Compl
             .Select(x => new { x.Id, Name = x.Name!, ActiveUsers = db.UserRoles.Count(m => m.RoleId == x.Id && db.Users.Any(u =>
                 u.Id == m.UserId && u.EmailConfirmed && (u.LockoutEnd == null || u.LockoutEnd <= now))) })
             .OrderBy(x => x.Name).ToListAsync(ct);
-        return Ok(roles);
+        var authorities = roles.Where(x => !ComplaintAuthorities.SlcgRoles.Contains(x.Name))
+            .Select(x => new ComplaintAuthority(x.Id, x.Name, x.ActiveUsers, [x.Id])).ToList();
+        var slcg = roles.Where(x => ComplaintAuthorities.SlcgRoles.Contains(x.Name)).ToArray();
+        if (slcg.Length > 0)
+            authorities.Add(new(ComplaintAuthorities.SlcgId, "SLCG",
+                slcg.Length == ComplaintAuthorities.SlcgRoles.Length ? slcg.Min(x => x.ActiveUsers) : 0,
+                slcg.Select(x => x.Id).ToArray()));
+        return Ok(authorities.OrderBy(x => x.Name));
     }
 
     [HttpGet("{id:guid}")]
@@ -97,13 +111,13 @@ public sealed class ComplaintWorkflowController(WhaleWatchingDbContext db, Compl
         if (complaint is null) return NotFound();
         var assignments = await db.ComplaintAssignments.AsNoTracking().Where(x => x.ComplaintId == id &&
                 (actor.Monitor || actor.AuthorityRoleIds.Contains(x.AuthorityRoleId))).OrderBy(x => x.ForwardedAtUtc)
-            .Select(x => new { x.Id, x.AuthorityRoleId, Authority = x.AuthorityRole.Name, x.Note, Status = x.Status.ToString(),
+            .Select(x => new { x.Id, x.AuthorityRoleId, Authority = ComplaintAuthorities.DisplayName(x.AuthorityRole.Name), x.Note, Status = x.Status.ToString(),
                 x.ForwardedAtUtc, ForwardedBy = x.ForwardedByUser.DisplayName, x.AcknowledgedAtUtc, x.RespondedAtUtc, x.UpdatedAtUtc,
                 CanRespond = actor.AuthorityRoleIds.Contains(x.AuthorityRoleId) }).ToListAsync(ct);
         var timeline = await db.ComplaintEvents.AsNoTracking().Where(x => x.ComplaintId == id &&
                 (actor.Monitor || (x.AssignmentId != null && actor.AuthorityRoleIds.Contains(x.Assignment!.AuthorityRoleId))))
             .OrderBy(x => x.CreatedAtUtc).ThenBy(x => x.Id)
-            .Select(x => new { x.Id, x.AssignmentId, Authority = x.Assignment == null ? null : x.Assignment.AuthorityRole.Name,
+            .Select(x => new { x.Id, x.AssignmentId, Authority = ComplaintAuthorities.DisplayName(x.Assignment == null ? null : x.Assignment.AuthorityRole.Name),
                 Actor = x.ActorUser == null ? "Passenger / legacy record" : x.ActorUser.DisplayName, x.Action, x.Text,
                 PreviousStatus = x.PreviousStatus.ToString(), Status = x.Status.ToString(),
                 AssignmentStatus = x.AssignmentStatus == null ? null : x.AssignmentStatus.ToString(), x.CreatedAtUtc }).ToListAsync(ct);

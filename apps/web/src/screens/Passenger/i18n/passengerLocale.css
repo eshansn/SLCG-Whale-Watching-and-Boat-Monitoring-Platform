@@ -1,0 +1,13 @@
+/* Longer translations can wrap without changing the passenger page layout. */
+.passenger-locale :is(button, dt, label) {
+  overflow-wrap: anywhere;
+}
+
+.passenger-locale select {
+  text-overflow: ellipsis;
+}
+
+/* Preserve the casing supplied by translators; English keeps its current style. */
+.passenger-locale:not([lang="en"]) .capitalize {
+  text-transform: none;
+}
