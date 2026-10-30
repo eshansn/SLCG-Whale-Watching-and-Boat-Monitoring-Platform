@@ -101,6 +101,16 @@ Optional environment variables:
 The browser suite mocks API and SignalR responses. It verifies authenticated image
 rendering and replacement events across 21 portal screens, plus the owner upload
 control and the no-image placeholder. It never writes to the running database.
+## Deep-ocean Login and Sign Up
+
+`deep-ocean-auth.cjs` is launched by
+`PasswordRecoveryTests.Browser_LiveDeepOceanAuthentication_LoginRegistrationAndRoleRouting`.
+It uses real authentication APIs/Identity and disposable SQL, testing all 11 login
+roles, session restoration, both public registration types, errors and responsive
+layouts. Unrelated portal datasets are isolated as unavailable fixtures. See
+[AUTHENTICATION_UI_IMPLEMENTATION.md](../../AUTHENTICATION_UI_IMPLEMENTATION.md)
+for setup and the exact coverage. It never registers accounts in the running app database.
+
 ## Password recovery flow
 
 `password-recovery.cjs` is launched by the xUnit test

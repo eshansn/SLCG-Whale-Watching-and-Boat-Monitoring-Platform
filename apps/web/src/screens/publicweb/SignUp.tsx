@@ -1,296 +1,104 @@
-import React, { useState } from 'react';
-import { motion, AnimatePresence, Variants } from 'framer-motion';
-import { Icon } from '../../components/ui/icon';
-import ShineButton from '../../components/ShineButton';
-import { useNavigate } from 'react-router-dom';
-import { register } from '../../auth/authApi';
+import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Anchor, ArrowLeft, ArrowRight, BadgeCheck, ContactRound, LockKeyhole, Mail, Phone, ShipWheel, UserRound } from 'lucide-react';
+import { AuthApiError, register } from '../../auth/authApi';
 import { useAuth } from '../../auth/useAuth';
+import AuthPanel from '../../components/auth/AuthPanel';
+import AuthField from '../../components/auth/AuthField';
+import AuthButton from '../../components/auth/AuthButton';
+import AuthPasswordGuidance from '../../components/auth/AuthPasswordGuidance';
 
-const SignUp = () => {
+type PublicRole = 'BoatOwner' | 'BoatCrew';
+
+export default function SignUp() {
   const navigate = useNavigate();
   const { login } = useAuth();
   const [step, setStep] = useState(1);
-  
-  const [formData, setFormData] = useState({
-    role: '',
-    username: '',
-    fullName: '',
-    nicNumber: '',
-    email: '',
-    phone: '',
-    password: '',
-    confirmPassword: ''
-  });
-
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [formData, setFormData] = useState({ role: '' as PublicRole | '', username: '', fullName: '', nicNumber: '', email: '', phone: '', password: '', confirmPassword: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [created, setCreated] = useState(false);
+  const [error, setError] = useState('');
+  const pending = useRef(false);
+  const heading = useRef<HTMLHeadingElement>(null);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+  useEffect(() => { heading.current?.focus({ preventScroll: true }); }, [step]);
+
+  const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = event.currentTarget;
+    setFormData(current => ({ ...current, [name]: value }));
+    setError('');
   };
 
-  const handleRoleSelection = (selectedRole: string) => {
-    setFormData({ ...formData, role: selectedRole });
-    setStep(2);
-  };
+  const selectRole = (role: PublicRole) => { setFormData(current => ({ ...current, role })); setError(''); setStep(2); };
 
-  // Fixed: Made the event parameter optional so ShineButton can call it safely
-  const handleFinalSubmit = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    if (isSubmitting) return;
-    if (formData.password !== formData.confirmPassword) {
-      window.alert('Passwords do not match.');
-      return;
-    }
-    setIsSubmitting(true);
+  const handleFinalSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (pending.current || created) return;
+    if (formData.password !== formData.confirmPassword) { setError('Passwords do not match.'); return; }
+    if (formData.role !== 'BoatOwner' && formData.role !== 'BoatCrew') { setStep(1); return; }
+    pending.current = true; setIsSubmitting(true); setError('');
+    let registered = false;
     try {
-      const role = formData.role === 'Boat Owner' ? 'BoatOwner' : 'BoatCrew';
       const email = formData.email.trim();
       await register({
-        userName: formData.username.trim(),
-        displayName: formData.fullName.trim(),
-        nicNumber: formData.nicNumber.trim(),
-        email,
-        phoneNumber: formData.phone.trim(),
-        password: formData.password,
-        role,
+        userName: formData.username.trim(), displayName: formData.fullName.trim(), nicNumber: formData.nicNumber.trim(),
+        email, phoneNumber: formData.phone.trim(), password: formData.password, role: formData.role,
       });
+      registered = true; setCreated(true);
       const session = await login({ email, password: formData.password });
       navigate(session.roles.includes('BoatOwner') ? '/owner' : '/crew', { replace: true });
-    } catch (error) {
-      window.alert(error instanceof Error ? error.message : 'Account creation failed.');
-    } finally {
-      setIsSubmitting(false);
-    }
+    } catch (failure) {
+      setError(registered ? 'Your account was created, but automatic sign-in could not be completed. Please sign in to continue.'
+        : failure instanceof AuthApiError ? failure.message : 'Unable to contact the registration service. Please try again.');
+    } finally { pending.current = false; setIsSubmitting(false); }
   };
 
-  const stepVariants: Variants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: "easeOut" as const } },
-    exit: { opacity: 0, y: -20, transition: { duration: 0.3, ease: "easeIn" as const } }
-  };
+  const roleLabel = formData.role === 'BoatOwner' ? 'Boat Owner' : 'Crew Member';
+  const mismatch = formData.confirmPassword.length > 0 && formData.password !== formData.confirmPassword;
 
-  return (
-    <div 
-      className="min-h-screen w-full flex items-center justify-center bg-gray-900 px-6 relative overflow-hidden"
-      style={{
-        backgroundImage: `linear-gradient(to bottom, rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.9)), url('/BG2.png')`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-      }}
-    >
-      <div className="w-full max-w-md z-10 flex flex-col items-center">
-        
-        <AnimatePresence mode="wait">
-          
-          {/* ================= STEP 1 ================= */}
-          {step === 1 && (
-            <motion.div 
-              key="step1"
-              variants={stepVariants}
-              initial="hidden"
-              animate="visible"
-              exit="exit"
-              className="w-full flex flex-col items-center"
-            >
-              <h1 className="text-3xl md:text-4xl font-bold text-white mb-2 tracking-wide text-center">
-                Tell Us Who You Are!
-              </h1>
-              <p className="text-sm text-gray-200 mb-10 font-bold text-center">
-                Almost There.
-              </p>
-
-              <div className="w-full flex flex-col gap-4">
-                {['Boat Owner', 'Crew Member'].map((role) => (
-                  <ShineButton
-                    key={role}
-                    text={role}
-                    onClick={() => handleRoleSelection(role)}
-                    className="w-full py-3"
-                  />
-                ))}
-              </div>
-            </motion.div>
-          )}
-
-          {/* ================= STEP 2 ================= */}
-          {step === 2 && (
-            <motion.div 
-              key="step2"
-              variants={stepVariants}
-              initial="hidden"
-              animate="visible"
-              exit="exit"
-              className="w-full flex flex-col items-center"
-            >
-              <h1 className="text-3xl md:text-4xl font-bold text-white mb-2 tracking-wide text-center">
-                Let's Get Started!
-              </h1>
-              <p className="text-sm text-gray-200 mb-10 font-bold text-center">
-                Just Few Steps Away.
-              </p>
-
-              <form className="w-full flex flex-col gap-4" onSubmit={(e) => { e.preventDefault(); setStep(3); }}>
-                <input 
-                  type="text" 
-                  name="username"
-                  value={formData.username}
-                  onChange={handleChange}
-                  placeholder="Enter Username" 
-                  minLength={3}
-                  maxLength={64}
-                  pattern="[a-zA-Z0-9._-]+"
-                  title="Use 3–64 letters, numbers, dots, underscores, or hyphens."
-                  className="w-full px-4 py-3 rounded-md bg-white text-gray-900 placeholder-indigo-900/60 focus:outline-none focus:ring-2 focus:ring-teal-400 font-medium text-sm"
-                  required
-                />
-                <input
-                  type="text"
-                  name="fullName"
-                  value={formData.fullName}
-                  onChange={handleChange}
-                  placeholder="Enter Full Name"
-                  maxLength={160}
-                  autoComplete="name"
-                  className="w-full px-4 py-3 rounded-md bg-white text-gray-900 placeholder-indigo-900/60 focus:outline-none focus:ring-2 focus:ring-teal-400 font-medium text-sm"
-                  required
-                />
-                <input
-                  type="text"
-                  name="nicNumber"
-                  value={formData.nicNumber}
-                  onChange={handleChange}
-                  placeholder="Enter NIC Number"
-                  autoComplete="off"
-                  pattern="([0-9]{9}[vVxX])|([0-9]{12})"
-                  className="w-full px-4 py-3 rounded-md bg-white text-gray-900 placeholder-indigo-900/60 focus:outline-none focus:ring-2 focus:ring-teal-400 font-medium text-sm"
-                  required
-                />
-                <input 
-                  type="email" 
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  placeholder="Enter Email" 
-                  className="w-full px-4 py-3 rounded-md bg-white text-gray-900 placeholder-indigo-900/60 focus:outline-none focus:ring-2 focus:ring-teal-400 font-medium text-sm"
-                  required
-                />
-                <input 
-                  type="tel" 
-                  name="phone"
-                  value={formData.phone}
-                  onChange={handleChange}
-                  placeholder="Enter Phone" 
-                  maxLength={32}
-                  className="w-full px-4 py-3 rounded-md bg-white text-gray-900 placeholder-indigo-900/60 focus:outline-none focus:ring-2 focus:ring-teal-400 font-medium text-sm"
-                  required
-                />
-
-                <div className="mt-2 w-full">
-                  <ShineButton
-                    text="Continue"
-                    type="submit"
-                    className="w-full py-3"
-                  />
-                </div>
-              </form>
-              
-              <div className="mt-4">
-                <p className="text-xs text-gray-400">
-                  Got an account? <a href="/login" className="text-[#5EEAD4] hover:underline font-semibold">Signin</a>
-                </p>
-              </div>
-            </motion.div>
-          )}
-
-          {/* ================= STEP 3 ================= */}
-          {step === 3 && (
-            <motion.div 
-              key="step3"
-              variants={stepVariants}
-              initial="hidden"
-              animate="visible"
-              exit="exit"
-              className="w-full flex flex-col items-center"
-            >
-              <h1 className="text-3xl md:text-4xl font-bold text-white mb-2 tracking-wide text-center">
-                Let's Get You Secured!
-              </h1>
-              <p className="text-sm text-gray-200 mb-10 font-bold text-center">
-                One Last Step.
-              </p>
-
-              <form className="w-full flex flex-col gap-4" onSubmit={handleFinalSubmit}>
-                <div className="relative">
-                  <input 
-                    type={showPassword ? "text" : "password"} 
-                    name="password"
-                    value={formData.password}
-                    onChange={handleChange}
-                    placeholder="New Password" 
-                    minLength={12}
-                    maxLength={128}
-                    pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^a-zA-Z0-9]).{12,}"
-                    title="Use at least 12 characters with uppercase, lowercase, a number, and a symbol."
-                    className="w-full px-4 py-3 rounded-md bg-white text-gray-900 placeholder-indigo-900/60 focus:outline-none focus:ring-2 focus:ring-teal-400 font-medium text-sm pr-12"
-                    required
-                  />
-                  <button 
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-indigo-900 hover:text-black flex items-center justify-center"
-                  >
-                    <Icon name={showPassword ? "eyeoff" : "eye"} size={20} />
-                  </button>
-                </div>
-
-                <div className="relative">
-                  <input 
-                    type={showConfirmPassword ? "text" : "password"} 
-                    name="confirmPassword"
-                    value={formData.confirmPassword}
-                    onChange={handleChange}
-                    placeholder="Confirm Password" 
-                    minLength={12}
-                    maxLength={128}
-                    className="w-full px-4 py-3 rounded-md bg-white text-gray-900 placeholder-indigo-900/60 focus:outline-none focus:ring-2 focus:ring-teal-400 font-medium text-sm pr-12"
-                    required
-                  />
-                  <button 
-                    type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-indigo-900 hover:text-black flex items-center justify-center"
-                  >
-                    <Icon name={showConfirmPassword ? "eyeoff" : "eye"} size={20} />
-                  </button>
-                </div>
-
-                <div className="mt-2 w-full">
-                  {/* Fixed: Wrapped the function call in an anonymous arrow function */}
-                  <ShineButton
-                    text="Create Account"
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="w-full py-3"
-                  />
-                </div>
-                
-                <button 
-                  type="button"
-                  onClick={() => setStep(2)}
-                  className="mt-2 text-xs text-gray-400 hover:text-white transition-colors"
-                >
-                  Back
-                </button>
-              </form>
-            </motion.div>
-          )}
-
-        </AnimatePresence>
-      </div>
+  return <AuthPanel titleId="signup-title" label="Create your WWMS account" step={step} note="Public registration · Boat owners & crew">
+    <div key={step} className="ocean-auth-step-content">
+      <p className="ocean-auth-step-number">Step 0{step} / 03 · {step === 1 ? 'Your role on the water' : step === 2 ? 'Your account details' : 'Secure your access'}</p>
+      <h1 id="signup-title" ref={heading} tabIndex={-1} className="ocean-auth-heading">{step === 1 ? 'Create your account.' : step === 2 ? 'Let’s get acquainted.' : 'Make it securely yours.'}</h1>
+      <p className="ocean-auth-description">{step === 1 ? 'Start your journey with WWMS. Choose the role that matches your work on the water.'
+        : step === 2 ? `A few details to set up your ${roleLabel.toLowerCase()} account.` : 'Choose a strong password to protect your connection.'}</p>
+      {step === 1 && <div className="ocean-auth-role-options" role="group" aria-label="Choose your account type">
+        {([{ role: 'BoatOwner', label: 'Boat Owner', description: 'Manage your boats, crew, and journeys.', icon: Anchor },
+          { role: 'BoatCrew', label: 'Crew Member', description: 'Stay connected to your work on the water.', icon: ShipWheel }] as const).map(option =>
+          <button type="button" key={option.role} className="ocean-auth-role" onClick={() => selectRole(option.role)}>
+            <option.icon size={21} className="ocean-auth-role-icon" aria-hidden="true" />
+            <span><strong>{option.label}</strong><small>{option.description}</small></span><ArrowRight size={15} aria-hidden="true" />
+          </button>)}
+      </div>}
+      {step === 2 && <form className="ocean-auth-form" onSubmit={event => { event.preventDefault(); setError(''); setStep(3); }}>
+        <div className="ocean-auth-registration-grid">
+        <AuthField id="signup-username" label="Username" icon={UserRound} name="username" value={formData.username} onChange={handleChange}
+          autoComplete="username" required minLength={3} maxLength={64} pattern={'[a-zA-Z0-9._\\-]+'} title="Use 3–64 letters, numbers, dots, underscores, or hyphens."
+          hint="3–64 letters, numbers, dots, underscores, or hyphens." />
+        <AuthField id="signup-full-name" label="Full name" icon={ContactRound} name="fullName" value={formData.fullName} onChange={handleChange} autoComplete="name" required maxLength={160} />
+        <AuthField id="signup-nic" label="NIC number" icon={BadgeCheck} name="nicNumber" value={formData.nicNumber} onChange={handleChange}
+          autoComplete="off" required pattern="([0-9]{9}[vVxX])|([0-9]{12})" title="Enter 9 digits followed by V or X, or a 12-digit NIC number." />
+        <AuthField id="signup-phone" label="Phone number" icon={Phone} name="phone" type="tel" value={formData.phone} onChange={handleChange} autoComplete="tel" required maxLength={32} />
+        <AuthField id="signup-email" label="Email address" icon={Mail} name="email" type="email" value={formData.email} onChange={handleChange} autoComplete="email" required maxLength={256} containerClassName="ocean-auth-field-wide" />
+        </div>
+        <AuthButton>Continue</AuthButton>
+        <button type="button" className="ocean-auth-link" onClick={() => setStep(1)}><ArrowLeft size={13} aria-hidden="true" />Change account type</button>
+      </form>}
+      {step === 3 && <form className="ocean-auth-form" onSubmit={handleFinalSubmit} aria-busy={isSubmitting}>
+        <p className="ocean-auth-selected-role"><BadgeCheck size={13} aria-hidden="true" />{roleLabel} registration</p>
+        <AuthField id="signup-password" name="password" label="Password" icon={LockKeyhole} type="password" value={formData.password} onChange={handleChange}
+          required minLength={12} maxLength={128} autoComplete="new-password" disabled={isSubmitting || created}
+          pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^a-zA-Z0-9]).{12,}" title="Use at least 12 characters with uppercase, lowercase, a number, and a symbol."
+          aria-describedby="signup-rules signup-error" />
+        <AuthField id="signup-confirm-password" name="confirmPassword" label="Confirm password" icon={LockKeyhole} type="password" value={formData.confirmPassword} onChange={handleChange}
+          required minLength={12} maxLength={128} autoComplete="new-password" disabled={isSubmitting || created} aria-describedby="signup-error" error={mismatch ? 'Passwords do not match.' : undefined} />
+        <AuthPasswordGuidance id="signup-rules" password={formData.password} />
+        <div id="signup-error" className="ocean-auth-error" role="alert">{error || null}</div>
+        {created && !isSubmitting ? <Link to="/login" className="ocean-auth-primary">Continue to Sign In<ArrowRight size={15} aria-hidden="true" /></Link>
+          : <AuthButton pending={isSubmitting} pendingLabel="Creating your account…">Create Account</AuthButton>}
+        <button type="button" className="ocean-auth-link" disabled={isSubmitting || created} onClick={() => { setError(''); setStep(2); }}><ArrowLeft size={13} aria-hidden="true" />Back to your details</button>
+      </form>}
+      <p className="ocean-auth-account-nav">Already have an account? <Link to="/login">Sign In</Link></p>
     </div>
-  );
-};
-
-export default SignUp;
+  </AuthPanel>;
+}

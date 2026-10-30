@@ -12,7 +12,9 @@ import Footer from './screens/publicweb/Footer';
 import Gallery from './screens/publicweb/Gallery';
 import Hero from './screens/publicweb/Hero';
 import Login from './screens/publicweb/Login';
+import PasswordRecovery from './screens/publicweb/PasswordRecovery';
 import SignUp from './screens/publicweb/SignUp';
+import OceanAuthLayout from './components/auth/OceanAuthLayout';
 import AdminDashboard from './screens/Admin/AdminDashboard';
 import ManageUsers from './screens/Admin/ManageUsersPage';
 import UserCategoriesPage from './screens/Admin/UserCategoriesPage';
@@ -194,9 +196,12 @@ export default function App() {
         <div className="min-h-screen bg-slate-900 font-sans">
           <Routes>
             <Route path="/" element={<PublicLandingPage />} />
-            <Route path="/auth" element={<AuthLanding />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<SignUp />} />
+            <Route element={<OceanAuthLayout />}>
+              <Route path="/auth" element={<AuthLanding />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/forgot-password" element={<PasswordRecovery />} />
+              <Route path="/signup" element={<SignUp />} />
+            </Route>
             <Route path="/sltda" element={<SltdaRoute><SltdaDashboard /></SltdaRoute>} />
             <Route path="/sltda/trips" element={<SltdaRoute><TripHistoryPage /></SltdaRoute>} />
             {['admin', 'sltda'].flatMap(portal => [

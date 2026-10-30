@@ -1,0 +1,172 @@
+.ocean-auth-shell {
+  --ocean-auth-ink: #eafbff;
+  --ocean-auth-muted: #8ca9b9;
+  --ocean-auth-accent: #35e6f7;
+  position: relative;
+  isolation: isolate;
+  min-height: 100svh;
+  overflow: clip;
+  background: #020912;
+  color: var(--ocean-auth-ink);
+  font-family: 'Geist Variable', 'Poppins', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+.ocean-auth-shell *, .ocean-auth-shell *::before, .ocean-auth-shell *::after { box-sizing: border-box; }
+.ocean-auth-brand-link { display: inline-flex; align-items: center; gap: 13px; color: inherit; text-decoration: none; }
+.ocean-auth-ocean { position: absolute; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; background: radial-gradient(ellipse at 20% 42%, #062b4066, transparent 48%), linear-gradient(130deg, #041726, #020912 75%); }
+.ocean-auth-ocean::after { content: ''; position: absolute; inset: 0; background: linear-gradient(0deg, #020912bb, transparent 45%), radial-gradient(ellipse at 95% 0%, #07598522, transparent 55%); }
+.ocean-auth-ocean-light { position: absolute; top: -45%; left: 5%; width: 80%; height: 110%; background: radial-gradient(ellipse, #07598526, transparent 65%); }
+.ocean-auth-ocean-beam { position: absolute; top: -50%; left: 22%; width: 25%; height: 150%; transform: rotate(27deg); background: linear-gradient(90deg, transparent, #8af5ff04, transparent); animation: ocean-auth-light 22s ease-in-out infinite alternate; }
+.ocean-auth-particles { position: absolute; inset: 0; }
+.ocean-auth-particles span { position: absolute; left: var(--x); top: var(--y); width: var(--size); height: var(--size); border-radius: 50%; background: #8af5ff; opacity: .14; animation: ocean-auth-drift var(--duration) var(--delay) ease-in-out infinite alternate; }
+.ocean-auth-header { width: min(1200px, 100%); margin: auto; padding: 38px 40px 0; display: flex; align-items: center; gap: 13px; }
+.ocean-auth-brand-crest { width: 31px; height: 42px; object-fit: contain; }
+.ocean-auth-brand { display: flex; align-items: center; gap: 15px; }
+.ocean-auth-brand strong { font-size: 21px; font-weight: 600; letter-spacing: .08em; }
+.ocean-auth-brand span { max-width: 220px; border-left: 1px solid #8ca9b933; padding-left: 15px; color: var(--ocean-auth-muted); font-size: 9px; line-height: 1.7; letter-spacing: .12em; text-transform: uppercase; }
+.ocean-auth-content { width: min(1160px, 100%); min-height: calc(100svh - 164px); margin: auto; padding: 32px 40px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 440px); align-items: center; gap: 65px; }
+.ocean-auth-visual { min-width: 0; align-self: center; padding-bottom: 35px; }
+.ocean-auth-visual-label { display: flex; align-items: center; gap: 10px; color: #8af5ff99; font-size: 10px; letter-spacing: .23em; text-transform: uppercase; }
+.ocean-auth-visual-label::before { content: ''; display: block; width: 26px; height: 1px; background: #35e6f777; }
+.ocean-auth-whale { position: relative; margin: 15px -26px 12px -32px; aspect-ratio: 640 / 360; animation: ocean-auth-float 12s ease-in-out infinite; }
+.ocean-auth-whale-halo { position: absolute; inset: 10% -10%; background: radial-gradient(ellipse, #35e6f709, transparent 65%); animation: ocean-auth-glow 9s ease-in-out infinite alternate; }
+.ocean-auth-whale-svg { width: 100%; height: 100%; overflow: visible; filter: drop-shadow(0 0 5px #35e6f729); transition: filter .6s ease; }
+.ocean-auth-shell:focus-within .ocean-auth-whale-svg { filter: drop-shadow(0 0 7px #35e6f745); }
+.ocean-auth-whale-outline, .ocean-auth-whale-detail { stroke-dasharray: 1; stroke-dashoffset: 1; animation: ocean-auth-draw 3.6s .25s ease forwards; }
+.ocean-auth-whale-detail { animation-delay: 1.8s; animation-duration: 2s; }
+.ocean-auth-visual h2 { max-width: 350px; margin: 0 0 14px; font-size: clamp(24px, 2.8vw, 34px); font-weight: 400; line-height: 1.35; letter-spacing: -.035em; }
+.ocean-auth-visual h2 em { color: #8af5ff; font-style: normal; }
+.ocean-auth-visual p { max-width: 310px; color: var(--ocean-auth-muted); font-size: 12px; line-height: 1.9; }
+.ocean-auth-visual-caption { margin-top: 36px; display: flex; align-items: center; gap: 8px; color: #8ca9b97f; font-size: 9px; letter-spacing: .12em; text-transform: uppercase; }
+.ocean-auth-visual-caption span { width: 4px; height: 4px; border-radius: 50%; background: #35e6f788; }
+.ocean-auth-panel { position: relative; min-width: 0; padding: 31px; border: 1px solid #8ca9b91e; border-radius: 22px; background: linear-gradient(150deg, #062b403b, #041320cf); box-shadow: 0 18px 70px #00000024; backdrop-filter: blur(10px); transition: border-color .3s ease; }
+.ocean-auth-panel::before { content: ''; position: absolute; height: 1px; top: -1px; left: 22%; right: 22%; background: linear-gradient(90deg, transparent, #35e6f755, transparent); }
+.ocean-auth-panel-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 29px; }
+.ocean-auth-security-label { display: flex; align-items: center; gap: 7px; color: #8af5ffb3; font-size: 9px; letter-spacing: .14em; text-transform: uppercase; }
+.ocean-auth-steps { display: flex; gap: 5px; }
+.ocean-auth-steps span { width: 17px; height: 3px; border-radius: 3px; background: #8ca9b924; }
+.ocean-auth-steps span.is-current { background: #35e6f7; }
+.ocean-auth-steps span.is-done { background: #35e6f75c; }
+.ocean-auth-step-content { animation: ocean-auth-enter .35s ease both; }
+.ocean-auth-step-number { margin: 0 0 11px; color: var(--ocean-auth-muted); text-transform: uppercase; font-size: 9px; letter-spacing: .14em; }
+.ocean-auth-heading { margin: 0 0 12px; outline: none; color: #eafbff; font-size: clamp(25px, 2.1vw, 29px); line-height: 1.25; font-weight: 500; letter-spacing: -.045em; }
+.ocean-auth-description { margin: 0 0 25px; color: #9bb5c4; font-size: 12px; line-height: 1.85; }
+.ocean-auth-form { display: flex; flex-direction: column; gap: 18px; }
+.ocean-auth-label { display: block; padding: 0; margin-bottom: 9px; font-size: 11px; font-weight: 500; color: #cfe6ef; }
+.ocean-auth-input-wrap { position: relative; display: flex; align-items: center; }
+.ocean-auth-input-icon { position: absolute; left: 15px; color: #65899c; pointer-events: none; }
+.ocean-auth-input { width: 100%; min-width: 0; height: 48px; border: 1px solid #496879; border-radius: 9px; padding: 0 43px; background: #02091266; color: #eafbff; font: inherit; font-size: 12px; transition: border-color .2s, box-shadow .2s; }
+.ocean-auth-input::placeholder { color: #658394; }
+.ocean-auth-input:focus { outline: none; border-color: #35e6f799; box-shadow: 0 0 0 3px #35e6f70a; }
+.ocean-auth-input:disabled { opacity: .55; }
+.ocean-auth-input[aria-invalid="true"] { border-color: #e9a6a0a0; }
+.ocean-auth-input-wrap:has(.ocean-auth-input[type="email"]) .ocean-auth-input { padding-right: 15px; }
+.ocean-auth-visibility { position: absolute; display: flex; align-items: center; justify-content: center; right: 3px; width: 42px; height: 42px; color: #8ca9b9; border: 0; background: transparent; cursor: pointer; }
+.ocean-auth-input-wrap.without-action .ocean-auth-input { padding-right: 14px; }
+.ocean-auth-field-hint { margin: 7px 0 0; color: #8ca9b9; font-size: 9px; line-height: 1.7; }
+.ocean-auth-registration-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 12px; }
+.ocean-auth-field-wide { grid-column: 1 / -1; }
+.ocean-auth-account-nav { margin: 23px 0 0; text-align: center; color: #8ca9b9; font-size: 11px; line-height: 1.8; }
+.ocean-auth-account-nav a { color: #8af5ff; text-decoration: none; display: inline-block; padding-block: 7px; }
+.ocean-auth-forgot { display: flex; justify-content: flex-end; margin-top: -16px; margin-bottom: -8px; }
+.ocean-auth-selected-role { display: flex; align-items: center; gap: 7px; color: #8af5ff; font-size: 10px; margin: -7px 0 0; }
+.ocean-auth-role-options, .ocean-auth-entry-actions { display: flex; flex-direction: column; gap: 13px; }
+.ocean-auth-role { display: flex; align-items: center; gap: 15px; width: 100%; min-width: 0; padding: 19px 16px; border: 1px solid #496879; border-radius: 10px; background: #02091266; color: #cfe6ef; text-align: left; cursor: pointer; transition: border-color .2s, background .2s, transform .2s; }
+.ocean-auth-role span { min-width: 0; flex: 1; }
+.ocean-auth-role strong { display: block; color: #eafbff; font-size: 13px; font-weight: 500; }
+.ocean-auth-role small { display: block; margin-top: 7px; font-size: 10px; line-height: 1.8; color: #8ca9b9; }
+.ocean-auth-role-icon { color: #8af5ff; flex: 0 0 auto; }
+.ocean-auth-role > svg:last-child { color: #8ca9b9; flex: 0 0 auto; }
+.ocean-auth-role:active { transform: translateY(1px); }
+.ocean-auth-secondary { display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 48px; padding: 12px 15px; border: 1px solid #496879; border-radius: 9px; background: #02091266; color: #cfe6ef; font-size: 12px; font-weight: 500; text-decoration: none; transition: border-color .2s, background .2s; }
+.ocean-auth-primary { display: flex; justify-content: center; align-items: center; gap: 10px; min-height: 48px; width: 100%; padding: 12px 15px; border: 1px solid #35e6f780; border-radius: 9px; background: #35e6f7; color: #032230; font: inherit; font-size: 12px; font-weight: 650; text-decoration: none; cursor: pointer; transition: background .2s, box-shadow .2s, transform .2s; }
+.ocean-auth-primary:active:not(:disabled) { transform: translateY(1px); }
+.ocean-auth-primary:disabled { cursor: not-allowed; background: #35e6f78a; border-color: transparent; color: #032230; }
+.ocean-auth-spin { animation: ocean-auth-spin 1s linear infinite; }
+.ocean-auth-shell :is(button, a, input):focus-visible { outline: 2px solid #8af5ff; outline-offset: 4px; }
+.ocean-auth-nav { display: flex; justify-content: center; flex-wrap: wrap; column-gap: 22px; margin-top: 20px; }
+.ocean-auth-link { display: inline-flex; justify-content: center; align-items: center; gap: 7px; min-height: 44px; color: #9bb5c4; font: inherit; font-size: 11px; background: none; border: 0; cursor: pointer; text-decoration: none; transition: color .2s; }
+.ocean-auth-link:disabled { opacity: .45; cursor: not-allowed; }
+.ocean-auth-panel-note { display: flex; justify-content: center; gap: 6px; align-items: center; margin: 19px 0 0; padding-top: 20px; border-top: 1px solid #8ca9b919; color: #7999ab; font-size: 9px; }
+.ocean-auth-error, .ocean-auth-notice { padding: 11px 13px; border-radius: 8px; font-size: 11px; line-height: 1.75; overflow-wrap: anywhere; }
+.ocean-auth-error { color: #ffd2cc; background: #a64d4214; border: 1px solid #edaaa02e; }
+.ocean-auth-notice { color: #b0e7ee; background: #35e6f708; border: 1px solid #35e6f71f; }
+.ocean-auth-error:empty { display: none; }
+.ocean-auth-account-hint { display: inline-block; color: #b6d8e8; font-size: 12px; margin-top: 8px; overflow-wrap: anywhere; }
+.ocean-auth-otp { border: 0; padding: 0; margin: 0; min-width: 0; }
+.ocean-auth-otp-digits { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 9px; }
+.ocean-auth-otp-digit { min-width: 0; width: 100%; height: 55px; border: 1px solid #496879; border-radius: 9px; background: #02091266; color: #eafbff; text-align: center; font-size: 22px; font-weight: 500; caret-color: #35e6f7; transition: border-color .2s, background .2s, box-shadow .2s; }
+.ocean-auth-otp-digit.has-digit { border-color: #8af5ff66; background: #062b404a; }
+.ocean-auth-otp-digit:focus { outline: none; border-color: #35e6f7; box-shadow: 0 0 0 3px #35e6f70d; }
+.ocean-auth-otp.is-invalid .ocean-auth-otp-digit { border-color: #e9a6a080; }
+.ocean-auth-code-help { margin: 10px 0 0; color: var(--ocean-auth-muted); font-size: 10px; line-height: 1.7; }
+.ocean-auth-resend { margin: 0; padding-top: 4px; text-align: center; color: var(--ocean-auth-muted); font-size: 11px; }
+.ocean-auth-resend .ocean-auth-link { margin-left: 5px; color: #8af5ff; }
+.ocean-auth-password-guidance { margin-top: -3px; }
+.ocean-auth-strength { display: flex; align-items: center; gap: 4px; margin-bottom: 12px; }
+.ocean-auth-strength span { height: 3px; flex: 1; background: #8ca9b926; border-radius: 3px; transition: background .2s; }
+.ocean-auth-strength span.is-filled { background: #8af5ffaa; }
+.ocean-auth-strength small { min-width: 42px; color: #9bb5c4; text-align: right; font-size: 9px; }
+.ocean-auth-requirements { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); list-style: none; gap: 8px 10px; padding: 0; margin: 0; }
+.ocean-auth-requirements li { display: flex; align-items: center; gap: 6px; color: #8ca9b9; font-size: 9px; line-height: 1.5; }
+.ocean-auth-requirements li.is-met { color: #a4e9e8; }
+.ocean-auth-requirements svg { flex: 0 0 auto; }
+.ocean-auth-field-error { color: #ffd2cc; margin: 8px 0 0; font-size: 10px; }
+.ocean-auth-verified { display: flex; align-items: center; gap: 6px; color: #8af5ff; font-size: 10px; margin: -8px 0 22px; }
+.ocean-auth-success-mark { position: relative; width: 60px; height: 60px; display: grid; place-items: center; border: 1px solid #35e6f74a; border-radius: 50%; color: #8af5ff; background: #35e6f709; margin-bottom: 23px; }
+.ocean-auth-success-mark::after { content: ''; position: absolute; inset: -1px; border: 1px solid #35e6f766; border-radius: inherit; animation: ocean-auth-ripple 1.5s ease-out both; }
+.ocean-auth-success-copy { margin-bottom: 28px; }
+.ocean-auth-footer { width: min(1200px, 100%); margin: auto; display: flex; justify-content: space-between; gap: 16px; padding: 0 40px 28px; color: #718e9e; font-size: 9px; line-height: 1.8; }
+@media (hover: hover) and (pointer: fine) {
+  .ocean-auth-panel:hover { border-color: #8af5ff3d; }
+  .ocean-auth-primary:hover:not(:disabled) { background: #8af5ff; box-shadow: 0 0 25px #35e6f715; }
+  .ocean-auth-link:hover, .ocean-auth-visibility:hover { color: #eafbff; }
+  .ocean-auth-role:hover, .ocean-auth-secondary:hover { border-color: #8af5ff; background: #062b4066; }
+  .ocean-auth-account-nav a:hover { color: #eafbff; }
+}
+@media (max-width: 900px) {
+  .ocean-auth-content { gap: 25px; grid-template-columns: minmax(0, 1fr) minmax(0, 410px); padding-inline: 28px; }
+  .ocean-auth-header { padding-inline: 28px; }
+  .ocean-auth-visual h2 { font-size: 25px; }
+  .ocean-auth-panel { padding: 27px; }
+  .ocean-auth-visual-caption { font-size: 8px; letter-spacing: .06em; }
+}
+@media (max-width: 700px) {
+  .ocean-auth-header { padding: 24px 23px 0; }
+  .ocean-auth-brand strong { font-size: 18px; }
+  .ocean-auth-brand span { font-size: 8px; max-width: 190px; }
+  .ocean-auth-content { min-height: auto; width: min(480px, 100%); padding: 0 19px 32px; grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .ocean-auth-visual { padding: 0; }
+  .ocean-auth-visual-label, .ocean-auth-visual h2, .ocean-auth-visual p, .ocean-auth-visual-caption { display: none; }
+  .ocean-auth-whale { width: 270px; max-width: 100%; height: 143px; margin: 0 auto; }
+  .ocean-auth-panel { padding: 26px; border-radius: 18px; }
+  .ocean-auth-panel-top { margin-bottom: 25px; }
+  .ocean-auth-heading { font-size: 27px; }
+  .ocean-auth-description { font-size: 12px; }
+  .ocean-auth-input { font-size: 16px; }
+  .ocean-auth-registration-grid { grid-template-columns: minmax(0, 1fr); }
+  .ocean-auth-otp-digits { gap: 7px; }
+  .ocean-auth-otp-digit { height: 51px; }
+  .ocean-auth-footer { justify-content: center; text-align: center; padding: 0 24px 23px; }
+  .ocean-auth-footer span:last-child { display: none; }
+}
+@media (max-width: 359px) {
+  .ocean-auth-panel { padding: 22px 18px; }
+  .ocean-auth-heading { font-size: 25px; }
+  .ocean-auth-brand { gap: 11px; }
+  .ocean-auth-brand span { padding-left: 11px; font-size: 7px; }
+  .ocean-auth-whale { height: 125px; }
+  .ocean-auth-security-label { font-size: 8px; letter-spacing: .1em; }
+}
+@keyframes ocean-auth-draw { to { stroke-dashoffset: 0; } }
+@keyframes ocean-auth-float { 0%, 100% { transform: translate(0, 0) rotate(-1deg); } 50% { transform: translate(3px, -9px) rotate(0deg); } }
+@keyframes ocean-auth-glow { from { opacity: .45; } to { opacity: .95; } }
+@keyframes ocean-auth-drift { from { transform: translate(0, 12px); opacity: .1; } to { transform: translate(9px, -24px); opacity: .26; } }
+@keyframes ocean-auth-light { to { transform: rotate(31deg) translateX(15px); opacity: .5; } }
+@keyframes ocean-auth-enter { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes ocean-auth-spin { to { transform: rotate(360deg); } }
+@keyframes ocean-auth-ripple { from { transform: scale(1); opacity: .5; } to { transform: scale(1.5); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .ocean-auth-shell *, .ocean-auth-shell *::before, .ocean-auth-shell *::after { animation: none !important; transition: none !important; }
+  .ocean-auth-whale-outline, .ocean-auth-whale-detail { stroke-dashoffset: 0; }
+}

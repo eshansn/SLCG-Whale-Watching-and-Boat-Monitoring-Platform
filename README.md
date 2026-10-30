@@ -4,6 +4,7 @@ SLTDA monitoring, complaint accountability, rollout instructions, APIs and verif
 
 Email OTP password recovery, Gmail setup, migration instructions and security testing are documented in [PASSWORD_RECOVERY_IMPLEMENTATION.md](PASSWORD_RECOVERY_IMPLEMENTATION.md).
 
+The shared deep-ocean Login, Sign Up and recovery UI is documented in [AUTHENTICATION_UI_IMPLEMENTATION.md](AUTHENTICATION_UI_IMPLEMENTATION.md).
 
 
 ## TrackMyCar GPS configuration
