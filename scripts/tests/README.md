@@ -1,5 +1,24 @@
 # Boat image regression checks
 
+## Shore QR scanning and mobile layouts
+
+With Vite running, run `node scripts/tests/shore-qr.cjs`. Set `PLAYWRIGHT_MODULE`
+when Playwright is installed outside the project. Chromium uses `msedge` by default;
+`PLAYWRIGHT_CHANNEL` overrides it. Set `PLAYWRIGHT_ENGINE=webkit` to use an installed
+WebKit engine. `WWMS_WEB_URL` defaults to `http://localhost:5173`.
+
+API and camera fixtures are confined to the browser suite. Actual ZXing decoding
+is used for generated QR PNGs and, where supported, canvas camera streams. These
+are automated engine checks, not physical Safari/Chrome camera tests.
+
+For live API/SQL checks, set `WWMS_TEST_SQL_CONNECTION` and run the backend test
+`ShoreQr_ValidatesTripAndRoleBeforeAttendance_AndPreventsDuplicateCheckIns`.
+To run `Browser_LiveShoreQrUploadAndConfirmedAttendance`, also build the web app,
+set `WWMS_BROWSER_WEB_ROOT` to the absolute `apps/web/dist` path and configure
+Playwright as above. The harness creates/deletes a disposable database and API;
+it never updates the application's database. See `SHORE_PORTAL_IMPLEMENTATION.md`
+for results and the remaining physical-device checks.
+
 ## SLTDA trip GPS and passenger flags
 
 Run `node scripts/tests/sltda-trip-map.cjs` with Vite running. It accepts the same

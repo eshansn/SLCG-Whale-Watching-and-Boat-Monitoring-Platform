@@ -1,0 +1,11 @@
+/* Shore-only constraints: keep tables scrollable without widening their grid. */
+.shore-portal main, .shore-portal section, .shore-portal aside { min-width: 0; }
+.shore-portal main { padding-bottom: max(2rem, env(safe-area-inset-bottom)); }
+.shore-portal :is(h1, h2, p, dd) { overflow-wrap: anywhere; }
+.shore-portal :is(button, input, select, a):focus-visible { outline: 3px solid #a5b4fc; outline-offset: 2px; }
+@media (max-width: 767px) {
+  .shore-portal > header > div { padding-left: max(1rem, env(safe-area-inset-left)); padding-right: max(1rem, env(safe-area-inset-right)); }
+  .shore-portal input:not([type="checkbox"]), .shore-portal select { font-size: 16px; }
+  .shore-portal button, .shore-portal select { min-height: 44px; }
+  .shore-portal [role="region"][tabindex="0"] { overscroll-behavior-x: contain; }
+}

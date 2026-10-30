@@ -17,7 +17,7 @@ export const shoreAttendanceApi={
  manifest:(token:string,tripId:string)=>request<AttendanceManifest>(token,`/api/shore/trips/${tripId}/attendance`),
  scan:(token:string,tripId:string,qrValue:string)=>request<PassengerGroup>(token,`/api/shore/trips/${tripId}/attendance/scan`,{method:'POST',body:JSON.stringify({qrValue})}),
  group:(token:string,tripId:string,primaryId:string)=>request<PassengerGroup>(token,`/api/shore/trips/${tripId}/attendance/groups/${primaryId}`),
- search:(token:string,tripId:string,query:string)=>request<PassengerGroupSearch[]>(token,`/api/shore/trips/${tripId}/attendance/search?query=${encodeURIComponent(query)}`),
+ search:(token:string,tripId:string,query:string,signal?:AbortSignal)=>request<PassengerGroupSearch[]>(token,`/api/shore/trips/${tripId}/attendance/search?query=${encodeURIComponent(query)}`,{signal}),
  saveGroup:(token:string,tripId:string,primaryId:string,items:{passengerId:string;status:AttendanceStatus}[])=>request<PassengerGroup>(token,`/api/shore/trips/${tripId}/attendance/groups/${primaryId}`,{method:'PUT',body:JSON.stringify({items})}),
  finalize:(token:string,tripId:string,confirmIncomplete:boolean)=>request<AttendanceManifest>(token,`/api/shore/trips/${tripId}/attendance/finalize`,{method:'POST',body:JSON.stringify({confirmIncomplete})}),
 };

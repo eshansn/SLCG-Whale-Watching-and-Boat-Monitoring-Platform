@@ -1,11 +1,19 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../../auth/useAuth";
 import { Icon } from "../../../components/ui/icon";
 import { House, LogOut, Menu, Settings, Ship, X } from "lucide-react";
+import '../shore.css';
 
 const ShoreNavbar = () => {
   const [open, setOpen] = useState(false);
+  const menuButton = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const escape = (event: KeyboardEvent) => { if (event.key === 'Escape') { setOpen(false); menuButton.current?.focus(); } };
+    window.addEventListener('keydown', escape);
+    return () => window.removeEventListener('keydown', escape);
+  }, [open]);
   const { logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
@@ -20,7 +28,7 @@ const ShoreNavbar = () => {
     <header className="sticky top-0 z-50 border-b border-slate-200/80 bg-white/95 shadow-sm backdrop-blur">
       <div className="mx-auto flex min-h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <Link to="/shore" aria-label="Shore Officer dashboard">
-          <img src="/SLCG.png" alt="Sri Lanka Coast Guard" className="h-9 w-auto sm:h-10" />
+          <img src="/SLCG.png" alt="Sri Lanka Coast Guard" className="h-9 w-auto max-w-[200px] object-contain sm:h-10" />
         </Link>
 
         <nav className="hidden items-center gap-7 text-sm lg:flex" aria-label="Shore Officer navigation">
@@ -34,17 +42,17 @@ const ShoreNavbar = () => {
           <button type="button" onClick={signOut} aria-label="Log out" title="Log out" className="rounded-full bg-[#14223d] p-2.5 text-white shadow-sm transition hover:bg-[#22375f]"><span className="flex items-center gap-2"><LogOut size={18}/><span>Log out</span></span></button>
         </nav>
 
-        <button type="button" onClick={() => setOpen((value) => !value)} className="flex h-10 w-10 flex-col items-center justify-center gap-1.5 rounded-md hover:bg-slate-100 lg:hidden" aria-label="Toggle navigation" aria-expanded={open}>
+        <button ref={menuButton} type="button" onClick={() => setOpen((value) => !value)} className="flex h-11 w-11 shrink-0 flex-col items-center justify-center gap-1.5 rounded-md hover:bg-slate-100 lg:hidden" aria-label="Toggle navigation" aria-controls="shore-mobile-navigation" aria-expanded={open}>
           {open?<X size={22}/>:<Menu size={22}/>} 
         </button>
       </div>
 
       {open && (
-        <nav className="grid gap-1 border-t border-slate-200 bg-white px-4 py-4 shadow-lg lg:hidden">
-          <Link aria-label="Notifications" title="Notifications" onClick={() => setOpen(false)} to="/shore/notifications" className="flex justify-center rounded-md px-3 py-3 hover:bg-slate-50"><Icon name="notification" size={22} /></Link>
-          <Link aria-label={onTripsPage?"Dashboard":"Trips"} title={onTripsPage?"Dashboard":"Trips"} onClick={() => setOpen(false)} to={onTripsPage ? "/shore" : "/shore/trips"} className="flex justify-center rounded-md px-3 py-3 hover:bg-slate-50">{onTripsPage ? <House size={22}/> : <Ship size={22}/>}</Link>
-          <Link aria-label="Settings" title="Settings" onClick={() => setOpen(false)} to="/shore/settings" className="flex justify-center rounded-md px-3 py-3 hover:bg-slate-50"><Settings size={22}/></Link>
-          <button type="button" onClick={signOut} aria-label="Log out" title="Log out" className="mt-2 flex justify-center rounded-md bg-[#14223d] px-4 py-3 text-white"><LogOut size={22}/></button>
+        <nav id="shore-mobile-navigation" aria-label="Shore Officer mobile navigation" className="grid max-h-[calc(100dvh_-_4rem)] gap-1 overflow-y-auto border-t border-slate-200 bg-white px-4 py-4 shadow-lg lg:hidden">
+          <Link aria-label="Notifications" title="Notifications" onClick={() => setOpen(false)} to="/shore/notifications" className="flex min-h-11 items-center gap-3 rounded-md px-3 py-3 hover:bg-slate-50"><Icon name="notification" size={22} />Notifications</Link>
+          <Link aria-label={onTripsPage?"Dashboard":"Trips"} title={onTripsPage?"Dashboard":"Trips"} onClick={() => setOpen(false)} to={onTripsPage ? "/shore" : "/shore/trips"} className="flex min-h-11 items-center gap-3 rounded-md px-3 py-3 hover:bg-slate-50">{onTripsPage ? <House size={22}/> : <Ship size={22}/>}<span>{onTripsPage ? 'Dashboard' : 'Trips'}</span></Link>
+          <Link aria-label="Settings" title="Settings" onClick={() => setOpen(false)} to="/shore/settings" className="flex min-h-11 items-center gap-3 rounded-md px-3 py-3 hover:bg-slate-50"><Settings size={22}/>Settings</Link>
+          <button type="button" onClick={signOut} aria-label="Log out" title="Log out" className="mt-2 flex min-h-11 items-center gap-3 rounded-md bg-[#14223d] px-4 py-3 text-white"><LogOut size={22}/>Log out</button>
         </nav>
       )}
     </header>

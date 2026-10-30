@@ -35,6 +35,80 @@ namespace WhaleWatching.Api.Tests;
 public sealed class ComplaintAccountabilityTests
 {
     [SqlServerFact]
+    public async Task ShoreQr_ValidatesTripAndRoleBeforeAttendance_AndPreventsDuplicateCheckIns()
+    {
+        await using var test = await Harness.CreateAsync();
+        var (trip, primary, qr) = await SeedShoreGroup(test);
+        var path = $"/api/shore/trips/{trip.Id}/attendance";
+        foreach (var role in new[] { PortalRoles.Admin, PortalRoles.BoatCrew, PortalRoles.BoatOwner, PortalRoles.Sltda, PortalRoles.Wildlife })
+            Assert.Equal(HttpStatusCode.Forbidden, (await test.Send(role, HttpMethod.Post, path + "/scan", new { qrValue = qr })).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await test.Send(null, HttpMethod.Post, path + "/scan", new { qrValue = qr })).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await test.Send(PortalRoles.ShoreCrew, HttpMethod.Post, path + "/scan", new { qrValue = "not-a-passenger" })).StatusCode);
+        var scanned = await (await test.Ok(PortalRoles.ShoreCrew, HttpMethod.Post, path + "/scan", new { qrValue = qr })).Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(trip.Id, scanned.GetProperty("tripId").GetGuid());
+        Assert.Equal(2, scanned.GetProperty("members").GetArrayLength());
+        Assert.False(scanned.GetProperty("alreadyProcessed").GetBoolean());
+        Assert.Equal(0, await test.Db.TripPassengerAttendances.CountAsync()); // Decoding/validation never checks anyone in.
+        var otherTrip = new Trip { Id = Guid.NewGuid(), BoatId = trip.BoatId, Status = TripStatus.Scheduled, ScheduledDepartureUtc = DateTimeOffset.UtcNow.AddHours(2) };
+        test.Db.Trips.Add(otherTrip); await test.Db.SaveChangesAsync();
+        Assert.Equal(HttpStatusCode.Conflict, (await test.Send(PortalRoles.ShoreCrew, HttpMethod.Post,
+            $"/api/shore/trips/{otherTrip.Id}/attendance/scan", new { qrValue = qr })).StatusCode);
+        var members = await test.Db.TripPassengers.Where(p => p.TripId == trip.Id).OrderBy(p => p.PassengerId).ToListAsync();
+        var items = members.Select(p => new { p.PassengerId, Status = p.PassengerId == primary.Id ? "Present" : "NotChecked" }).ToArray();
+        var savePath = path + $"/groups/{primary.Id}";
+        Assert.Equal(HttpStatusCode.BadRequest, (await test.Send(PortalRoles.ShoreCrew, HttpMethod.Put, savePath,
+            new { items = new[] { new { PassengerId = Guid.NewGuid(), Status = "Present" } } })).StatusCode);
+        await test.Ok(PortalRoles.ShoreCrew, HttpMethod.Put, savePath, new { items });
+        var checkedAt = (await test.Db.TripPassengerAttendances.AsNoTracking().SingleAsync()).CheckedAtUtc;
+        await test.Ok(PortalRoles.ShoreCrew, HttpMethod.Put, savePath, new { items });
+        Assert.Equal(1, await test.Db.TripPassengerAttendances.CountAsync());
+        Assert.Equal(1, await test.Db.PassengerAttendanceAudits.CountAsync());
+        Assert.Equal(checkedAt, (await test.Db.TripPassengerAttendances.AsNoTracking().SingleAsync()).CheckedAtUtc);
+        var repeat = await (await test.Ok(PortalRoles.ShoreCrew, HttpMethod.Post, path + "/scan", new { qrValue = qr })).Content.ReadFromJsonAsync<JsonElement>();
+        Assert.True(repeat.GetProperty("alreadyProcessed").GetBoolean());
+        var search = await test.Json(PortalRoles.ShoreCrew, path + "/search?query=Passenger");
+        Assert.Equal(primary.Id, search[0].GetProperty("primaryPassengerId").GetGuid());
+        trip.Status = TripStatus.Ongoing; await test.Db.SaveChangesAsync();
+        Assert.Equal(HttpStatusCode.Conflict, (await test.Send(PortalRoles.ShoreCrew, HttpMethod.Post, path + "/scan", new { qrValue = qr })).StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, (await test.Send(PortalRoles.ShoreCrew, HttpMethod.Put, savePath, new { items })).StatusCode);
+        trip.Status = TripStatus.Scheduled; await test.Db.SaveChangesAsync();
+        Assert.Equal(HttpStatusCode.Conflict, (await test.Send(PortalRoles.ShoreCrew, HttpMethod.Post, path + "/finalize", new { confirmIncomplete = false })).StatusCode);
+        await test.Ok(PortalRoles.ShoreCrew, HttpMethod.Post, path + "/finalize", new { confirmIncomplete = true });
+        Assert.Equal(HttpStatusCode.Conflict, (await test.Send(PortalRoles.ShoreCrew, HttpMethod.Put, savePath, new { items })).StatusCode);
+    }
+
+    private static async Task<(Trip, PassengerProfile, string)> SeedShoreGroup(Harness test)
+    {
+        var trip = await test.Db.Trips.SingleAsync(t => t.Status == TripStatus.Scheduled);
+        var primary = await test.Db.PassengerProfiles.SingleAsync(p => p.Id == test.PassengerId);
+        primary.PersonalQrToken = Convert.ToHexString(RandomNumberGenerator.GetBytes(20));
+        var companion = await test.Db.PassengerProfiles.SingleAsync(p => p.Name == "Passenger Two");
+        test.Db.TripPassengers.Add(new TripPassenger { Id = Guid.NewGuid(), TripId = trip.Id, PassengerId = companion.Id,
+            PrimaryPassengerId = primary.Id, RegisteredAtUtc = DateTimeOffset.UtcNow });
+        await test.Db.SaveChangesAsync();
+        return (trip, primary, $"wwms:passenger:{primary.PersonalQrToken}");
+    }
+
+    [ComplaintBrowserFact]
+    public async Task Browser_LiveShoreQrUploadAndConfirmedAttendance()
+    {
+        await using var test = await Harness.CreateAsync();
+        var (trip, _, qr) = await SeedShoreGroup(test);
+        var script = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../scripts/tests/shore-qr.cjs"));
+        var info = new ProcessStartInfo("node") { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true };
+        info.ArgumentList.Add(script); info.ArgumentList.Add("--live");
+        info.Environment["WWMS_WEB_URL"] = test.Client.BaseAddress!.ToString();
+        info.Environment["WWMS_SHORE_TRIP_ID"] = trip.Id.ToString(); info.Environment["WWMS_SHORE_QR"] = qr;
+        using var process = Process.Start(info)!;
+        var output = process.StandardOutput.ReadToEndAsync(); var errors = process.StandardError.ReadToEndAsync();
+        try { await process.WaitForExitAsync(new CancellationTokenSource(TimeSpan.FromMinutes(3)).Token); }
+        catch (OperationCanceledException) { process.Kill(entireProcessTree: true); throw; }
+        Assert.True(process.ExitCode == 0, await output + await errors);
+        Assert.Equal(1, await test.Db.TripPassengerAttendances.CountAsync());
+        Assert.Equal(1, await test.Db.PassengerAttendanceAudits.CountAsync());
+    }
+
+    [SqlServerFact]
     public async Task MonitoringTripTracking_UsesOnlyRecordedBoatAndTripWindow_AndPreservesCountry()
     {
         await using var test = await Harness.CreateAsync();

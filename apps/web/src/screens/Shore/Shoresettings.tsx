@@ -149,7 +149,7 @@ function SettingToggle({
 }) {
   return (
     <label className="flex cursor-pointer items-center justify-between gap-6 py-5">
-      <span>
+      <span className="min-w-0 break-words">
         <span className="block text-sm font-medium text-[#14223d]">
           {title}
         </span>

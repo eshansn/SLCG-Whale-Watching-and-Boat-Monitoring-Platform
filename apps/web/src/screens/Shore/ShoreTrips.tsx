@@ -28,9 +28,9 @@ const ShoreTrips = () => {
           <div><h1 className="text-xl font-semibold text-[#14223d]">Scheduled Trips</h1><p className="mt-1 text-xs text-slate-400">Review and authorize scheduled vessel departures.</p></div>
           <div className="flex flex-col gap-3 sm:flex-row">
             <label className="flex items-center gap-2 rounded-md border border-slate-200 px-3 py-2 text-slate-400 focus-within:border-indigo-400">
-              <Icon name="search" size={16} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search" className="w-full bg-transparent text-sm text-slate-700 outline-none sm:w-44" />
+              <Icon name="search" size={16} /><input aria-label="Search shore trips" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search" className="min-h-7 w-full min-w-0 bg-transparent text-sm text-slate-700 outline-none sm:w-44" />
             </label>
-            <select value={sort} onChange={(event) => setSort(event.target.value)} className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600 outline-none focus:border-indigo-400">
+            <select aria-label="Sort shore trips" value={sort} onChange={(event) => setSort(event.target.value)} className="min-h-11 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600 outline-none focus:border-indigo-400">
               <option value="time">Sort by Time</option><option value="vessel">Sort by Vessel</option>
             </select>
           </div>
@@ -48,7 +48,7 @@ const ShoreTrips = () => {
         <div className="divide-y divide-slate-100 md:hidden">
           {visibleTrips.map((trip) => (
             <button key={trip.id} type="button" onClick={() => navigate(`/shore/trips/${trip.id}`)} className="block w-full p-5 text-left transition hover:bg-slate-50">
-              <div className="flex items-start justify-between gap-3"><strong className="flex items-center gap-3 text-sm text-[#14223d]"><BoatImage src={boats.find(boat => boat.id === trip.boatId)?.imageUrl} alt={trip.vesselName} className="h-12 w-16 rounded-lg object-cover"/>{trip.vesselName}</strong><Status status={trip.status} /></div>
+              <div className="flex items-start justify-between gap-3"><strong className="flex min-w-0 flex-1 flex-wrap items-center gap-3 break-words text-sm text-[#14223d]"><BoatImage src={boats.find(boat => boat.id === trip.boatId)?.imageUrl} alt={trip.vesselName} className="h-12 w-16 shrink-0 rounded-lg object-cover"/><span className="min-w-0 break-words">{trip.vesselName}</span></strong><Status status={trip.status} /></div>
               <p className="mt-2 text-xs text-slate-500">{trip.registrationNumber} · {trip.ownerName}</p><p className="mt-1 text-xs text-slate-400">{formatTripDate(trip.scheduledDepartureUtc)}</p>
             </button>
           ))}

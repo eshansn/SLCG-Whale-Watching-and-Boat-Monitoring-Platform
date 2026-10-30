@@ -17,7 +17,7 @@ const ShoreDashboard = () => {
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
-      <div className="grid gap-8 lg:grid-cols-[180px_1fr]">
+      <div className="grid min-w-0 grid-cols-1 gap-8 lg:grid-cols-[180px_minmax(0,1fr)]">
         <section>
           <p className="text-sm font-medium text-slate-700">Hello,</p>
           <h1 className="mt-1 break-words text-3xl font-semibold capitalize text-[#14223d]">{name}!</h1>
@@ -31,7 +31,7 @@ const ShoreDashboard = () => {
           </div>
         </section>
 
-        <section className="grid gap-6 md:grid-cols-2">
+        <section className="grid min-w-0 grid-cols-1 gap-6 md:grid-cols-2">
           <button type="button" onClick={() => navigate("/shore/trips")} className="group min-h-80 rounded-md bg-white p-8 text-left shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-indigo-500">
             <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-indigo-50 text-indigo-700"><Icon name="vessel" size={38} /></div>
             <h2 className="mt-7 text-xl font-medium text-[#14223d]">Trips</h2>
