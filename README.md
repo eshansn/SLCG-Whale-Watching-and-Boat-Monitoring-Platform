@@ -6,6 +6,7 @@ Email OTP password recovery, Gmail setup, migration instructions and security te
 
 The shared deep-ocean Login, Sign Up and recovery UI is documented in [AUTHENTICATION_UI_IMPLEMENTATION.md](AUTHENTICATION_UI_IMPLEMENTATION.md).
 
+Mandatory crew certificates, server approval enforcement, testing and the legacy approval audit are documented in [CREW_CERTIFICATE_IMPLEMENTATION.md](CREW_CERTIFICATE_IMPLEMENTATION.md).
 
 ## TrackMyCar GPS configuration
 

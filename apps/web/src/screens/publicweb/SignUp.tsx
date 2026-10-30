@@ -7,6 +7,7 @@ import AuthPanel from '../../components/auth/AuthPanel';
 import AuthField from '../../components/auth/AuthField';
 import AuthButton from '../../components/auth/AuthButton';
 import AuthPasswordGuidance from '../../components/auth/AuthPasswordGuidance';
+import { certificateAccept, certificateError } from '../BoatCrew/certificateValidation';
 
 type PublicRole = 'BoatOwner' | 'BoatCrew';
 
@@ -18,6 +19,9 @@ export default function SignUp() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [created, setCreated] = useState(false);
   const [error, setError] = useState('');
+  const [certificate, setCertificate] = useState<File>();
+  const [uploadError, setUploadError] = useState('');
+  const [checkingCertificate, setCheckingCertificate] = useState(false);
   const pending = useRef(false);
   const heading = useRef<HTMLHeadingElement>(null);
 
@@ -39,11 +43,15 @@ export default function SignUp() {
     pending.current = true; setIsSubmitting(true); setError('');
     let registered = false;
     try {
+      if (formData.role === 'BoatCrew') {
+        const validation = await certificateError(certificate);
+        if (validation) { setUploadError(validation); setStep(2); return; }
+      }
       const email = formData.email.trim();
       await register({
         userName: formData.username.trim(), displayName: formData.fullName.trim(), nicNumber: formData.nicNumber.trim(),
         email, phoneNumber: formData.phone.trim(), password: formData.password, role: formData.role,
-      });
+      }, certificate);
       registered = true; setCreated(true);
       const session = await login({ email, password: formData.password });
       navigate(session.roles.includes('BoatOwner') ? '/owner' : '/crew', { replace: true });
@@ -70,7 +78,17 @@ export default function SignUp() {
             <span><strong>{option.label}</strong><small>{option.description}</small></span><ArrowRight size={15} aria-hidden="true" />
           </button>)}
       </div>}
-      {step === 2 && <form className="ocean-auth-form" onSubmit={event => { event.preventDefault(); setError(''); setStep(3); }}>
+      {step === 2 && <form className="ocean-auth-form" onSubmit={async event => {
+        event.preventDefault();
+        if (checkingCertificate) return;
+        setCheckingCertificate(true);
+        try {
+          const validation = formData.role === 'BoatCrew' ? await certificateError(certificate) : undefined;
+          setUploadError(validation ?? '');
+          if (!validation) { setError(''); setStep(3); }
+        } catch { setUploadError('Unable to read this certificate. Please select the file again.'); }
+        finally { setCheckingCertificate(false); }
+      }}>
         <div className="ocean-auth-registration-grid">
         <AuthField id="signup-username" label="Username" icon={UserRound} name="username" value={formData.username} onChange={handleChange}
           autoComplete="username" required minLength={3} maxLength={64} pattern={'[a-zA-Z0-9._\\-]+'} title="Use 3–64 letters, numbers, dots, underscores, or hyphens."
@@ -80,8 +98,16 @@ export default function SignUp() {
           autoComplete="off" required pattern="([0-9]{9}[vVxX])|([0-9]{12})" title="Enter 9 digits followed by V or X, or a 12-digit NIC number." />
         <AuthField id="signup-phone" label="Phone number" icon={Phone} name="phone" type="tel" value={formData.phone} onChange={handleChange} autoComplete="tel" required maxLength={32} />
         <AuthField id="signup-email" label="Email address" icon={Mail} name="email" type="email" value={formData.email} onChange={handleChange} autoComplete="email" required maxLength={256} containerClassName="ocean-auth-field-wide" />
+        {formData.role === 'BoatCrew' && <div className="ocean-auth-field ocean-auth-field-wide">
+          <label htmlFor="signup-certificate" className="ocean-auth-label">Crew certificate (required)</label>
+          <input id="signup-certificate" name="certificate" type="file" className="ocean-auth-certificate-input" accept={certificateAccept} required={!certificate}
+            aria-describedby="signup-certificate-help signup-certificate-error" aria-invalid={!!uploadError}
+            onChange={event => { setCertificate(event.target.files?.[0]); setUploadError(''); }} />
+          <p id="signup-certificate-help" className="ocean-auth-field-hint">A certificate is required for approval. PDF, JPEG, PNG, or WebP, up to 5 MB.{certificate ? ` Selected: ${certificate.name}` : ''}</p>
+          <p id="signup-certificate-error" role="alert" className="ocean-auth-error">{uploadError || null}</p>
+        </div>}
         </div>
-        <AuthButton>Continue</AuthButton>
+        <AuthButton pending={checkingCertificate} pendingLabel="Checking certificate…">Continue</AuthButton>
         <button type="button" className="ocean-auth-link" onClick={() => setStep(1)}><ArrowLeft size={13} aria-hidden="true" />Change account type</button>
       </form>}
       {step === 3 && <form className="ocean-auth-form" onSubmit={handleFinalSubmit} aria-busy={isSubmitting}>

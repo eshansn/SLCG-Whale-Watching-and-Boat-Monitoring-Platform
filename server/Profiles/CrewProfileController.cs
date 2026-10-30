@@ -77,20 +77,11 @@ public sealed class CrewProfileController(UserManager<ApplicationUser> userManag
     [RequestSizeLimit(6 * 1024 * 1024)]
     public async Task<IActionResult> UploadCertificate([FromForm] IFormFile certificate, CancellationToken ct)
     {
-        if (certificate.Length is 0 or > 5 * 1024 * 1024)
-            return ValidationProblem("Certificate must be between 1 byte and 5 MB.");
-        var type = certificate.ContentType.ToLowerInvariant();
-        if (!new[] { "application/pdf", "image/jpeg", "image/png", "image/webp" }.Contains(type))
-            return ValidationProblem("Certificate must be a PDF, JPEG, PNG, or WebP file.");
-        var name = Path.GetFileName(certificate.FileName.Replace('\\', '/'));
-        if (string.IsNullOrWhiteSpace(name) || name.Length > 255)
-            return ValidationProblem("Certificate filename must contain between 1 and 255 characters.");
+        var upload = await CrewCertificateValidation.ReadAsync(certificate, ct);
+        if (upload.Error is not null) return ValidationProblem(upload.Error);
         var user = await UserRecord(); if (user is null) return NotFound();
-        await using var stream = new MemoryStream();
-        await certificate.CopyToAsync(stream, ct);
-        var bytes = stream.ToArray();
-        if (!HasCertificateSignature(bytes, type)) return ValidationProblem("The certificate content does not match its file type.");
-        var document = new CrewCertificate { CrewUserId = user.Id, Name = name, ContentType = type, Content = bytes };
+        var document = upload.Document!;
+        document.CrewUserId = user.Id;
         db.CrewCertificates.Add(document);
         await db.SaveChangesAsync(ct);
         return Ok(new CrewCertificateDto(document.Id, document.Name, document.ContentType, document.UploadedAtUtc));
@@ -101,17 +92,12 @@ public sealed class CrewProfileController(UserManager<ApplicationUser> userManag
     {
         var user = await UserRecord(); if (user is null) return NotFound();
         var document = await db.CrewCertificates.AsNoTracking().SingleOrDefaultAsync(x => x.Id == id && x.CrewUserId == user.Id, ct);
-        return document is null ? NotFound() : File(document.Content, document.ContentType, document.Name);
+        Response.Headers["X-Content-Type-Options"] = "nosniff";
+        Response.Headers.CacheControl = "no-store";
+        return document?.Content is not { Length: > 0 } ? NotFound() : File(document.Content, document.ContentType, document.Name);
     }
 
-    public static bool HasCertificateSignature(byte[] bytes, string type) => type switch
-    {
-        "application/pdf" => bytes.AsSpan().StartsWith("%PDF-"u8),
-        "image/jpeg" => bytes.AsSpan().StartsWith(new byte[] { 0xff, 0xd8, 0xff }),
-        "image/png" => bytes.AsSpan().StartsWith(new byte[] { 137, 80, 78, 71, 13, 10, 26, 10 }),
-        "image/webp" => bytes.Length >= 12 && bytes.AsSpan(0, 4).SequenceEqual("RIFF"u8) && bytes.AsSpan(8, 4).SequenceEqual("WEBP"u8),
-        _ => false
-    };
+    public static bool HasCertificateSignature(byte[] bytes, string type) => CrewCertificateValidation.IsValidContent(bytes, type);
     private static CrewProfileDto ToDto(ApplicationUser u) => new(u.Id, u.UserName!, u.DisplayName, u.NicNumber ?? "", u.Email ?? "", u.PhoneNumber ?? "", u.CrewType ?? "Crew Member", u.IsCrewCertified, u.ProfilePhoto is { Length: > 0 }, u.Bio);
     private ActionResult IdentityProblem(IdentityResult result) { foreach (var e in result.Errors) ModelState.AddModelError(e.Code, e.Description); return ValidationProblem(ModelState); }
 }

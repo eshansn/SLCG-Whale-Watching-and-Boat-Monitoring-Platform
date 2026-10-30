@@ -12,6 +12,7 @@ using WhaleWatching.Api.Data;
 using WhaleWatching.Api.Domain;
 using WhaleWatching.Api.Gps;
 using WhaleWatching.Api.Realtime;
+using WhaleWatching.Api.Profiles;
 
 namespace WhaleWatching.Api.Operations;
 
@@ -649,15 +650,34 @@ public sealed class OperationsController(WhaleWatchingDbContext db, IHubContext<
     [Authorize(Roles = $"{PortalRoles.Admin},{PortalRoles.Wildlife}")]
     public async Task<ActionResult> UpdateCrewApproval(Guid id, ApprovalRequest request, CancellationToken ct)
     {
+        if (!User.IsInRole(PortalRoles.Admin) && !User.IsInRole(PortalRoles.Wildlife)) return Forbid();
         if (!string.Equals(request.Approval, "Approved", StringComparison.OrdinalIgnoreCase) &&
             !string.Equals(request.Approval, "Rejected", StringComparison.OrdinalIgnoreCase))
             return ValidationProblem("Approval must be Approved or Rejected.");
-        var crew = await db.Users.FindAsync([id], ct); if (crew is null) return NotFound();
-        var isBoatCrew = await db.UserRoles.AnyAsync(userRole => userRole.UserId == id &&
-            db.Roles.Any(role => role.Id == userRole.RoleId && role.Name == PortalRoles.BoatCrew), ct);
-        if (!isBoatCrew) return NotFound();
-        crew.IsCrewCertified = string.Equals(request.Approval, "Approved", StringComparison.OrdinalIgnoreCase);
-        await db.SaveChangesAsync(ct);
+        var result = await db.Database.CreateExecutionStrategy().ExecuteAsync<ActionResult>(async () =>
+        {
+            db.ChangeTracker.Clear();
+            await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
+            // Serialize approval requests for this crew account, including repeated approvals.
+            var crew = await db.Users.FromSqlInterpolated($"SELECT * FROM AspNetUsers WITH (UPDLOCK, ROWLOCK) WHERE Id = {id}")
+                .SingleOrDefaultAsync(ct);
+            if (crew is null) return NotFound();
+            var isBoatCrew = await db.UserRoles.AnyAsync(userRole => userRole.UserId == id &&
+                db.Roles.Any(role => role.Id == userRole.RoleId && role.Name == PortalRoles.BoatCrew), ct);
+            if (!isBoatCrew) return NotFound();
+            var approving = string.Equals(request.Approval, "Approved", StringComparison.OrdinalIgnoreCase);
+            if (approving)
+            {
+                var status = CrewCertificateValidation.Inspect(await db.CrewCertificates.AsNoTracking()
+                    .Where(document => document.CrewUserId == id).ToListAsync(ct));
+                if (!status.CanApprove) return Conflict(new { message = "Approval denied. " + status.Message, certificateStatus = status.Status });
+            }
+            crew.IsCrewCertified = approving;
+            await db.SaveChangesAsync(ct);
+            await transaction.CommitAsync(ct);
+            return NoContent();
+        });
+        if (result is not NoContentResult) return result;
         await hub.Clients.All.SendAsync("operationsChanged", new { entity = "crew", id }, ct);
         return NoContent();
     }

@@ -104,7 +104,15 @@ export interface PublicRegistration {
   role: 'BoatOwner' | 'BoatCrew';
 }
 
-export async function register(details: PublicRegistration): Promise<{ message: string }> {
+export async function register(details: PublicRegistration, certificate?: File): Promise<{ message: string }> {
+  if (details.role === 'BoatCrew') {
+    const body = new FormData();
+    Object.entries(details).forEach(([key, value]) => { if (value !== undefined) body.append(key, value); });
+    if (certificate) body.append('certificate', certificate);
+    const response = await apiFetch('/api/auth/register', { method: 'POST', body });
+    if (!response.ok) throw new AuthApiError(await getErrorMessage(response), response.status);
+    return response.json() as Promise<{ message: string }>;
+  }
   return post<{ message: string }>('/api/auth/register', details);
 }
 

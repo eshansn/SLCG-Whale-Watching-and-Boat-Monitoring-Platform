@@ -7,6 +7,7 @@ import EditRecordModal from './components/EditRecordModal';
 import { RecordUnavailable, RecordsErrorNotice } from './components/RecordsLoadState';
 import TripHistory from './components/TripHistory';
 import CrewCertificates from './components/CrewCertificates';
+import CrewCertificateNotice from './components/CrewCertificateNotice';
 import { crewPositions } from '../BoatCrew/crewApi';
 
 export default function CrewDetailsPage() {
@@ -45,11 +46,14 @@ export default function CrewDetailsPage() {
         <p className="text-sm text-slate-400">{member.role}</p>
         <div className="mt-7 space-y-5">{[['NIC', member.nic], ['Email', member.email], ['Phone', member.phone], ['Address', member.address]].map(([label, value]) => <div key={label}><p className="text-xs uppercase text-slate-400">{label}</p><p className="font-medium">{value}</p></div>)}</div>
         <h2 className="mt-7 border-t pt-6 text-sm font-semibold">Certifications</h2>
+        <CrewCertificateNotice certificate={member.certificate} approved={member.approval === 'Approved'} />
         <CrewCertificates key={member.apiId ?? member.id} crewId={member.apiId ?? member.id}/>
         {member.certifications.map((certification) => <p key={certification} className="mt-3 rounded-lg bg-slate-50 p-3 text-sm">{certification}</p>)}
       </section>
       <div className="space-y-6">
-        <ApprovalControls key={`${member.approval}-${member.declineReason}`} initialStatus={member.approval} initialReason={member.declineReason} onChange={(status, reason) => records.setCrewApproval(member.id, status, reason)}/>
+        <ApprovalControls key={`${member.approval}-${member.declineReason}`} initialStatus={member.approval} initialReason={member.declineReason}
+          approvalDisabledReason={records.loading || records.error ? 'Reload records to verify the certificate before approval.' : !member.certificate?.canApprove ? member.certificate?.message ?? 'Certificate required before approval.' : undefined}
+          onChange={(status, reason) => records.setCrewApproval(member.id, status, reason)}/>
         <section className="rounded-2xl bg-white p-6 shadow-sm">
           <h2 className="text-lg font-semibold">Currently working on</h2>
           {boat ? <Link aria-label={`View ${boat.name}`} title="View boat" to={`/admin/boats/${boat.id}`} className="mt-4 flex items-center justify-between rounded-xl border p-5"><span className="font-semibold">{boat.name}</span><Eye size={19} className="text-indigo-700"/></Link> : <p className="mt-4 text-sm text-slate-500">Unassigned</p>}

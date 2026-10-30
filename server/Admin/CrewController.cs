@@ -3,12 +3,13 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using WhaleWatching.Api.Auth;
 using WhaleWatching.Api.Data;
+using WhaleWatching.Api.Profiles;
 
 namespace WhaleWatching.Api.Admin;
 
 [ApiController]
 [Route("api/admin/crew")]
-[Authorize(Roles = PortalRoles.Admin)]
+[Authorize(Roles = $"{PortalRoles.Admin},{PortalRoles.Wildlife}")]
 public sealed class CrewController(WhaleWatchingDbContext db) : ControllerBase
 {
     [HttpGet("{id:guid}/certificates")]
@@ -22,7 +23,9 @@ public sealed class CrewController(WhaleWatchingDbContext db) : ControllerBase
     {
         var document = await db.CrewCertificates.AsNoTracking()
             .SingleOrDefaultAsync(x => x.CrewUserId == id && x.Id == certificateId, ct);
-        return document is null ? NotFound() : File(document.Content, document.ContentType, document.Name);
+        Response.Headers["X-Content-Type-Options"] = "nosniff";
+        Response.Headers.CacheControl = "no-store";
+        return document?.Content is not { Length: > 0 } ? NotFound() : File(document.Content, document.ContentType, document.Name);
     }
 
     [HttpGet]
@@ -51,9 +54,13 @@ public sealed class CrewController(WhaleWatchingDbContext db) : ControllerBase
                     .FirstOrDefault()))
             .ToListAsync(ct);
 
-        return Ok(crew);
+        var statuses = await CrewCertificateValidation.StatusesAsync(db, crew.Select(c => c.Id).ToArray(), ct);
+        return Ok(crew.Select(c => c with { Certificate = statuses[c.Id] }).ToList());
     }
 }
 
 public sealed record AdminCrewDto(Guid Id, string DisplayName, string Email, string? PhoneNumber,
-    string Position, string? NicNumber, string? Bio, bool Certified, Guid? OwnerId, Guid? BoatId);
+    string Position, string? NicNumber, string? Bio, bool Certified, Guid? OwnerId, Guid? BoatId)
+{
+    public CrewCertificateStatus Certificate { get; init; } = CrewCertificateValidation.Missing;
+}

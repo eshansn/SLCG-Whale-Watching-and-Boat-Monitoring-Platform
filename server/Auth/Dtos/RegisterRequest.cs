@@ -4,6 +4,9 @@ namespace WhaleWatching.Api.Auth.Dtos;
 
 public sealed class RegisterRequest
 {
+    [System.Text.Json.Serialization.JsonIgnore]
+    public IFormFile? Certificate { get; init; }
+
     [Required, MinLength(3), MaxLength(64), RegularExpression("^[a-zA-Z0-9._-]+$",
         ErrorMessage = "Username can contain letters, numbers, dots, underscores, and hyphens only.")]
     public required string UserName { get; init; }

@@ -15,11 +15,12 @@ namespace WhaleWatching.Api.Auth;
 public sealed class AuthController(IAuthService authService, UserManager<ApplicationUser> userManager) : ControllerBase
 {
     [HttpPost("register")]
+    [Consumes("application/json")]
     [AllowAnonymous]
     [ProducesResponseType<RegisterResponse>(StatusCodes.Status202Accepted)]
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Register(
-        RegisterRequest request,
+        [FromBody] RegisterRequest request,
         CancellationToken cancellationToken)
     {
         var result = await authService.RegisterPublicPortalUserAsync(request, cancellationToken);
@@ -36,6 +37,14 @@ public sealed class AuthController(IAuthService authService, UserManager<Applica
         return Accepted(new RegisterResponse(
             "Registration accepted. You can now sign in."));
     }
+
+    [HttpPost("register")]
+    [Consumes("multipart/form-data")]
+    [AllowAnonymous]
+    [RequestSizeLimit(6 * 1024 * 1024)]
+    [RequestFormLimits(MultipartBodyLengthLimit = 6 * 1024 * 1024)]
+    public Task<IActionResult> RegisterWithCertificate([FromForm] RegisterRequest request, CancellationToken ct) =>
+        Register(request, ct);
 
     [HttpPost("login")]
     [AllowAnonymous]

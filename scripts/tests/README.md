@@ -120,3 +120,17 @@ SQL database and a fake email sender. Never run it against a real user deploymen
 See [PASSWORD_RECOVERY_IMPLEMENTATION.md](../../PASSWORD_RECOVERY_IMPLEMENTATION.md)
 for configuration, SQL test setup, browser requirements and the security test inventory.
 
+## Mandatory crew certificates
+
+`crew-certificates.cjs` is launched by
+`ComplaintAccountabilityTests.Browser_LiveCrewCertificates_UploadReviewDownloadAndApprove`.
+It tests real private uploads/downloads, all existing accepted file formats, staff
+certificate states, upload failure/retry, legacy review, and Admin/Wildlife approval
+against a disposable SQL database. `deep-ocean-auth.cjs` also checks mandatory crew
+certificate registration and the unchanged owner JSON registration flow.
+
+Use the same SQL/browser environment variables documented above, with either
+`PLAYWRIGHT_ENGINE=chromium` or `PLAYWRIGHT_ENGINE=webkit`. These scripts never
+upload certificates or approve accounts in the running deployment.
+See [CREW_CERTIFICATE_IMPLEMENTATION.md](../../CREW_CERTIFICATE_IMPLEMENTATION.md)
+for the server test inventory and read-only staff audit command.

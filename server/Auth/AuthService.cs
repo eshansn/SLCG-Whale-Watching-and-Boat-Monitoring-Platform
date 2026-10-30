@@ -2,13 +2,16 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using WhaleWatching.Api.Auth.Dtos;
 using WhaleWatching.Api.Domain;
+using WhaleWatching.Api.Data;
+using WhaleWatching.Api.Profiles;
 
 namespace WhaleWatching.Api.Auth;
 
 public sealed class AuthService(
     UserManager<ApplicationUser> userManager,
     SignInManager<ApplicationUser> signInManager,
-    IJwtTokenService jwtTokenService) : IAuthService
+    IJwtTokenService jwtTokenService,
+    WhaleWatchingDbContext db) : IAuthService
 {
     public async Task<IdentityResult> RegisterPublicPortalUserAsync(
         RegisterRequest request,
@@ -25,6 +28,14 @@ public sealed class AuthService(
                 Code = "InvalidPublicRole",
                 Description = "Only boat owner and boat crew accounts can be self-registered."
             });
+        }
+        CrewCertificate? certificate = null;
+        if (role == PortalRoles.BoatCrew)
+        {
+            var upload = await CrewCertificateValidation.ReadAsync(request.Certificate, cancellationToken);
+            if (upload.Error is not null)
+                return IdentityResult.Failed(new IdentityError { Code = "CertificateRequired", Description = upload.Error });
+            certificate = upload.Document;
         }
         if (await userManager.Users.AnyAsync(user => user.NicNumber == nicNumber, cancellationToken))
         {
@@ -45,19 +56,30 @@ public sealed class AuthService(
             PhoneNumber = request.PhoneNumber.Trim()
         };
 
-        var createResult = await userManager.CreateAsync(user, request.Password);
-        if (!createResult.Succeeded)
+        return await db.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
         {
-            return createResult;
-        }
+            db.ChangeTracker.Clear();
+            await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+            var createResult = await userManager.CreateAsync(user, request.Password);
+            if (!createResult.Succeeded)
+            {
+                return createResult;
+            }
 
-        var roleResult = await userManager.AddToRoleAsync(user, role);
-        if (!roleResult.Succeeded)
-        {
-            await userManager.DeleteAsync(user);
-        }
-
-        return roleResult;
+            var roleResult = await userManager.AddToRoleAsync(user, role);
+            if (!roleResult.Succeeded)
+            {
+                return roleResult;
+            }
+            if (certificate is not null)
+            {
+                certificate.CrewUserId = user.Id;
+                db.CrewCertificates.Add(certificate);
+                await db.SaveChangesAsync(cancellationToken);
+            }
+            await transaction.CommitAsync(cancellationToken);
+            return roleResult;
+        });
     }
 
     public async Task<AuthResponse?> LoginAsync(

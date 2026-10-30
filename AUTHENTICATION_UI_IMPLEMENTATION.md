@@ -26,6 +26,7 @@ Login still calls the existing AuthContext login method with the trimmed account
 
 Public registration remains limited to Boat Owner and Crew Member. It still proceeds through role → details → password and sends the existing request fields: `userName`, `displayName`, `nicNumber`, `email`, `phoneNumber`, `password`, `role`. All existing mandatory fields are present. Username/NIC formats and length limits are preserved, and server-side Identity validators remain authoritative. Password guidance displays the existing 12–128-character input bound, six unique characters, uppercase, lowercase, number and symbol requirements.
 
+Crew registration additionally requires a certificate in the details step and sends these fields with the certificate as multipart form data to the existing registration URL. Boat owner registration continues to use JSON. Registration persists the crew account and certificate atomically; see [CREW_CERTIFICATE_IMPLEMENTATION.md](CREW_CERTIFICATE_IMPLEMENTATION.md) for validation, approval enforcement and tests.
 
 Registration still waits for server-confirmed creation, signs in through the existing login method and routes to `/owner` or `/crew`. If creation succeeds but the subsequent sign-in fails, the page accurately explains that an account was created and offers Sign In; it does not encourage another registration attempt. Errors appear inline rather than in browser alert dialogs. A synchronous ref guard prevents duplicate login/registration requests while the disabled/loading state renders.
 

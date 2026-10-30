@@ -15,7 +15,7 @@ namespace WhaleWatching.Api.Tests;
 public sealed class CrewProfileTests
 {
     [Theory]
-    [InlineData("application/pdf", "%PDF-1.7", true)]
+    [InlineData("application/pdf", "%PDF-1.7", false)]
     [InlineData("application/pdf", "malicious content", false)]
     [InlineData("image/png", "%PDF-1.7", false)]
     [InlineData("image/jpeg", "", false)]
@@ -64,7 +64,7 @@ public sealed class CrewProfileTests
 
             var invalidRole = await controller.Update(new UpdateCrewProfileRequest { Email = crew.Email, PhoneNumber = "+94771234567", Position = "Admin" });
             Assert.Equal(400, Assert.IsAssignableFrom<ObjectResult>(invalidRole.Result).StatusCode);
-            var bytes = "%PDF-1.7\nTest certificate"u8.ToArray();
+            var bytes = CrewCertificateFixtures.Pdf();
             IFormFile File(byte[] content) => new FormFile(new MemoryStream(content), 0, content.Length, "certificate", "coxswain.pdf") { Headers = new HeaderDictionary(), ContentType = "application/pdf" };
             Assert.Equal(400, Assert.IsAssignableFrom<ObjectResult>(await controller.UploadCertificate(File("invalid"u8.ToArray()), default)).StatusCode);
             Assert.Equal(400, Assert.IsAssignableFrom<ObjectResult>(await controller.UploadCertificate(File([]), default)).StatusCode);
@@ -76,7 +76,8 @@ public sealed class CrewProfileTests
             Assert.Equal(bytes, Assert.IsType<FileContentResult>(await controller.DownloadCertificate(uploaded.Id, default)).FileContents);
             Assert.IsType<NotFoundResult>(await Controller(stranger.Id).DownloadCertificate(uploaded.Id, default));
             Assert.False((await db.Users.SingleAsync(x => x.Id == crew.Id)).IsCrewCertified);
-            var admin = new WhaleWatching.Api.Admin.CrewController(db);
+            var admin = new WhaleWatching.Api.Admin.CrewController(db)
+            { ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() } };
             Assert.Equal(bytes, Assert.IsType<FileContentResult>(await admin.DownloadCertificate(crew.Id, uploaded.Id, default)).FileContents);
             Assert.IsType<NotFoundResult>(await admin.DownloadCertificate(stranger.Id, uploaded.Id, default));
         }

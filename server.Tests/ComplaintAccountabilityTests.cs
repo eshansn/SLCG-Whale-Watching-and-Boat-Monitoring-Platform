@@ -32,7 +32,7 @@ using Microsoft.Extensions.Options;
 
 namespace WhaleWatching.Api.Tests;
 
-public sealed class ComplaintAccountabilityTests
+public sealed partial class ComplaintAccountabilityTests
 {
     [SqlServerFact]
     public async Task ShoreQr_ValidatesTripAndRoleBeforeAttendance_AndPreventsDuplicateCheckIns()
@@ -648,6 +648,13 @@ public sealed class ComplaintAccountabilityTests
     private sealed class FailureInjector : SaveChangesInterceptor
     {
         public bool FailNextSave { get; set; }
+        public bool FailCertificateSave { get; set; }
+        public override ValueTask<InterceptionResult<int>> SavingChangesAsync(DbContextEventData eventData, InterceptionResult<int> result, CancellationToken cancellationToken = default)
+        {
+            if (FailCertificateSave && eventData.Context!.ChangeTracker.Entries<CrewCertificate>().Any(e => e.State == EntityState.Added))
+            { FailCertificateSave = false; throw new InvalidOperationException("Simulated certificate storage failure"); }
+            return ValueTask.FromResult(result);
+        }
         public override ValueTask<int> SavedChangesAsync(SaveChangesCompletedEventData eventData, int result, CancellationToken cancellationToken = default)
         {
             if (FailNextSave) { FailNextSave = false; throw new InvalidOperationException("Simulated notification persistence failure after SQL writes"); }
@@ -770,7 +777,7 @@ public sealed class ComplaintAccountabilityTests
         public Task<HttpResponseMessage> Send(string? role, HttpMethod method, string path, object? body = null)
         {
             var request = new HttpRequestMessage(method, path);
-            if (body is not null) request.Content = JsonContent.Create(body);
+            if (body is not null) request.Content = body as HttpContent ?? JsonContent.Create(body);
             if (role is not null)
             {
                 var jwt = new JwtSecurityToken(claims: [new Claim("sub", Users[role].ToString()), new Claim("role", role)], expires: DateTime.UtcNow.AddMinutes(20),

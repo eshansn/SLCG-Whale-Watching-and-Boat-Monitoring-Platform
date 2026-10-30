@@ -161,6 +161,24 @@ const { chromium, webkit } = require(process.env.PLAYWRIGHT_MODULE || 'playwrigh
       await signupPage.goto('/signup');
       await signupPage.getByRole('button', { name: new RegExp(label) }).click();
       await details(signupPage, values);
+      if (role === 'BoatCrew') {
+        await signupPage.getByRole('button', { name: 'Continue', exact: true }).click();
+        assert.equal(await signupPage.locator('#signup-password').count(), 0, 'Certificate is required');
+        await signupPage.locator('#signup-certificate').setInputFiles({ name: 'invalid.pdf', mimeType: 'application/pdf', buffer: Buffer.from('invalid content') });
+        await signupPage.getByRole('button', { name: 'Continue', exact: true }).click();
+        await signupPage.locator('#signup-certificate-error').getByText(/does not match/).waitFor();
+        assert.equal(await signupPage.locator('#signup-password').count(), 0);
+        let pdf = '%PDF-1.4\n';
+        const offsets = [0];
+        for (const body of ['<< /Type /Catalog /Pages 2 0 R >>', '<< /Type /Pages /Kids [3 0 R] /Count 1 >>', '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 200 200] >>']) {
+          offsets.push(pdf.length); pdf += `${offsets.length - 1} 0 obj\n${body}\nendobj\n`;
+        }
+        const xref = pdf.length;
+        pdf += 'xref\n0 4\n0000000000 65535 f \n' + offsets.slice(1).map(n => `${String(n).padStart(10, '0')} 00000 n \n`).join('');
+        pdf += `trailer\n<< /Size 4 /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+        await signupPage.locator('#signup-certificate').setInputFiles({ name: 'crew-certificate.pdf', mimeType: 'application/pdf', buffer: Buffer.from(pdf) });
+        await layout(signupPage, 'signup-certificate');
+      }
       if (role === 'BoatOwner') {
         await layout(signupPage, 'signup-details');
         await signupPage.locator('#signup-username').fill('a');

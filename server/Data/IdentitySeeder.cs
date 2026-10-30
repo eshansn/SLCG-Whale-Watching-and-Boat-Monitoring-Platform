@@ -210,8 +210,7 @@ public sealed class IdentitySeeder(
         foreach (var item in crewSeed)
         {
             var crewUser = await SeedDataUserAsync(item.Item1, item.Item2, PortalRoles.BoatCrew, crewPassword);
-            if (!crewUser.IsCrewCertified) { crewUser.IsCrewCertified = true;
-                EnsureSucceeded(await userManager.UpdateAsync(crewUser), $"certify seeded crew '{crewUser.Email}'"); }
+            // Seed data must not grant/reapply crew approval without an officer's certificate check.
             if (crewUser.CrewType != item.Item3) { crewUser.CrewType = item.Item3;
                 EnsureSucceeded(await userManager.UpdateAsync(crewUser), $"set crew type for '{crewUser.Email}'"); }
             crewUsers.Add((crewUser, item.Item3, item.Item4));
