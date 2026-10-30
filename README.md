@@ -2,6 +2,10 @@
 
 SLTDA monitoring, complaint accountability, rollout instructions, APIs and verification results are documented in [SLTDA_IMPLEMENTATION.md](SLTDA_IMPLEMENTATION.md).
 
+Email OTP password recovery, Gmail setup, migration instructions and security testing are documented in [PASSWORD_RECOVERY_IMPLEMENTATION.md](PASSWORD_RECOVERY_IMPLEMENTATION.md).
+
+
+
 ## TrackMyCar GPS configuration
 
 TrackMyCar is called only by the ASP.NET Core backend. Never place its API key in

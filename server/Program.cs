@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using WhaleWatching.Api.Auth;
+using WhaleWatching.Api.Auth.Recovery;
 using WhaleWatching.Api.Data;
 using WhaleWatching.Api.Domain;
 using WhaleWatching.Api.Gps;
@@ -98,6 +99,7 @@ builder.Services.AddAuthentication(options =>
         };
         options.Events = new JwtBearerEvents
         {
+            OnTokenValidated = AccessTokenSecurity.ValidateAsync,
             OnMessageReceived = context =>
             {
                 var token = context.Request.Query["access_token"];
@@ -197,6 +199,7 @@ builder.Services.AddHostedService<TripLifecycleMonitor>();
 builder.Services.AddHostedService<TrackMyCarSyncWorker>();
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddPasswordRecovery(builder.Configuration);
 builder.Services.AddScoped<IdentitySeeder>();
 builder.Services.AddScoped<ComplaintAccess>();
 builder.Services.AddScoped<ComplaintWorkflow>();
@@ -211,7 +214,7 @@ app.UseCors("clients");
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
-app.MapHub<OperationsHub>("/hubs/operations");
+app.MapHub<OperationsHub>("/hubs/operations", options => options.CloseOnAuthenticationExpiration = true);
 app.MapHealthChecks("/health/live", new HealthCheckOptions
 {
     Predicate = _ => false

@@ -39,6 +39,14 @@ services:
         User Id=sa;Password=${MSSQL_SA_PASSWORD};
         Encrypt=True;TrustServerCertificate=True;
       Jwt__SigningKey: "${JWT_SIGNING_KEY:?Set JWT_SIGNING_KEY in your .env file}"
+      PasswordRecovery__Enabled: "${PASSWORD_RECOVERY_ENABLED:-false}"
+      PasswordRecovery__HashKey: "${PASSWORD_RECOVERY_HASH_KEY:-}"
+      PasswordRecovery__Smtp__Host: "${SMTP_HOST:-smtp.gmail.com}"
+      PasswordRecovery__Smtp__Port: "${SMTP_PORT:-587}"
+      PasswordRecovery__Smtp__Username: "${SMTP_USERNAME:-}"
+      PasswordRecovery__Smtp__AppPassword: "${SMTP_APP_PASSWORD:-}"
+      PasswordRecovery__Smtp__FromEmail: "${SMTP_FROM_EMAIL:-}"
+      PasswordRecovery__Smtp__FromName: "${SMTP_FROM_NAME:-WWMS Account Security}"
       TrackMyCar__ApiKey: "${TrackMyCar__ApiKey:-}"
       TrackMyCar__Enabled: "${TrackMyCar__Enabled:-true}"
       DevelopmentMockData__Enabled: "${DevelopmentMockData__Enabled:-false}"

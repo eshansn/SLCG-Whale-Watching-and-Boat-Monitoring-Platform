@@ -101,3 +101,12 @@ Optional environment variables:
 The browser suite mocks API and SignalR responses. It verifies authenticated image
 rendering and replacement events across 21 portal screens, plus the owner upload
 control and the no-image placeholder. It never writes to the running database.
+## Password recovery flow
+
+`password-recovery.cjs` is launched by the xUnit test
+`PasswordRecoveryTests.Browser_LivePasswordRecovery_MobileDesktopAndEnglishOnlyFlow`.
+It drives the production frontend against the real API/Identity services, a disposable
+SQL database and a fake email sender. Never run it against a real user deployment.
+See [PASSWORD_RECOVERY_IMPLEMENTATION.md](../../PASSWORD_RECOVERY_IMPLEMENTATION.md)
+for configuration, SQL test setup, browser requirements and the security test inventory.
+

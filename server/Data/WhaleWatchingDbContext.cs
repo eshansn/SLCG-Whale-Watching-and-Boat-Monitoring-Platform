@@ -10,6 +10,9 @@ public sealed class WhaleWatchingDbContext(DbContextOptions<WhaleWatchingDbConte
 {
     public DbSet<GpsTelemetry> GpsTelemetry => Set<GpsTelemetry>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+    public DbSet<PasswordRecovery> PasswordRecoveries => Set<PasswordRecovery>();
+    public DbSet<PasswordRecoveryDelivery> PasswordRecoveryDeliveries => Set<PasswordRecoveryDelivery>();
+    public DbSet<PasswordRecoveryRateWindow> PasswordRecoveryRateWindows => Set<PasswordRecoveryRateWindow>();
     public DbSet<Boat> Boats => Set<Boat>();
     public DbSet<BoatDocument> BoatDocuments => Set<BoatDocument>();
     public DbSet<CrewCertificate> CrewCertificates => Set<CrewCertificate>();
@@ -38,6 +41,7 @@ public sealed class WhaleWatchingDbContext(DbContextOptions<WhaleWatchingDbConte
     {
         base.OnModelCreating(modelBuilder);
         ComplaintModelConfiguration.Configure(modelBuilder);
+        PasswordRecoveryModelConfiguration.Configure(modelBuilder);
 
         var certificate = modelBuilder.Entity<CrewCertificate>();
         certificate.Property(x => x.Name).HasMaxLength(255).IsRequired();

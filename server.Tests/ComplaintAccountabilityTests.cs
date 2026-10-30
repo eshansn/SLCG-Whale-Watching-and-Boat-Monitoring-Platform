@@ -602,7 +602,13 @@ public sealed class ComplaintAccountabilityTests
         try
         {
             await db.GetService<IMigrator>().MigrateAsync("20261008042311_CrewProfileCertificates");
-            var (passenger, trip) = await Harness.SeedPassengerAndTrips(db);
+            // Seed the legacy user schema explicitly; today's user model includes later additive columns.
+            var owner = new ApplicationUser { Id = Guid.NewGuid(), DisplayName = "Legacy operator" };
+            await db.Database.ExecuteSqlInterpolatedAsync($@"INSERT INTO AspNetUsers
+                (Id,DisplayName,EmailConfirmed,PhoneNumberConfirmed,TwoFactorEnabled,LockoutEnabled,AccessFailedCount,IsCrewCertified)
+                VALUES ({owner.Id},{owner.DisplayName},0,0,0,0,0,0)");
+            db.Attach(owner);
+            var (passenger, trip) = await Harness.SeedPassengerAndTrips(db, owner);
             var id = Guid.NewGuid(); var created = DateTimeOffset.UtcNow.AddDays(-10);
             await db.Database.ExecuteSqlInterpolatedAsync($"INSERT INTO PassengerComplaints (Id,PassengerId,TripId,Type,Message,CreatedAtUtc) VALUES ({id},{passenger.Id},{trip.Id},{"Other"},{"Legacy report"},{created})");
             await db.Database.MigrateAsync();
@@ -742,9 +748,9 @@ public sealed class ComplaintAccountabilityTests
             await db.SaveChangesAsync(); db.ChangeTracker.Clear();
             return test;
         }
-        public static async Task<(PassengerProfile, Trip)> SeedPassengerAndTrips(WhaleWatchingDbContext db)
+        public static async Task<(PassengerProfile, Trip)> SeedPassengerAndTrips(WhaleWatchingDbContext db, ApplicationUser? existingOwner = null)
         {
-            var owner = new ApplicationUser { Id = Guid.NewGuid(), DisplayName = "Test operator" };
+            var owner = existingOwner ?? new ApplicationUser { Id = Guid.NewGuid(), DisplayName = "Test operator" };
             var boat = new Boat { Id = Guid.NewGuid(), Owner = owner, Name = "Test boat", RegistrationNumber = Guid.NewGuid().ToString(), RegistrationDate = new DateOnly(2026, 1, 1) };
             var passenger = new PassengerProfile { Id = Guid.NewGuid(), Name = "Passenger One", IdentificationNumber = "MONITOR-ID-1", NormalizedIdentificationNumber = "MONITOR-ID-1", PhoneNumber = "0701234567", NormalizedPhoneNumber = "0701234567", PassengerType = "Local", CountryCode = "LK", CreatedAtUtc = DateTimeOffset.UtcNow };
             db.PassengerProfiles.AddRange(passenger,
