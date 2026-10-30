@@ -1,0 +1,137 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="265ee7fd-3abb-4630-af1a-9ccb2a6312a5" name="Admin@DESKTOP-1P8ID0I 2026-10-30 11:47:24" runUser="DESKTOP-1P8ID0I\Admin" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-10-30T11:47:24.7328032+05:30" queuing="2026-10-30T11:47:24.7328033+05:30" start="2026-10-30T11:47:22.9952146+05:30" finish="2026-10-30T11:47:26.9569764+05:30" />
+  <TestSettings name="default" id="9857aa42-5695-46cf-af08-f34cd17bce4e">
+    <Deployment runDeploymentRoot="Admin_DESKTOP-1P8ID0I_2026-10-30_11_47_24" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="5a11e675-4b0d-4eb0-9e46-722a34c89b77" testId="d3879061-ca86-2f5f-aee4-7e0c95527855" testName="WhaleWatching.Api.Tests.AuthRegistrationTests.FailedRegistration_ReturnsValidationErrorInsteadOfSuccess(code: &quot;DuplicateEmail&quot;)" computerName="DESKTOP-1P8ID0I" duration="00:00:00.0003597" startTime="2026-10-30T11:47:23.3830467+05:30" endTime="2026-10-30T11:47:23.3830467+05:30" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="5a11e675-4b0d-4eb0-9e46-722a34c89b77" />
+    <UnitTestResult executionId="5175a7bf-5a73-4679-ba1e-b25fb098cf12" testId="b6ce989f-43ea-04c0-db96-ab54ae53d668" testName="WhaleWatching.Api.Tests.CrewProfileTests.CertificateUpload_RejectsMismatchedFileContent(type: &quot;application/pdf&quot;, content: &quot;malicious content&quot;, accepted: False)" computerName="DESKTOP-1P8ID0I" duration="00:00:00.0000015" startTime="2026-10-30T11:47:24.9941249+05:30" endTime="2026-10-30T11:47:24.9941250+05:30" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="5175a7bf-5a73-4679-ba1e-b25fb098cf12" />
+    <UnitTestResult executionId="430e2bb9-93f7-41ab-9644-7a8cba6078b8" testId="55a5cfe8-6a0f-5d1a-6842-474f968d986a" testName="WhaleWatching.Api.Tests.AuthRegistrationTests.FailedRegistration_ReturnsValidationErrorInsteadOfSuccess(code: &quot;DuplicateNicNumber&quot;)" computerName="DESKTOP-1P8ID0I" duration="00:00:00.0043974" startTime="2026-10-30T11:47:23.3826615+05:30" endTime="2026-10-30T11:47:23.3826616+05:30" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="430e2bb9-93f7-41ab-9644-7a8cba6078b8" />
+    <UnitTestResult executionId="73bb8fdc-a23e-4faf-afba-054a2764c708" testId="31de5f48-d144-9951-ecdc-be229dda4bb0" testName="WhaleWatching.Api.Tests.CrewProfileTests.ProfileAndCertificates_PersistWithoutAllowingSelfApprovalOrAccessToAnotherCrewMember" computerName="DESKTOP-1P8ID0I" duration="00:00:01.6240484" startTime="2026-10-30T11:47:24.9938494+05:30" endTime="2026-10-30T11:47:24.9938495+05:30" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="73bb8fdc-a23e-4faf-afba-054a2764c708">
+      <Output>
+        <ErrorInfo>
+          <Message>System.NullReferenceException : Object reference not set to an instance of an object.</Message>
+          <StackTrace>   at WhaleWatching.Api.Admin.CrewController.DownloadCertificate(Guid id, Guid certificateId, CancellationToken ct) in D:\SLCG-Whale-Watching-and-Boat-Monitoring-Platform\server\Admin\CrewController.cs:line 26&#xD;
+   at WhaleWatching.Api.Tests.CrewProfileTests.ProfileAndCertificates_PersistWithoutAllowingSelfApprovalOrAccessToAnotherCrewMember() in D:\SLCG-Whale-Watching-and-Boat-Monitoring-Platform\server.Tests\CrewProfileTests.cs:line 80&#xD;
+   at WhaleWatching.Api.Tests.CrewProfileTests.ProfileAndCertificates_PersistWithoutAllowingSelfApprovalOrAccessToAnotherCrewMember() in D:\SLCG-Whale-Watching-and-Boat-Monitoring-Platform\server.Tests\CrewProfileTests.cs:line 83&#xD;
+   at WhaleWatching.Api.Tests.CrewProfileTests.ProfileAndCertificates_PersistWithoutAllowingSelfApprovalOrAccessToAnotherCrewMember() in D:\SLCG-Whale-Watching-and-Boat-Monitoring-Platform\server.Tests\CrewProfileTests.cs:line 83&#xD;
+   at WhaleWatching.Api.Tests.CrewProfileTests.ProfileAndCertificates_PersistWithoutAllowingSelfApprovalOrAccessToAnotherCrewMember() in D:\SLCG-Whale-Watching-and-Boat-Monitoring-Platform\server.Tests\CrewProfileTests.cs:line 83&#xD;
+--- End of stack trace from previous location ---</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="2d472fe7-db2b-4c20-a413-85ed4d3b2c96" testId="89e8715b-dce4-6177-547d-27de7be2d1c3" testName="WhaleWatching.Api.Tests.CrewCertificateValidationTests.StructuralValidation_RejectsTruncationMismatchedTypesAndCorruption" computerName="DESKTOP-1P8ID0I" duration="00:00:00.0060175" startTime="2026-10-30T11:47:23.3643059+05:30" endTime="2026-10-30T11:47:23.3643251+05:30" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="2d472fe7-db2b-4c20-a413-85ed4d3b2c96" />
+    <UnitTestResult executionId="5f38f58f-ee94-4f87-8161-6abc48d3c798" testId="fc074e27-a1d2-7106-4319-3d47af54cda0" testName="WhaleWatching.Api.Tests.CrewProfileTests.CertificateUpload_RejectsMismatchedFileContent(type: &quot;text/html&quot;, content: &quot;&lt;html&gt;&quot;, accepted: False)" computerName="DESKTOP-1P8ID0I" duration="00:00:00.0000033" startTime="2026-10-30T11:47:24.9941429+05:30" endTime="2026-10-30T11:47:24.9941429+05:30" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="5f38f58f-ee94-4f87-8161-6abc48d3c798" />
+    <UnitTestResult executionId="62ff1a82-e46c-408a-b0b0-5e5fbf15a88d" testId="93c4229b-51e9-4819-c25a-c322c3536fa7" testName="WhaleWatching.Api.Tests.ComplaintAccountabilityTests.CrewCertificates_RegistrationIsAtomicAndCannotUseReferencesInsteadOfFiles" computerName="DESKTOP-1P8ID0I" duration="00:00:00.9309243" startTime="2026-10-30T11:47:26.9077233+05:30" endTime="2026-10-30T11:47:26.9077234+05:30" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="62ff1a82-e46c-408a-b0b0-5e5fbf15a88d" />
+    <UnitTestResult executionId="34fb8cfa-402e-4a07-a5d2-b75f01ccdb50" testId="5ae8a180-e8e8-7879-ca29-6da84faab635" testName="WhaleWatching.Api.Tests.AuthRegistrationTests.FailedRegistration_ReturnsValidationErrorInsteadOfSuccess(code: &quot;DuplicateUserName&quot;)" computerName="DESKTOP-1P8ID0I" duration="00:00:00.0001845" startTime="2026-10-30T11:47:23.3834568+05:30" endTime="2026-10-30T11:47:23.3834569+05:30" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="34fb8cfa-402e-4a07-a5d2-b75f01ccdb50" />
+    <UnitTestResult executionId="48de45e9-85c0-4619-8b8a-ce567a8a8af9" testId="72dc0537-f142-6522-9b2c-d63e70d2abc1" testName="WhaleWatching.Api.Tests.ComplaintAccountabilityTests.CrewCertificates_ApprovalRequiresOwnedAvailableValidBytes_AndPreservesLegacyApproval" computerName="DESKTOP-1P8ID0I" duration="00:00:02.6202096" startTime="2026-10-30T11:47:25.9763903+05:30" endTime="2026-10-30T11:47:25.9763904+05:30" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="48de45e9-85c0-4619-8b8a-ce567a8a8af9" />
+    <UnitTestResult executionId="8ba94650-fb20-4f1c-b121-d0fb27248d50" testId="e8680756-6f5f-be4f-88ec-d2811c93c6cf" testName="WhaleWatching.Api.Tests.AuthRegistrationTests.FailedRegistration_ReturnsValidationErrorInsteadOfSuccess(code: &quot;PasswordTooShort&quot;)" computerName="DESKTOP-1P8ID0I" duration="00:00:00.0001785" startTime="2026-10-30T11:47:23.3832588+05:30" endTime="2026-10-30T11:47:23.3832589+05:30" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="8ba94650-fb20-4f1c-b121-d0fb27248d50" />
+    <UnitTestResult executionId="78b13bc1-2e08-4c23-8304-3990c6454e8d" testId="904b37fc-ace5-fc09-74d4-f177ce2fa6d4" testName="WhaleWatching.Api.Tests.CrewProfileTests.CertificateUpload_RejectsMismatchedFileContent(type: &quot;application/pdf&quot;, content: &quot;%PDF-1.7&quot;, accepted: False)" computerName="DESKTOP-1P8ID0I" duration="00:00:00.0001898" startTime="2026-10-30T11:47:24.9940862+05:30" endTime="2026-10-30T11:47:24.9940862+05:30" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="78b13bc1-2e08-4c23-8304-3990c6454e8d" />
+    <UnitTestResult executionId="724f812d-3936-4fdb-a83b-4f768ac23b35" testId="9a009eee-c1cd-6f7b-d351-d8c3ab4bf52a" testName="WhaleWatching.Api.Tests.AuthRegistrationTests.SuccessfulRegistration_AllowsSignIn" computerName="DESKTOP-1P8ID0I" duration="00:00:00.0222894" startTime="2026-10-30T11:47:23.3782194+05:30" endTime="2026-10-30T11:47:23.3782194+05:30" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="724f812d-3936-4fdb-a83b-4f768ac23b35" />
+    <UnitTestResult executionId="b0194a62-dd5b-42d0-b000-fb7216edc4db" testId="8b703899-5b2e-e9b1-5b4b-d1b1b0c3f4fb" testName="WhaleWatching.Api.Tests.CrewProfileTests.CertificateUpload_RejectsMismatchedFileContent(type: &quot;image/jpeg&quot;, content: &quot;&quot;, accepted: False)" computerName="DESKTOP-1P8ID0I" duration="00:00:00.0013840" startTime="2026-10-30T11:47:24.9940700+05:30" endTime="2026-10-30T11:47:24.9940701+05:30" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="b0194a62-dd5b-42d0-b000-fb7216edc4db" />
+    <UnitTestResult executionId="6a1d2d34-e9bb-47e9-9f78-032149c199fc" testId="47db22f7-16aa-f913-b531-6aa81b9b95c9" testName="WhaleWatching.Api.Tests.CrewProfileTests.CertificateUpload_RejectsMismatchedFileContent(type: &quot;image/png&quot;, content: &quot;%PDF-1.7&quot;, accepted: False)" computerName="DESKTOP-1P8ID0I" duration="00:00:00.0000049" startTime="2026-10-30T11:47:24.9940959+05:30" endTime="2026-10-30T11:47:24.9940959+05:30" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="6a1d2d34-e9bb-47e9-9f78-032149c199fc" />
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="WhaleWatching.Api.Tests.ComplaintAccountabilityTests.CrewCertificates_ApprovalRequiresOwnedAvailableValidBytes_AndPreservesLegacyApproval" storage="d:\slcg-whale-watching-and-boat-monitoring-platform\server.tests\bin\debug\net8.0\whalewatching.api.tests.dll" id="72dc0537-f142-6522-9b2c-d63e70d2abc1">
+      <Execution id="48de45e9-85c0-4619-8b8a-ce567a8a8af9" />
+      <TestMethod codeBase="D:\SLCG-Whale-Watching-and-Boat-Monitoring-Platform\server.Tests\bin\Debug\net8.0\WhaleWatching.Api.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="WhaleWatching.Api.Tests.ComplaintAccountabilityTests" name="CrewCertificates_ApprovalRequiresOwnedAvailableValidBytes_AndPreservesLegacyApproval" />
+    </UnitTest>
+    <UnitTest name="WhaleWatching.Api.Tests.ComplaintAccountabilityTests.CrewCertificates_RegistrationIsAtomicAndCannotUseReferencesInsteadOfFiles" storage="d:\slcg-whale-watching-and-boat-monitoring-platform\server.tests\bin\debug\net8.0\whalewatching.api.tests.dll" id="93c4229b-51e9-4819-c25a-c322c3536fa7">
+      <Execution id="62ff1a82-e46c-408a-b0b0-5e5fbf15a88d" />
+      <TestMethod codeBase="D:\SLCG-Whale-Watching-and-Boat-Monitoring-Platform\server.Tests\bin\Debug\net8.0\WhaleWatching.Api.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="WhaleWatching.Api.Tests.ComplaintAccountabilityTests" name="CrewCertificates_RegistrationIsAtomicAndCannotUseReferencesInsteadOfFiles" />
+    </UnitTest>
+    <UnitTest name="WhaleWatching.Api.Tests.AuthRegistrationTests.FailedRegistration_ReturnsValidationErrorInsteadOfSuccess(code: &quot;PasswordTooShort&quot;)" storage="d:\slcg-whale-watching-and-boat-monitoring-platform\server.tests\bin\debug\net8.0\whalewatching.api.tests.dll" id="e8680756-6f5f-be4f-88ec-d2811c93c6cf">
+      <Execution id="8ba94650-fb20-4f1c-b121-d0fb27248d50" />
+      <TestMethod codeBase="D:\SLCG-Whale-Watching-and-Boat-Monitoring-Platform\server.Tests\bin\Debug\net8.0\WhaleWatching.Api.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="WhaleWatching.Api.Tests.AuthRegistrationTests" name="FailedRegistration_ReturnsValidationErrorInsteadOfSuccess" />
+    </UnitTest>
+    <UnitTest name="WhaleWatching.Api.Tests.AuthRegistrationTests.SuccessfulRegistration_AllowsSignIn" storage="d:\slcg-whale-watching-and-boat-monitoring-platform\server.tests\bin\debug\net8.0\whalewatching.api.tests.dll" id="9a009eee-c1cd-6f7b-d351-d8c3ab4bf52a">
+      <Execution id="724f812d-3936-4fdb-a83b-4f768ac23b35" />
+      <TestMethod codeBase="D:\SLCG-Whale-Watching-and-Boat-Monitoring-Platform\server.Tests\bin\Debug\net8.0\WhaleWatching.Api.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="WhaleWatching.Api.Tests.AuthRegistrationTests" name="SuccessfulRegistration_AllowsSignIn" />
+    </UnitTest>
+    <UnitTest name="WhaleWatching.Api.Tests.CrewProfileTests.CertificateUpload_RejectsMismatchedFileContent(type: &quot;image/png&quot;, content: &quot;%PDF-1.7&quot;, accepted: False)" storage="d:\slcg-whale-watching-and-boat-monitoring-platform\server.tests\bin\debug\net8.0\whalewatching.api.tests.dll" id="47db22f7-16aa-f913-b531-6aa81b9b95c9">
+      <Execution id="6a1d2d34-e9bb-47e9-9f78-032149c199fc" />
+      <TestMethod codeBase="D:\SLCG-Whale-Watching-and-Boat-Monitoring-Platform\server.Tests\bin\Debug\net8.0\WhaleWatching.Api.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="WhaleWatching.Api.Tests.CrewProfileTests" name="CertificateUpload_RejectsMismatchedFileContent" />
+    </UnitTest>
+    <UnitTest name="WhaleWatching.Api.Tests.AuthRegistrationTests.FailedRegistration_ReturnsValidationErrorInsteadOfSuccess(code: &quot;DuplicateEmail&quot;)" storage="d:\slcg-whale-watching-and-boat-monitoring-platform\server.tests\bin\debug\net8.0\whalewatching.api.tests.dll" id="d3879061-ca86-2f5f-aee4-7e0c95527855">
+      <Execution id="5a11e675-4b0d-4eb0-9e46-722a34c89b77" />
+      <TestMethod codeBase="D:\SLCG-Whale-Watching-and-Boat-Monitoring-Platform\server.Tests\bin\Debug\net8.0\WhaleWatching.Api.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="WhaleWatching.Api.Tests.AuthRegistrationTests" name="FailedRegistration_ReturnsValidationErrorInsteadOfSuccess" />
+    </UnitTest>
+    <UnitTest name="WhaleWatching.Api.Tests.AuthRegistrationTests.FailedRegistration_ReturnsValidationErrorInsteadOfSuccess(code: &quot;DuplicateNicNumber&quot;)" storage="d:\slcg-whale-watching-and-boat-monitoring-platform\server.tests\bin\debug\net8.0\whalewatching.api.tests.dll" id="55a5cfe8-6a0f-5d1a-6842-474f968d986a">
+      <Execution id="430e2bb9-93f7-41ab-9644-7a8cba6078b8" />
+      <TestMethod codeBase="D:\SLCG-Whale-Watching-and-Boat-Monitoring-Platform\server.Tests\bin\Debug\net8.0\WhaleWatching.Api.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="WhaleWatching.Api.Tests.AuthRegistrationTests" name="FailedRegistration_ReturnsValidationErrorInsteadOfSuccess" />
+    </UnitTest>
+    <UnitTest name="WhaleWatching.Api.Tests.CrewCertificateValidationTests.StructuralValidation_RejectsTruncationMismatchedTypesAndCorruption" storage="d:\slcg-whale-watching-and-boat-monitoring-platform\server.tests\bin\debug\net8.0\whalewatching.api.tests.dll" id="89e8715b-dce4-6177-547d-27de7be2d1c3">
+      <Execution id="2d472fe7-db2b-4c20-a413-85ed4d3b2c96" />
+      <TestMethod codeBase="D:\SLCG-Whale-Watching-and-Boat-Monitoring-Platform\server.Tests\bin\Debug\net8.0\WhaleWatching.Api.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="WhaleWatching.Api.Tests.CrewCertificateValidationTests" name="StructuralValidation_RejectsTruncationMismatchedTypesAndCorruption" />
+    </UnitTest>
+    <UnitTest name="WhaleWatching.Api.Tests.AuthRegistrationTests.FailedRegistration_ReturnsValidationErrorInsteadOfSuccess(code: &quot;DuplicateUserName&quot;)" storage="d:\slcg-whale-watching-and-boat-monitoring-platform\server.tests\bin\debug\net8.0\whalewatching.api.tests.dll" id="5ae8a180-e8e8-7879-ca29-6da84faab635">
+      <Execution id="34fb8cfa-402e-4a07-a5d2-b75f01ccdb50" />
+      <TestMethod codeBase="D:\SLCG-Whale-Watching-and-Boat-Monitoring-Platform\server.Tests\bin\Debug\net8.0\WhaleWatching.Api.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="WhaleWatching.Api.Tests.AuthRegistrationTests" name="FailedRegistration_ReturnsValidationErrorInsteadOfSuccess" />
+    </UnitTest>
+    <UnitTest name="WhaleWatching.Api.Tests.CrewProfileTests.CertificateUpload_RejectsMismatchedFileContent(type: &quot;application/pdf&quot;, content: &quot;%PDF-1.7&quot;, accepted: False)" storage="d:\slcg-whale-watching-and-boat-monitoring-platform\server.tests\bin\debug\net8.0\whalewatching.api.tests.dll" id="904b37fc-ace5-fc09-74d4-f177ce2fa6d4">
+      <Execution id="78b13bc1-2e08-4c23-8304-3990c6454e8d" />
+      <TestMethod codeBase="D:\SLCG-Whale-Watching-and-Boat-Monitoring-Platform\server.Tests\bin\Debug\net8.0\WhaleWatching.Api.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="WhaleWatching.Api.Tests.CrewProfileTests" name="CertificateUpload_RejectsMismatchedFileContent" />
+    </UnitTest>
+    <UnitTest name="WhaleWatching.Api.Tests.CrewProfileTests.CertificateUpload_RejectsMismatchedFileContent(type: &quot;image/jpeg&quot;, content: &quot;&quot;, accepted: False)" storage="d:\slcg-whale-watching-and-boat-monitoring-platform\server.tests\bin\debug\net8.0\whalewatching.api.tests.dll" id="8b703899-5b2e-e9b1-5b4b-d1b1b0c3f4fb">
+      <Execution id="b0194a62-dd5b-42d0-b000-fb7216edc4db" />
+      <TestMethod codeBase="D:\SLCG-Whale-Watching-and-Boat-Monitoring-Platform\server.Tests\bin\Debug\net8.0\WhaleWatching.Api.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="WhaleWatching.Api.Tests.CrewProfileTests" name="CertificateUpload_RejectsMismatchedFileContent" />
+    </UnitTest>
+    <UnitTest name="WhaleWatching.Api.Tests.CrewProfileTests.ProfileAndCertificates_PersistWithoutAllowingSelfApprovalOrAccessToAnotherCrewMember" storage="d:\slcg-whale-watching-and-boat-monitoring-platform\server.tests\bin\debug\net8.0\whalewatching.api.tests.dll" id="31de5f48-d144-9951-ecdc-be229dda4bb0">
+      <Execution id="73bb8fdc-a23e-4faf-afba-054a2764c708" />
+      <TestMethod codeBase="D:\SLCG-Whale-Watching-and-Boat-Monitoring-Platform\server.Tests\bin\Debug\net8.0\WhaleWatching.Api.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="WhaleWatching.Api.Tests.CrewProfileTests" name="ProfileAndCertificates_PersistWithoutAllowingSelfApprovalOrAccessToAnotherCrewMember" />
+    </UnitTest>
+    <UnitTest name="WhaleWatching.Api.Tests.CrewProfileTests.CertificateUpload_RejectsMismatchedFileContent(type: &quot;text/html&quot;, content: &quot;&lt;html&gt;&quot;, accepted: False)" storage="d:\slcg-whale-watching-and-boat-monitoring-platform\server.tests\bin\debug\net8.0\whalewatching.api.tests.dll" id="fc074e27-a1d2-7106-4319-3d47af54cda0">
+      <Execution id="5f38f58f-ee94-4f87-8161-6abc48d3c798" />
+      <TestMethod codeBase="D:\SLCG-Whale-Watching-and-Boat-Monitoring-Platform\server.Tests\bin\Debug\net8.0\WhaleWatching.Api.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="WhaleWatching.Api.Tests.CrewProfileTests" name="CertificateUpload_RejectsMismatchedFileContent" />
+    </UnitTest>
+    <UnitTest name="WhaleWatching.Api.Tests.CrewProfileTests.CertificateUpload_RejectsMismatchedFileContent(type: &quot;application/pdf&quot;, content: &quot;malicious content&quot;, accepted: False)" storage="d:\slcg-whale-watching-and-boat-monitoring-platform\server.tests\bin\debug\net8.0\whalewatching.api.tests.dll" id="b6ce989f-43ea-04c0-db96-ab54ae53d668">
+      <Execution id="5175a7bf-5a73-4679-ba1e-b25fb098cf12" />
+      <TestMethod codeBase="D:\SLCG-Whale-Watching-and-Boat-Monitoring-Platform\server.Tests\bin\Debug\net8.0\WhaleWatching.Api.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="WhaleWatching.Api.Tests.CrewProfileTests" name="CertificateUpload_RejectsMismatchedFileContent" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="d3879061-ca86-2f5f-aee4-7e0c95527855" executionId="5a11e675-4b0d-4eb0-9e46-722a34c89b77" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="b6ce989f-43ea-04c0-db96-ab54ae53d668" executionId="5175a7bf-5a73-4679-ba1e-b25fb098cf12" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="55a5cfe8-6a0f-5d1a-6842-474f968d986a" executionId="430e2bb9-93f7-41ab-9644-7a8cba6078b8" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="31de5f48-d144-9951-ecdc-be229dda4bb0" executionId="73bb8fdc-a23e-4faf-afba-054a2764c708" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="89e8715b-dce4-6177-547d-27de7be2d1c3" executionId="2d472fe7-db2b-4c20-a413-85ed4d3b2c96" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="fc074e27-a1d2-7106-4319-3d47af54cda0" executionId="5f38f58f-ee94-4f87-8161-6abc48d3c798" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="93c4229b-51e9-4819-c25a-c322c3536fa7" executionId="62ff1a82-e46c-408a-b0b0-5e5fbf15a88d" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="5ae8a180-e8e8-7879-ca29-6da84faab635" executionId="34fb8cfa-402e-4a07-a5d2-b75f01ccdb50" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="72dc0537-f142-6522-9b2c-d63e70d2abc1" executionId="48de45e9-85c0-4619-8b8a-ce567a8a8af9" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="e8680756-6f5f-be4f-88ec-d2811c93c6cf" executionId="8ba94650-fb20-4f1c-b121-d0fb27248d50" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="904b37fc-ace5-fc09-74d4-f177ce2fa6d4" executionId="78b13bc1-2e08-4c23-8304-3990c6454e8d" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="9a009eee-c1cd-6f7b-d351-d8c3ab4bf52a" executionId="724f812d-3936-4fdb-a83b-4f768ac23b35" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="8b703899-5b2e-e9b1-5b4b-d1b1b0c3f4fb" executionId="b0194a62-dd5b-42d0-b000-fb7216edc4db" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="47db22f7-16aa-f913-b531-6aa81b9b95c9" executionId="6a1d2d34-e9bb-47e9-9f78-032149c199fc" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="Results Not in a List" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="All Loaded Results" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Failed">
+    <Counters total="14" executed="14" passed="13" failed="1" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v2.8.2+699d445a1a (64-bit .NET 10.0.12)&#xD;
+[xUnit.net 00:00:00.04]   Discovering: WhaleWatching.Api.Tests&#xD;
+[xUnit.net 00:00:00.08]   Discovered:  WhaleWatching.Api.Tests&#xD;
+[xUnit.net 00:00:00.09]   Starting:    WhaleWatching.Api.Tests&#xD;
+[xUnit.net 00:00:01.75]       System.NullReferenceException : Object reference not set to an instance of an object.&#xD;
+[xUnit.net 00:00:01.75]       Stack Trace:&#xD;
+[xUnit.net 00:00:01.75]         D:\SLCG-Whale-Watching-and-Boat-Monitoring-Platform\server\Admin\CrewController.cs(26,0): at WhaleWatching.Api.Admin.CrewController.DownloadCertificate(Guid id, Guid certificateId, CancellationToken ct)&#xD;
+[xUnit.net 00:00:01.75]         D:\SLCG-Whale-Watching-and-Boat-Monitoring-Platform\server.Tests\CrewProfileTests.cs(80,0): at WhaleWatching.Api.Tests.CrewProfileTests.ProfileAndCertificates_PersistWithoutAllowingSelfApprovalOrAccessToAnotherCrewMember()&#xD;
+[xUnit.net 00:00:01.75]         D:\SLCG-Whale-Watching-and-Boat-Monitoring-Platform\server.Tests\CrewProfileTests.cs(83,0): at WhaleWatching.Api.Tests.CrewProfileTests.ProfileAndCertificates_PersistWithoutAllowingSelfApprovalOrAccessToAnotherCrewMember()&#xD;
+[xUnit.net 00:00:01.75]         D:\SLCG-Whale-Watching-and-Boat-Monitoring-Platform\server.Tests\CrewProfileTests.cs(83,0): at WhaleWatching.Api.Tests.CrewProfileTests.ProfileAndCertificates_PersistWithoutAllowingSelfApprovalOrAccessToAnotherCrewMember()&#xD;
+[xUnit.net 00:00:01.75]         D:\SLCG-Whale-Watching-and-Boat-Monitoring-Platform\server.Tests\CrewProfileTests.cs(83,0): at WhaleWatching.Api.Tests.CrewProfileTests.ProfileAndCertificates_PersistWithoutAllowingSelfApprovalOrAccessToAnotherCrewMember()&#xD;
+[xUnit.net 00:00:01.75]         --- End of stack trace from previous location ---&#xD;
+[xUnit.net 00:00:03.66]   Finished:    WhaleWatching.Api.Tests&#xD;
+</StdOut>
+    </Output>
+    <RunInfos>
+      <RunInfo computerName="DESKTOP-1P8ID0I" outcome="Error" timestamp="2026-10-30T11:47:24.9922891+05:30">
+        <Text>[xUnit.net 00:00:01.75]     WhaleWatching.Api.Tests.CrewProfileTests.ProfileAndCertificates_PersistWithoutAllowingSelfApprovalOrAccessToAnotherCrewMember [FAIL]</Text>
+      </RunInfo>
+    </RunInfos>
+  </ResultSummary>
+</TestRun>

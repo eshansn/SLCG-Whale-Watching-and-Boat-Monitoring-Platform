@@ -1,0 +1,81 @@
+
+  VITE v8.1.3  ready in 324 ms
+
+  ➜  Local:   http://127.0.0.1:5173/
+10:16:22 AM [vite] (client) hmr update /src/index.css, /src/screens/SLTDA/SltdaDashboard.tsx, /src/screens/SLTDA/PassengerMonitoringPage.tsx, /src/screens/SLTDA/PassengerProfilePage.tsx, /src/screens/SLTDA/MonitoringTripPage.tsx, /src/screens/Complaints/ComplaintDetailPage.tsx, /src/screens/Complaints/ComplaintListPage.tsx, /src/screens/SLTDA/TripHistoryPage.tsx, /src/screens/Complaints/ComplaintNotificationsPage.tsx, /src/screens/SLTDA/SltdaLayout.tsx, /src/screens/Complaints/ComplaintComponents.tsx
+10:16:22 AM [vite] (client) hmr update /src/screens/Complaints/ComplaintDetailPage.tsx, /src/index.css
+10:24:35 AM [vite] (client) hmr update /src/screens/Complaints/ComplaintDetailPage.tsx, /src/index.css
+10:24:50 AM [vite] (client) hmr update /src/screens/Complaints/ComplaintDetailPage.tsx, /src/index.css
+10:39:49 AM [vite] (client) hmr update /src/index.css, /src/screens/OPS/components/TripRouteMap.tsx
+10:39:49 AM [vite] (client) hmr update /src/screens/SLTDA/MonitoringTripPage.tsx, /src/index.css
+10:40:07 AM [vite] (client) hmr update /src/screens/SLTDA/PassengerMonitoringPage.tsx, /src/index.css
+10:40:16 AM [vite] (client) hmr update /src/screens/SLTDA/PassengerMonitoringPage.tsx, /src/index.css
+10:45:32 AM [vite] (client) hmr update /src/index.css, /src/screens/SLTDA/SltdaTripTracking.tsx
+10:45:32 AM [vite] (client) hmr update /src/index.css, /src/screens/SLTDA/SltdaTripTracking.tsx
+10:45:42 AM [vite] (client) hmr update /src/index.css, /src/screens/SLTDA/SltdaTripTracking.tsx
+10:45:42 AM [vite] (client) hmr update /src/index.css, /src/screens/SLTDA/SltdaTripTracking.tsx
+10:50:59 AM [vite] (client) hmr update /src/index.css, /src/components/CountryFlag.tsx
+10:50:59 AM [vite] (client) hmr update /src/screens/SLTDA/PassengerMonitoringPage.tsx, /src/index.css
+10:56:07 AM [vite] (client) hmr update /src/index.css, /src/screens/OPS/components/TripRouteMap.tsx
+10:56:07 AM [vite] (client) hmr update /src/index.css, /src/screens/SLTDA/SltdaTripTracking.tsx
+11:33:40 AM [vite] (client) hmr update /src/index.css, /src/screens/Shore/PassengerAttendancePanel.tsx
+11:33:40 AM [vite] (client) hmr update /src/index.css, /src/screens/Shore/PassengerAttendancePanel.tsx
+11:33:41 AM [vite] (client) page reload src/screens/Shore/shoreAttendanceApi.ts
+11:33:42 AM [vite] (client) [optimizer] bundling dependencies...
+11:33:44 AM [vite] (client) dependency optimized: @zxing/browser
+11:33:44 AM [vite] (client) optimized dependencies changed. reloading
+11:34:13 AM [vite] (client) hmr update /src/screens/Shore/ShoreTripInfo.tsx, /src/index.css
+11:34:13 AM [vite] (client) hmr update /src/screens/Shore/ShoreTripInfo.tsx, /src/index.css
+11:34:14 AM [vite] (client) hmr update /src/screens/Shore/ShoreTripInfo.tsx, /src/index.css
+11:34:14 AM [vite] (client) hmr update /src/screens/Shore/components/ShoreNavbar.tsx, /src/index.css
+11:34:52 AM [vite] (client) hmr update /src/screens/Shore/ShoreDashboard.tsx, /src/index.css
+11:34:52 AM [vite] (client) hmr update /src/screens/Shore/ShoreTrips.tsx, /src/index.css
+11:34:52 AM [vite] (client) hmr update /src/screens/Shore/Shoresettings.tsx, /src/index.css
+11:44:07 AM [vite] (client) hmr update /src/screens/Shore/ShoreDashboard.tsx, /src/index.css
+11:44:07 AM [vite] (client) hmr update /src/screens/Shore/ShoreTripInfo.tsx, /src/index.css
+11:44:07 AM [vite] (client) hmr update /src/index.css, /src/screens/Shore/components/PassengerQrScanner.tsx
+11:48:13 AM [vite] (client) hmr update /src/index.css, /src/screens/Shore/components/PassengerQrScanner.tsx
+11:48:13 AM [vite] (client) hmr update /src/index.css, /src/screens/Shore/shore.css
+11:48:13 AM [vite] (client) hmr update /src/screens/Shore/components/ShoreNavbar.tsx, /src/index.css
+3:58:51 PM [vite] (client) hmr update /src/screens/publicweb/Login.tsx, /src/index.css
+3:58:51 PM [vite] (client) hmr update /src/App.tsx, /src/index.css
+3:59:37 PM [vite] (client) hmr update /src/index.css, /src/screens/Passenger/i18n/PassengerLocaleProvider.tsx, /src/screens/Passenger/i18n/PassengerLanguageSelector.tsx, /src/screens/publicweb/PasswordRecovery.tsx
+3:59:37 PM [vite] (client) hmr update /src/index.css, /src/screens/Passenger/i18n/PassengerLocaleProvider.tsx, /src/screens/Passenger/i18n/PassengerLanguageSelector.tsx, /src/screens/publicweb/PasswordRecovery.tsx
+3:59:37 PM [vite] (client) hmr update /src/index.css, /src/screens/Passenger/i18n/PassengerLocaleProvider.tsx, /src/screens/Passenger/i18n/PassengerLanguageSelector.tsx, /src/screens/publicweb/PasswordRecovery.tsx
+3:59:37 PM [vite] (client) hmr update /src/index.css, /src/screens/Passenger/i18n/PassengerLocaleProvider.tsx, /src/screens/Passenger/i18n/PassengerLanguageSelector.tsx, /src/screens/publicweb/PasswordRecovery.tsx
+3:59:37 PM [vite] (client) hmr update /src/index.css, /src/screens/Passenger/i18n/PassengerLocaleProvider.tsx, /src/screens/Passenger/i18n/PassengerLanguageSelector.tsx, /src/screens/publicweb/PasswordRecovery.tsx
+4:09:12 PM [vite] (client) hmr update /src/index.css, /src/screens/publicweb/PasswordRecovery.tsx
+4:12:31 PM [vite] (client) hmr update /src/App.tsx, /src/index.css
+8:54:28 AM [vite] (client) hmr update /src/index.css, /src/screens/publicweb/PasswordRecovery.tsx
+9:03:43 AM [vite] (client) hmr update /src/screens/publicweb/recovery/recovery.css, /src/index.css
+9:19:48 AM [vite] (client) hmr update /src/screens/publicweb/recovery/RecoveryOtpInput.tsx, /src/index.css
+9:19:48 AM [vite] (client) hmr update /src/index.css, /src/screens/publicweb/PasswordRecovery.tsx
+9:19:48 AM [vite] (client) hmr update /src/screens/publicweb/recovery/OceanScene.tsx, /src/index.css
+9:19:48 AM [vite] (client) hmr update /src/screens/publicweb/recovery/recovery.css, /src/index.css
+9:19:48 AM [vite] (client) hmr update /src/App.tsx, /src/index.css
+9:21:10 AM [vite] (client) hmr update /src/screens/publicweb/Login.tsx, /src/index.css
+9:21:10 AM [vite] (client) hmr update /src/screens/publicweb/SignUp.tsx, /src/index.css
+9:21:10 AM [vite] (client) page reload src/screens/publicweb/AuthLanding.tsx
+9:22:56 AM [vite] (client) hmr update /src/index.css, /src/components/auth/AuthField.tsx
+9:22:56 AM [vite] (client) hmr update /src/index.css, /src/components/auth/AuthPanel.tsx
+9:22:56 AM [vite] (client) hmr update /src/screens/publicweb/SignUp.tsx, /src/index.css
+9:22:56 AM [vite] (client) hmr update /src/index.css, /src/components/auth/ocean-auth.css
+9:23:15 AM [vite] (client) hmr update /src/index.css, /src/screens/publicweb/PasswordRecovery.tsx
+9:27:30 AM [vite] (client) hmr update /src/screens/publicweb/Login.tsx, /src/index.css
+11:42:43 AM [vite] (client) hmr update /src/index.css, /src/screens/publicweb/SignUp.tsx, /src/auth/AuthContext.tsx, /src/screens/publicweb/Login.tsx, /src/screens/BoatOwner/BoatOwnerSettingsPage.tsx, /src/screens/BoatCrew/components/CrewPasswordDialog.tsx
+11:42:43 AM [vite] (client) hmr update /src/screens/publicweb/SignUp.tsx, /src/index.css
+11:42:43 AM [vite] (client) hmr update /src/index.css, /src/screens/Admin/AdminRecordsContext.tsx, /src/screens/Admin/TripsPage.tsx, /src/screens/OPS/OPSdashboard.tsx, /src/screens/OPS/OPStrips.tsx, /src/screens/OPS/OPSnotifications.tsx, /src/screens/Shore/Shoresettings.tsx, /src/screens/Shore/ShoreDashboard.tsx, /src/screens/OPS/OPSsos.tsx, /src/screens/Shore/ShoreTrips.tsx, /src/screens/OPS/OPSmonitor.tsx, /src/screens/Shore/ShoreTripInfo.tsx, /src/screens/ShoreWildlife/ShoreWildlifePages.tsx and 34 more
+11:42:43 AM [vite] (client) hmr update /src/screens/Admin/AdminRecordsContext.tsx, /src/index.css
+11:42:44 AM [vite] (client) hmr update /src/screens/Admin/AdminRecordsContext.tsx, /src/index.css
+11:42:46 AM [vite] (client) hmr invalidate /src/screens/Admin/AdminRecordsContext.tsx Could not Fast Refresh ("useAdminRecords" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+11:42:46 AM [vite] (client) hmr update /src/App.tsx, /src/screens/Admin/AdminDashboard.tsx, /src/screens/Admin/ManageUsersPage.tsx, /src/screens/Admin/BoatCrewPage.tsx, /src/screens/Admin/BoatOwnersPage.tsx, /src/screens/Admin/BoatsPage.tsx, /src/screens/Admin/BoatDetailsPage.tsx, /src/screens/Admin/CrewDetailsPage.tsx, /src/screens/Admin/OwnerDetailsPage.tsx
+11:43:02 AM [vite] (client) hmr update /src/index.css, /src/screens/Admin/components/ApprovalControls.tsx
+11:43:03 AM [vite] (client) hmr update /src/screens/Admin/CrewDetailsPage.tsx, /src/index.css
+11:43:33 AM [vite] (client) hmr update /src/screens/Admin/BoatCrewPage.tsx, /src/index.css
+11:43:33 AM [vite] (client) hmr update /src/screens/BoatCrew/BoatCrewProfile.tsx, /src/index.css
+11:45:26 AM [vite] (client) hmr update /src/screens/publicweb/SignUp.tsx, /src/index.css
+11:45:26 AM [vite] (client) hmr update /src/index.css, /src/components/auth/ocean-auth.css
+12:05:59 PM [vite] (client) hmr update /src/index.css, /src/screens/Admin/CrewDetailsPage.tsx, /src/screens/BoatCrew/BoatCrewDashboard.tsx, /src/screens/BoatCrew/BoatCrewProfile.tsx
+12:05:59 PM [vite] (client) hmr update /src/screens/BoatCrew/BoatCrewProfile.tsx, /src/index.css
+12:11:36 PM [vite] (client) hmr update /src/screens/BoatCrew/BoatCrewProfile.tsx, /src/index.css
+12:28:14 PM [vite] (client) hmr update /src/screens/publicweb/SignUp.tsx, /src/index.css
