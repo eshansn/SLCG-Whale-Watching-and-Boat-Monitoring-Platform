@@ -148,3 +148,47 @@ No new paid email/SMS service, external analytics service, organization hierarch
 The Admin → Staff 500 error was reproduced from the running API log and through an HTTP integration test. `CreateStaffRequest` placed DataAnnotations on generated record properties using `[property: ...]`; ASP.NET requires validation metadata on the positional record constructor parameters. The same issue affected `UpdateStaffRequest` and `ResetStaffPasswordRequest`.
 
 Those three request records now put validation attributes on their constructor parameters, preserving the existing limits and authorization. Real HTTP tests create every permitted staff role, follow the 201 Location, confirm persisted membership, check duplicate rejection, edit staff, reset passwords, and verify invalid email/password/phone input returns 400 without creating a user. The live browser test also creates an SLTDA account through Admin → Staff in its disposable test database. The local API container was rebuilt and restarted with the fix and passed its readiness check. No schema change is needed for this validation fix itself; the container startup also applied the previously pending complaint migration described above.
+
+## Trip GPS history and passenger flags — 28 October 2026
+
+SLTDA trip information now includes a recorded route map, distinct start/end markers,
+zoom/pan controls, full-route bounds and a legend. The timeline shows actual departure,
+arrival, elapsed duration, coordinates, recorded distance and last GPS update using
+Sri Lanka time. Ongoing routes identify the latest recorded position without a final
+endpoint. Empty, single-point, loading, error and unavailable-basemap states are handled.
+
+Frontend: `MonitoringTripPage.tsx` and `PassengerMonitoringPage.tsx` integrate
+`SltdaTripTracking.tsx`, `tripTracking.ts` and `PassengerNameFlag.tsx`. The existing
+`TripRouteMap.tsx` and `CountryFlag.tsx` have optional monitoring behavior; their
+other callers retain their defaults. No dependencies or portal redesign were added.
+GPS requests are briefly cached per session and trip, bounded to 32 entries. Ongoing
+trips refresh every 15 seconds; completed routes do not poll independently.
+
+`GET /api/passenger-monitoring/trips/{id}/tracking-summary` uses the existing
+PassengerMonitoring policy and current-account checks, then reuses TripTrackingService
+and TripTrackingCalculator. Points belong to the selected boat's configured GPS device,
+fall within its actual trip lifecycle and are ordered chronologically. Monitoring never
+uses UpdatedAtUtc as an arrival time or a current boat position as a historical endpoint.
+An inactive trip without a recorded arrival has no safe history window and returns
+an empty route. Existing operational tracking retains its default behavior.
+
+Trip participants now return the existing CountryCode field. Small flags precede names
+in both SLTDA passenger lists, reusing the existing ISO country list and flag component.
+Case, surrounding whitespace and known country names are normalized for display;
+missing/invalid countries show a neutral globe. No nationality is inferred from names,
+contact data or local/foreign classification. No schema migration is required.
+
+Verification: targeted ESLint and TypeScript passed; production build passed with
+existing SignalR annotation and bundle-size warnings. Backend regression suite:
+129 passed, 2 browser tests skipped without browser configuration. The new browser
+test was then run separately with its prerequisites and passed against a live API
+and disposable SQL database. Fixture browser coverage also passed for routes, markers,
+timeline, failure/retry/loading, mobile layout, request reuse, country flags and filters.
+The local Docker API was rebuilt/restarted, is healthy, and its tracking and participant
+endpoints returned HTTP 200. See `scripts/tests/README.md` for reproduction commands.
+
+Limits: historical routes require stored telemetry and an identifiable GPS device;
+the current model does not retain device reassignment history. Missing departure,
+arrival or country records are displayed as unavailable instead of guessed. Route
+endpoints identify first/last recorded GPS samples, which can differ from an unrecorded
+physical departure/arrival location. Basemap tiles and flag images use existing providers.

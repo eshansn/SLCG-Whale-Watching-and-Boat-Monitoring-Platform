@@ -30,12 +30,14 @@ export function CountryFlag({ countryCode, large = false, label, flagLabel }: Co
 export function PassengerCountryDisplay({
   passengerType,
   countryCode,
+  recordedOnly = false,
 }: {
   passengerType: string;
   countryCode?: string;
+  recordedOnly?: boolean;
 }) {
   const isLocal = passengerType.toLowerCase() === "local";
-  const country = findCountry(isLocal ? "LK" : countryCode);
+  const country = findCountry(!recordedOnly && isLocal ? "LK" : recordedOnly ? countryCode?.trim() : countryCode);
   const typeLabel = isLocal ? "Local" : "Foreign";
 
   return (

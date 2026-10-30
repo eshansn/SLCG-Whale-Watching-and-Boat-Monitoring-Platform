@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import Map, { Layer, Marker, Source, type MapRef } from "react-map-gl/maplibre";
+import Map, { Layer, Marker, NavigationControl, Source, type MapRef } from "react-map-gl/maplibre";
 import "maplibre-gl/dist/maplibre-gl.css";
 import type { TripTrackingSummary } from "../../../operations/operationsApi";
 import StopPointMarker from "./StopPointMarker";
@@ -19,6 +19,8 @@ interface TripRouteMapProps {
   vesselName: string;
   fallbackLatitude?: number;
   fallbackLongitude?: number;
+  recordedOnly?: boolean;
+  emptyMessage?: string;
 }
 
 export default function TripRouteMap({
@@ -26,9 +28,12 @@ export default function TripRouteMap({
   vesselName,
   fallbackLatitude,
   fallbackLongitude,
+  recordedOnly = false,
+  emptyMessage,
 }: TripRouteMapProps) {
   const mapRef = useRef<MapRef>(null);
   const [selectedStopKey, setSelectedStopKey] = useState<string | null>(null);
+  const [mapError, setMapError] = useState(false);
   const route = summary.route;
   const stops = useMemo(() => [...(summary.stops ?? [])]
     .sort((first, second) => new Date(first.startedAtUtc).getTime() - new Date(second.startedAtUtc).getTime()),
@@ -64,29 +69,31 @@ export default function TripRouteMap({
 
   const start = route[0];
   const last = route.at(-1);
-  const activePosition = summary.currentPosition ?? (summary.status === "Active" ? last : undefined);
+  const activePosition = recordedOnly ? (summary.status === "Active" ? last : undefined) : summary.currentPosition ?? (summary.status === "Active" ? last : undefined);
   const showFallback = summary.status === "NotStarted" && fallbackLatitude != null && fallbackLongitude != null;
   const startOverlapsVessel = start != null && activePosition != null &&
     distanceMeters(start.latitude, start.longitude, activePosition.latitude, activePosition.longitude) <= overlappingMarkerDistanceMeters;
   const startOverlapsEnd = start != null && summary.status === "Completed" && last != null &&
     distanceMeters(start.latitude, start.longitude, last.latitude, last.longitude) <= overlappingMarkerDistanceMeters;
-  const showStart = start != null && !startOverlapsVessel && !startOverlapsEnd;
+  const showStart = start != null && (recordedOnly || (!startOverlapsVessel && !startOverlapsEnd));
 
   useEffect(() => { fitRoute(); }, [fitRoute]);
 
   return (
-    <div className="relative h-full min-h-[360px] overflow-hidden rounded-xl lg:min-h-[500px]">
+    <div className={recordedOnly ? "relative h-[360px] overflow-hidden rounded-xl lg:h-[500px]" : "relative h-full min-h-[360px] overflow-hidden rounded-xl lg:min-h-[500px]"}>
       <Map
         ref={mapRef}
-        initialViewState={{ longitude: fallbackLongitude ?? 80.425, latitude: fallbackLatitude ?? 5.935, zoom: fallbackLatitude == null ? 11.7 : 13.5 }}
+        initialViewState={{ longitude: (recordedOnly ? start?.longitude : undefined) ?? fallbackLongitude ?? 80.425, latitude: (recordedOnly ? start?.latitude : undefined) ?? fallbackLatitude ?? 5.935, zoom: fallbackLatitude == null ? 11.7 : 13.5 }}
         mapStyle="https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json"
         onLoad={fitRoute}
         onClick={() => setSelectedStopKey(null)}
+        onError={recordedOnly ? () => setMapError(true) : undefined}
         reuseMaps
       >
         {route.length >= 2 && <Source id="trip-route" type="geojson" data={line}><Layer {...routeLayer} /></Source>}
-        {showStart && <Marker longitude={start.longitude} latitude={start.latitude} anchor="center"><MapDot color="#16a34a" label="Start" /></Marker>}
-        {summary.status === "Completed" && last && <Marker longitude={last.longitude} latitude={last.latitude} anchor="center"><MapDot color="#dc2626" label="End" /></Marker>}
+        {recordedOnly && <NavigationControl position="bottom-right" showCompass={false} />}
+        {showStart && <Marker longitude={start.longitude} latitude={start.latitude} anchor="center" offset={recordedOnly && (startOverlapsVessel || startOverlapsEnd) ? [-18, 0] : undefined}><MapDot color="#16a34a" label="Start" /></Marker>}
+        {summary.status === "Completed" && (!recordedOnly || summary.endedAtUtc) && last && <Marker longitude={last.longitude} latitude={last.latitude} anchor="center"><MapDot color="#dc2626" label="End" /></Marker>}
         {stops.map((stop, index) => {
           const markerKey = `${stop.startedAtUtc}:${index}`;
           return <StopPointMarker key={markerKey} markerKey={markerKey} stop={stop} number={index + 1} selected={selectedStopKey === markerKey} onSelect={setSelectedStopKey} onClose={() => setSelectedStopKey(null)} offset={stopMarkerOffsets[index] ?? (stop.isOngoing ? [18, 14] : undefined)} />;
@@ -94,9 +101,11 @@ export default function TripRouteMap({
         {activePosition && <Marker longitude={activePosition.longitude} latitude={activePosition.latitude} anchor="center"><BoatMarker vesselName={vesselName} /></Marker>}
         {showFallback && <Marker longitude={fallbackLongitude} latitude={fallbackLatitude} anchor="center"><BoatMarker vesselName={vesselName} muted /></Marker>}
       </Map>
-      <div className="pointer-events-none absolute left-3 top-3 rounded-lg bg-white/95 px-3 py-2 text-[10px] font-bold uppercase shadow">
+      {route.length === 0 && emptyMessage && <div role="status" className="pointer-events-none absolute inset-0 flex items-center justify-center p-6"><p className="rounded-xl border border-slate-200 bg-white/95 px-5 py-4 text-center text-sm font-medium text-slate-600 shadow-sm">{emptyMessage}</p></div>}
+      {recordedOnly && mapError && <p role="alert" className="absolute bottom-3 left-3 right-14 rounded-lg bg-white/95 p-3 text-xs text-slate-600">Map tiles could not be loaded. Recorded trip coordinates remain available above.</p>}
+      {!(route.length === 0 && emptyMessage) && <div className="pointer-events-none absolute left-3 top-3 rounded-lg bg-white/95 px-3 py-2 text-[10px] font-bold uppercase shadow">
         {summary.status === "NotStarted" ? "Trip has not started" : route.length === 0 ? "Waiting for GPS data" : summary.status === "Active" ? "Live travelled route" : "Completed travelled route"}
-      </div>
+      </div>}
     </div>
   );
 }

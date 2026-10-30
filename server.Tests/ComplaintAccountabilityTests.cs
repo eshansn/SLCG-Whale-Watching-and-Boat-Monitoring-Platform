@@ -26,11 +26,110 @@ using WhaleWatching.Api.Auth;
 using WhaleWatching.Api.Complaints;
 using WhaleWatching.Api.Data;
 using WhaleWatching.Api.Domain;
+using WhaleWatching.Api.Gps;
+using WhaleWatching.Api.Operations;
+using Microsoft.Extensions.Options;
 
 namespace WhaleWatching.Api.Tests;
 
 public sealed class ComplaintAccountabilityTests
 {
+    [SqlServerFact]
+    public async Task MonitoringTripTracking_UsesOnlyRecordedBoatAndTripWindow_AndPreservesCountry()
+    {
+        await using var test = await Harness.CreateAsync();
+        var trip = await SeedTrackingTrip(test);
+        var path = $"/api/passenger-monitoring/trips/{trip.Id}/tracking-summary";
+        foreach (var role in new[] { PortalRoles.Sltda, PortalRoles.Admin })
+        {
+            var result = await test.Json(role, path);
+            Assert.Equal(trip.Id, result.GetProperty("tripId").GetGuid());
+            Assert.Equal(trip.BoatId, result.GetProperty("boatId").GetGuid());
+            Assert.Equal("Completed", result.GetProperty("status").GetString());
+            Assert.Equal(trip.ActualDepartureUtc, result.GetProperty("startedAtUtc").GetDateTimeOffset());
+            Assert.Equal(trip.ActualArrivalUtc, result.GetProperty("endedAtUtc").GetDateTimeOffset());
+            var route = result.GetProperty("route").EnumerateArray().ToArray();
+            Assert.Equal(3, route.Length);
+            Assert.Equal(trip.ActualDepartureUtc, route[0].GetProperty("recordedAtUtc").GetDateTimeOffset());
+            Assert.Equal(trip.ActualArrivalUtc, route[^1].GetProperty("recordedAtUtc").GetDateTimeOffset());
+            Assert.True(result.GetProperty("routeLength").GetDouble() > 0);
+            Assert.Equal(JsonValueKind.Null, result.GetProperty("currentPosition").ValueKind);
+        }
+        var participants = await test.Json(PortalRoles.Sltda, $"/api/passenger-monitoring/trips/{trip.Id}");
+        Assert.Equal("LK", participants.GetProperty("participants").GetProperty("items")[0].GetProperty("countryCode").GetString());
+        foreach (var role in new[] { PortalRoles.Ops, PortalRoles.Wildlife, PortalRoles.BoatOwner, PortalRoles.Passenger })
+            Assert.Equal(HttpStatusCode.Forbidden, (await test.Send(role, HttpMethod.Get, path)).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await test.Send(null, HttpMethod.Get, path)).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await test.Send(PortalRoles.Sltda, HttpMethod.Get,
+            $"/api/passenger-monitoring/trips/{Guid.NewGuid()}/tracking-summary")).StatusCode);
+
+        trip.Status = TripStatus.Ongoing; trip.ActualArrivalUtc = null;
+        await test.Db.SaveChangesAsync();
+        var active = await test.Json(PortalRoles.Sltda, path);
+        Assert.Equal("Active", active.GetProperty("status").GetString());
+        Assert.Equal(JsonValueKind.Null, active.GetProperty("endedAtUtc").ValueKind);
+        Assert.Equal(4, active.GetProperty("route").GetArrayLength());
+        Assert.Equal(active.GetProperty("route")[3].GetProperty("recordedAtUtc").GetDateTimeOffset(),
+            active.GetProperty("currentPosition").GetProperty("recordedAtUtc").GetDateTimeOffset());
+
+        trip.Status = TripStatus.Completed; // Missing arrival must not use UpdatedAtUtc or current boat location.
+        await test.Db.SaveChangesAsync();
+        var missingEnd = await test.Json(PortalRoles.Sltda, path);
+        Assert.Equal(JsonValueKind.Null, missingEnd.GetProperty("endedAtUtc").ValueKind);
+        Assert.Equal(0, missingEnd.GetProperty("route").GetArrayLength());
+        trip.ActualArrivalUtc = trip.ActualDepartureUtc!.Value.AddMinutes(1); // One point, no inferred distance.
+        await test.Db.SaveChangesAsync();
+        var single = await test.Json(PortalRoles.Sltda, path);
+        Assert.Equal(1, single.GetProperty("route").GetArrayLength());
+        Assert.Equal(JsonValueKind.Null, single.GetProperty("routeLength").ValueKind);
+        trip.Boat.GpsDeviceId = null;
+        await test.Db.SaveChangesAsync();
+        Assert.Equal(0, (await test.Json(PortalRoles.Sltda, path)).GetProperty("route").GetArrayLength());
+        var scheduled = await test.Db.Trips.SingleAsync(t => t.Status == TripStatus.Scheduled);
+        var notStarted = await test.Json(PortalRoles.Sltda, $"/api/passenger-monitoring/trips/{scheduled.Id}/tracking-summary");
+        Assert.Equal("NotStarted", notStarted.GetProperty("status").GetString());
+        Assert.Equal(0, notStarted.GetProperty("route").GetArrayLength());
+
+        test.Db.UserRoles.Remove(await test.Db.UserRoles.SingleAsync(r => r.UserId == test.Users[PortalRoles.Sltda]));
+        await test.Db.SaveChangesAsync();
+        Assert.Equal(HttpStatusCode.Forbidden, (await test.Send(PortalRoles.Sltda, HttpMethod.Get, path)).StatusCode);
+    }
+
+    private static async Task<Trip> SeedTrackingTrip(Harness test)
+    {
+        var tripId = await test.Db.PassengerComplaints.Where(c => c.Id == test.ComplaintId).Select(c => c.TripId).SingleAsync();
+        var trip = await test.Db.Trips.Include(t => t.Boat).SingleAsync(t => t.Id == tripId);
+        var start = DateTimeOffset.FromUnixTimeSeconds(DateTimeOffset.UtcNow.AddHours(-3).ToUnixTimeSeconds());
+        trip.ActualDepartureUtc = start; trip.ActualArrivalUtc = start.AddHours(1);
+        trip.UpdatedAtUtc = start.AddHours(2); trip.Boat.GpsDeviceId = "monitoring-trip-device";
+        GpsTelemetry Point(string device, double minutes, decimal lat = 5.95m, decimal lon = 80.4m) => new()
+        { DeviceId = device, RecordedAtUtc = start.AddMinutes(minutes), ReceivedAtUtc = start.AddMinutes(minutes), Latitude = lat, Longitude = lon };
+        test.Db.GpsTelemetry.AddRange(Point(trip.Boat.GpsDeviceId, 60, 5.98m, 80.45m),
+            Point(trip.Boat.GpsDeviceId, 0), Point(trip.Boat.GpsDeviceId, 30, 5.96m, 80.42m),
+            Point(trip.Boat.GpsDeviceId, -1), Point(trip.Boat.GpsDeviceId, 90),
+            Point("unrelated-device", 20), Point(trip.Boat.GpsDeviceId, 240));
+        await test.Db.SaveChangesAsync();
+        return trip;
+    }
+
+    [ComplaintBrowserFact]
+    public async Task Browser_LiveSltdaTripMapAndPassengerCountry()
+    {
+        await using var test = await Harness.CreateAsync();
+        var trip = await SeedTrackingTrip(test);
+        var script = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../scripts/tests/sltda-trip-map.cjs"));
+        var info = new ProcessStartInfo("node") { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true };
+        info.ArgumentList.Add(script);
+        info.Environment["WWMS_WEB_URL"] = test.Client.BaseAddress!.ToString();
+        info.Environment["WWMS_TRACKING_TRIP_ID"] = trip.Id.ToString();
+        using var process = Process.Start(info)!;
+        var output = process.StandardOutput.ReadToEndAsync();
+        var errors = process.StandardError.ReadToEndAsync();
+        try { await process.WaitForExitAsync(new CancellationTokenSource(TimeSpan.FromMinutes(2)).Token); }
+        catch (OperationCanceledException) { process.Kill(entireProcessTree: true); throw; }
+        Assert.True(process.ExitCode == 0, await output + await errors);
+    }
+
     [Theory]
     [InlineData(ComplaintStatus.Submitted, ComplaintStatus.UnderReview, true, true)]
     [InlineData(ComplaintStatus.Submitted, ComplaintStatus.Closed, false, false)]
@@ -509,6 +608,12 @@ public sealed class ComplaintAccountabilityTests
             builder.Services.AddRateLimiter(o => o.AddFixedWindowLimiter("auth", limiter =>
                 { limiter.PermitLimit = 100; limiter.Window = TimeSpan.FromMinutes(1); }));
             builder.Services.AddScoped<ComplaintAccess>(); builder.Services.AddScoped<ComplaintWorkflow>();
+            builder.Services.AddOptions<TrackMyCarOptions>(); builder.Services.AddMemoryCache();
+            builder.Services.AddHttpClient<TrackMyCarApiClient>(); builder.Services.AddScoped<IGpsProvider, TrackMyCarGpsProvider>();
+            builder.Services.AddScoped<GpsTelemetryIngestor>(); builder.Services.AddScoped<GpsHistoryService>();
+            builder.Services.AddScoped<GpsTrackerStatus>(); builder.Services.AddScoped<BoatDocumentService>();
+            builder.Services.AddScoped(services => new TripTrackingService(services.GetRequiredService<WhaleWatchingDbContext>(),
+                null!, Options.Create(new TrackMyCarOptions()), TimeProvider.System));
             builder.Services.AddControllers().AddApplicationPart(typeof(ComplaintWorkflowController).Assembly);
             builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(o =>
             {

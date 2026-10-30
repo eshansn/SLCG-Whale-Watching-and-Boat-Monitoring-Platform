@@ -1,5 +1,25 @@
 # Boat image regression checks
 
+## SLTDA trip GPS and passenger flags
+
+Run `node scripts/tests/sltda-trip-map.cjs` with Vite running. It accepts the same
+`PLAYWRIGHT_MODULE`, `PLAYWRIGHT_CHANNEL` and `WWMS_WEB_URL` settings below.
+Fixtures exercise completed/ongoing/unstarted trips, absent or invalid GPS points,
+single readings, missing arrival times, mismatched trips, retries/loading, route
+request reuse, mobile layout, flags, country variations, and passenger filters.
+Only test requests are intercepted; application code uses real GPS records.
+
+`MonitoringTripTracking_UsesOnlyRecordedBoatAndTripWindow_AndPreservesCountry`
+in the backend suite verifies device/time-window isolation, chronological points,
+lifecycle times, distance availability, country projection and authorization in
+a disposable SQL database. Set `WWMS_TEST_SQL_CONNECTION` to enable it.
+
+For live browser-to-API-to-SQL coverage, build the web app, set
+`WWMS_BROWSER_WEB_ROOT` to the absolute `apps/web/dist` path, set
+`PLAYWRIGHT_MODULE` and `WWMS_TEST_SQL_CONNECTION`, then run the backend test
+`Browser_LiveSltdaTripMapAndPassengerCountry`. This creates a disposable API and
+database; only basemap graphics are stubbed, while GPS/passenger/auth APIs are real.
+
 ## Complaint detail crash regression
 
 With Vite running and Playwright available, run `node scripts/tests/complaint-detail.cjs`.

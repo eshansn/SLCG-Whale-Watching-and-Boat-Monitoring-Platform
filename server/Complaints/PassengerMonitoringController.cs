@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using WhaleWatching.Api.Auth;
 using WhaleWatching.Api.Data;
 using WhaleWatching.Api.Domain;
+using WhaleWatching.Api.Operations;
 
 namespace WhaleWatching.Api.Complaints;
 
@@ -133,7 +134,25 @@ public sealed class PassengerMonitoringController(WhaleWatchingDbContext db, Com
         if (trip is null) return NotFound();
         var records = db.TripPassengers.AsNoTracking().Where(x => x.TripId == id);
         var items = await records.OrderBy(x => x.Passenger.Name).ThenBy(x => x.Id).Skip((query.Page - 1) * query.PageSize).Take(query.PageSize)
-            .Select(x => new { x.PassengerId, x.Passenger.Name, x.RegisteredAtUtc, Attendance = x.Attendance == null ? "NotChecked" : x.Attendance.Status.ToString() }).ToListAsync(ct);
+            .Select(x => new { x.PassengerId, x.Passenger.Name, x.Passenger.CountryCode, x.RegisteredAtUtc, Attendance = x.Attendance == null ? "NotChecked" : x.Attendance.Status.ToString() }).ToListAsync(ct);
         return Ok(new { Trip = trip, Participants = new { Items = items, Total = trip.RegisteredPassengers, query.Page, query.PageSize } });
+    }
+
+    [HttpGet("trips/{id:guid}/tracking-summary")]
+    public async Task<ActionResult<TripTrackingSummaryDto>> Tracking(Guid id,
+        [FromServices] TripTrackingService tracking, CancellationToken ct)
+    {
+        if (!await Permitted(ct)) return Forbid();
+        // Reuse trip/device/time-window processing without allowing arbitrary boat history.
+        var snapshot = await tracking.GetAsync(id, false, ct, recordedLifecycleOnly: true);
+        if (snapshot is null) return NotFound();
+        var route = snapshot.Route.Select(p => new TripRoutePointDto(p.Latitude, p.Longitude,
+            p.RecordedAtUtc, p.SpeedKnots, p.HeadingDegrees)).ToList();
+        return Ok(new TripTrackingSummaryDto(snapshot.TripId, snapshot.BoatId, snapshot.Status,
+            snapshot.StartedAtUtc, snapshot.EndedAtUtc, snapshot.RouteLengthKilometers, "km",
+            snapshot.MoveDurationSeconds, snapshot.StopsDurationSeconds, snapshot.AverageSpeedKnots, "knots",
+            snapshot.Status == "Active" ? route.LastOrDefault() : null, route,
+            snapshot.Stops.Select(s => new TripStopDto(s.StartedAtUtc, s.EndedAtUtc, s.DurationSeconds,
+                s.Latitude, s.Longitude, s.IsOngoing, s.SpeedKnots)).ToList()));
     }
 }

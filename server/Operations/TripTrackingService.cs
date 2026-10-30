@@ -16,9 +16,11 @@ public sealed class TripTrackingService(
         TimeSpan.FromMinutes(options.Value.RouteMinimumStopMinutes), options.Value.StopRadiusMeters);
 
     internal async Task<TripTrackingSnapshot?> GetAsync(Guid tripId, bool synchronizeProviderHistory,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken, bool recordedLifecycleOnly = false)
     {
-        var trip = await db.Trips.AsNoTracking().Where(item => item.Id == tripId)
+        var trips = db.Trips.AsNoTracking();
+        if (recordedLifecycleOnly) trips = trips.IgnoreQueryFilters();
+        var trip = await trips.Where(item => item.Id == tripId)
             .Select(item => new
             {
                 item.Id,
@@ -37,7 +39,12 @@ public sealed class TripTrackingService(
 
         var startedAtUtc = trip.ActualDepartureUtc.Value;
         var isActive = trip.Status == TripStatus.Ongoing && trip.ActualArrivalUtc is null;
-        DateTimeOffset? endedAtUtc = isActive ? null : trip.ActualArrivalUtc ?? trip.UpdatedAtUtc;
+        DateTimeOffset? endedAtUtc = isActive ? null : trip.ActualArrivalUtc ?? (recordedLifecycleOnly ? null : trip.UpdatedAtUtc);
+        // Monitoring must never substitute an administrative update for the trip's end.
+        // Without a recorded end for an inactive trip there is no safe GPS history window.
+        if (recordedLifecycleOnly && !isActive && (endedAtUtc is null || endedAtUtc < startedAtUtc))
+            return new TripTrackingSnapshot(trip.Id, trip.BoatId, "Completed", startedAtUtc, null,
+                null, null, null, null, [], []);
         var queryEndUtc = endedAtUtc ?? timeProvider.GetUtcNow();
         if (synchronizeProviderHistory)
             await gpsHistory.EnsureRangeAsync(trip.GpsDeviceId, startedAtUtc, queryEndUtc, cancellationToken);
