@@ -7,6 +7,7 @@ import type { Assignment, Authority, ComplaintDetail } from './complaintApi';
 import { CaseKindBadge, ComplaintUpdatesLink, LoadState, StatusBadge } from './ComplaintComponents';
 import { useComplaintPortal } from './useComplaintPortal';
 import { useComplaintData } from './useComplaintData';
+import { authorityName, receivingAuthorities } from './complaintAuthorities';
 
 export default function ComplaintDetailPage() {
   const { id } = useParams();
@@ -62,7 +63,7 @@ export default function ComplaintDetailPage() {
         <h2 className="mt-6 text-sm font-semibold">Evidence</h2><div className="mt-3 flex flex-wrap gap-3">{data.complaint.evidence.map(i => <button type="button" key={i.id} onClick={() => void download(i.id, i.fileName)} className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs text-indigo-700"><Download size={15} />{i.fileName}</button>)}{!data.complaint.evidence.length && <p className="text-xs text-slate-500">No evidence attached.</p>}</div>
       </section>
       <section className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm sm:p-7"><h2 className="text-lg font-semibold">Handling timeline</h2><p className="mt-1 text-xs text-slate-500">Chronological history · All times in Sri Lanka time</p>
-        <ol className="mt-6 space-y-6 border-l-2 border-indigo-100 pl-5">{data.timeline.map(e => <li key={e.id}><div className="flex flex-wrap items-center justify-between gap-2"><strong className="text-sm">{e.action}{e.authority ? ` · ${e.authority}` : ''}</strong><time className="text-xs text-slate-400">{date(e.createdAtUtc)}</time></div><p className="mt-1 text-xs text-slate-500">{e.actor} · {label(e.previousStatus)} → {label(e.status)}{e.assignmentStatus ? ` · Assignment: ${label(e.assignmentStatus)}` : ''}</p>{e.text && <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-slate-600">{e.text}</p>}</li>)}</ol>
+        <ol className="mt-6 space-y-6 border-l-2 border-indigo-100 pl-5">{data.timeline.map(e => <li key={e.id}><div className="flex flex-wrap items-center justify-between gap-2"><strong className="text-sm">{e.action}{e.authority ? ` · ${authorityName(e.authority)}` : ''}</strong><time className="text-xs text-slate-400">{date(e.createdAtUtc)}</time></div><p className="mt-1 text-xs text-slate-500">{e.actor} · {label(e.previousStatus)} → {label(e.status)}{e.assignmentStatus ? ` · Assignment: ${label(e.assignmentStatus)}` : ''}</p>{e.text && <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-slate-600">{e.text}</p>}</li>)}</ol>
       </section></div>
       <aside className="space-y-6">
         {data.canMonitor && <MonitorActions key={data.complaint.id} detail={data} busy={busy} act={act} />}
@@ -82,7 +83,7 @@ function MonitorActions({ detail, busy, act }: { detail: ComplaintDetail; busy: 
   const [note, setNote] = useState('');
   const [text, setText] = useState('');
   const [status, setStatus] = useState('');
-  const available = authorities.data?.filter(a => a.activeUsers > 0 && a.roleIds.some(roleId => !detail.assignments.some(s => s.authorityRoleId === roleId))) ?? [];
+  const available = receivingAuthorities(authorities.data ?? []).filter(a => a.activeUsers > 0 && a.roleIds.some(roleId => !detail.assignments.some(s => s.authorityRoleId === roleId)));
   const recipients = available.filter(a => selected.includes(a.id));
   const canForward = !['Resolved', 'Closed'].includes(detail.complaint.status);
   return <section className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm"><h2 className="text-lg font-semibold">Review and coordinate</h2>
@@ -91,7 +92,7 @@ function MonitorActions({ detail, busy, act }: { detail: ComplaintDetail; busy: 
       <label className="block text-xs text-slate-500">Review or status-change remark<textarea required maxLength={4000} value={text} onChange={e => setText(e.target.value)} rows={3} className={`mt-1 ${inputClass}`} /></label>
       <button className={buttonClass} disabled={busy || !text.trim() || !detail.allowedStatuses.includes(status)}>Record status</button>
     </form>}
-    {canForward && <form className="mt-6 space-y-3 border-t border-slate-100 pt-5" onSubmit={e => { e.preventDefault(); void act({ action: 'forward', authorityRoleIds: recipients.map(a => a.id), note }); }}>
+    {canForward && <form className="mt-6 space-y-3 border-t border-slate-100 pt-5" onSubmit={e => { e.preventDefault(); void act({ action: 'forward', authorityRoleIds: [...new Set(recipients.flatMap(a => a.roleIds).filter(roleId => !detail.assignments.some(s => s.authorityRoleId === roleId)))], note }); }}>
       <h3 className="text-sm font-semibold">Forward to relevant authorities</h3><LoadState {...authorities} />
       <fieldset disabled={busy} className="space-y-2"><legend className="sr-only">Select receiving authorities</legend>{available.map(a => <label key={a.id} className="flex items-center gap-3 rounded-xl border border-slate-100 p-3 text-sm"><input type="checkbox" checked={selected.includes(a.id)} onChange={e => setSelected(s => e.target.checked ? [...s, a.id] : s.filter(id => id !== a.id))} /><span>{a.name}</span></label>)}</fieldset>
       {!available.length && !authorities.loading && <p className="text-xs text-slate-500">No additional active authorities are available.</p>}
@@ -105,7 +106,7 @@ function MonitorActions({ detail, busy, act }: { detail: ComplaintDetail; busy: 
 function AssignmentCard({ assignment: a, closed, busy, act }: { assignment: Assignment; closed: boolean; busy: boolean; act: (fields: Record<string, unknown>) => Promise<void> }) {
   const [text, setText] = useState('');
   const [status, setStatus] = useState('Responded');
-  return <article id={`assignment-${a.id}`} className="scroll-mt-24 rounded-xl border border-slate-200 p-4"><div className="flex flex-wrap items-center justify-between gap-2"><strong className="text-sm">{a.authority}</strong><StatusBadge value={a.status} /></div>
+  return <article id={`assignment-${a.id}`} className="scroll-mt-24 rounded-xl border border-slate-200 p-4"><div className="flex flex-wrap items-center justify-between gap-2"><strong className="text-sm">{authorityName(a.authority)}</strong><StatusBadge value={a.status} /></div>
     <p className="mt-2 text-xs leading-5 text-slate-500">Forwarded by {a.forwardedBy}<br />{date(a.forwardedAtUtc)}</p>{a.note && <p className="mt-3 whitespace-pre-wrap break-words rounded-lg bg-slate-50 p-3 text-sm text-slate-600">{a.note}</p>}
     <p className="mt-3 text-xs leading-6 text-slate-500">Acknowledged: {date(a.acknowledgedAtUtc)}<br />Last response: {date(a.respondedAtUtc)}<br />Updated: {date(a.updatedAtUtc)}</p>
     {a.canRespond && !closed && (a.status === 'Pending' ? <button className={`mt-4 ${buttonClass}`} disabled={busy} onClick={() => void act({ action: 'assignment', assignmentId: a.id, status: 'Acknowledged' })}>Acknowledge receipt</button> :

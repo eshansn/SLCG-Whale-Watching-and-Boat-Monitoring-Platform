@@ -1,5 +1,25 @@
 # Boat image regression checks
 
+## Complaint detail crash regression
+
+With Vite running and Playwright available, run `node scripts/tests/complaint-detail.cjs`.
+Set `PLAYWRIGHT_MODULE` if Playwright is installed outside the project and
+`PLAYWRIGHT_CHANNEL` to override the default `msedge` browser.
+The checks cover SLTDA and Admin complaint details with both legacy individual
+authorities (without `roleIds`) and grouped authorities, assignment filtering,
+forwarding payloads, refresh, mobile layout, and return navigation. All API writes
+are intercepted fixtures, so no existing complaint is changed.
+Both authority formats must show one SLCG choice and confirmation, with forwarding
+to both receiving roles. Partial and complete referrals and inactive recipients
+are also covered; internal role names remain hidden in the selector and assignment labels.
+
+For an optional check against an existing local complaint, set `WWMS_TEST_EMAIL`
+and `WWMS_TEST_PASSWORD` for a monitoring account and pass `--live`. This mode
+logs in, opens a complaint, and refreshes it without changing complaint records.
+Both modes accept `WWMS_WEB_URL` (default `http://localhost:5173`).
+
+## Boat image behavior
+
 The latest uploaded `VesselPhotographOrDiagram` document is the boat display
 image, including while that document awaits approval. Document approval and
 history remain separate from image selection. The image endpoint reads the same

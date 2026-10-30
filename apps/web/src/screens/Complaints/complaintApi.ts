@@ -14,7 +14,8 @@ export interface Assignment { id: string; authorityRoleId: string; authority: st
   forwardedAtUtc: string; forwardedBy: string; acknowledgedAtUtc: string | null; respondedAtUtc: string | null; updatedAtUtc: string; canRespond: boolean }
 export interface TimelineEvent { id: string; assignmentId: string | null; authority: string | null; actor: string;
   action: string; text: string | null; previousStatus: string; status: string; assignmentStatus: string | null; createdAtUtc: string }
-export interface Authority { id: string; name: string; activeUsers: number; roleIds: string[] }
+// Older API deployments return individual authorities without grouped role IDs.
+export interface Authority { id: string; name: string; activeUsers: number; roleIds?: string[] }
 export interface Notification { id: string; complaintId: string; assignmentId: string | null; reference: string; action: string;
   sender: string; category: string; kind: string; createdAtUtc: string; readAtUtc: string | null }
 export interface Passenger { id: string; name: string; identificationNumber: string; phoneNumber: string; passengerType: string;
