@@ -45,7 +45,8 @@ async function main() {
       const json = value => r.fulfill({ json: value });
       if (path === '/api/auth/refresh') return json({ accessToken: jwt, roles: ['ShoreCrew'], refreshToken: 'test', accessTokenExpiresAtUtc: scheduled, refreshTokenExpiresAtUtc: scheduled });
       if (path === '/api/operations/trips') return json([{ ...trip, passengerVerificationFinalizedAtUtc: finalized ? scheduled : null }]);
-      if (path === '/api/operations/boats') return json([{ id: userId, name: trip.vesselName, lengthMeters: 15, maximumCapacity: 20, documents: [] }]);
+      if (path === '/api/operations/boats') return json([{ id: userId, name: trip.vesselName, lengthMeters: 15, maximumCapacity: 20, approval: 'Approved', wildlifeApproval: 'Pending', documents: [] }]);
+      if (path === `/api/operations/trips/${tripId}/passengers`) return json(members.map(member => ({ id: member.passengerId, name: member.name, passengerType: 'local', countryCode: 'LK', ageCategory: 'adult' })));
       if (path.endsWith('/attendance/scan')) {
         scans++; await new Promise(resolve => setTimeout(resolve, 250));
         return request.postDataJSON().qrValue === qrValue ? json(group()) : r.fulfill({ status: 400, json: { message: 'Invalid passenger QR code.' } });
@@ -91,6 +92,16 @@ async function main() {
   const goto = async url => { await page.goto(url); await page.waitForLoadState('networkidle'); };
   const checkLayout = async () => {
     assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), 'No horizontal page overflow');
+    if (await page.getByRole('heading', { name: 'Passenger Summary', exact: true }).count()) {
+      const sections = await page.evaluate(() => {
+        const section = text => [...document.querySelectorAll('main h2')].find(h => h.textContent === text || (text === 'Crew' && h.textContent.startsWith('Crew (')))?.closest('section')?.getBoundingClientRect();
+        const crew = section('Crew'), summary = section('Passenger Summary'), departure = section('Trip departure');
+        return { stacked: !!crew && !!summary && !!departure && summary.top >= crew.bottom && departure.top >= summary.bottom,
+          fullWidth: !!crew && !!summary && Math.abs(crew.width - summary.width) <= 1 };
+      });
+      assert.equal(sections.stacked, true, 'Crew, Passenger Summary and Trip Departure stack vertically at every breakpoint');
+      assert.equal(sections.fullWidth, true, 'Passenger Summary uses the full Crew section width');
+    }
     const clipped = await page.evaluate(() => [...document.querySelectorAll('main button, main input, main select, dialog[open] button, dialog[open] input')].filter(el => {
       const r = el.getBoundingClientRect();
       return r.width > 0 && r.height > 0 && (r.left < -1 || r.right > innerWidth + 1);
@@ -106,7 +117,7 @@ async function main() {
   const closeScanner = async () => { await dialog.getByRole('button', { name: 'Close Scan Passenger QR', exact: true }).click(); };
   try {
     if (!live && !process.env.SHORE_SKIP_LAYOUT) {
-      for (const [width, height] of [[320, 568], [375, 812], [430, 932], [768, 1024], [1024, 768], [1440, 900]]) {
+      for (const [width, height] of [[320, 568], [375, 812], [430, 932], [768, 1024], [1024, 768], [1440, 900], [1600, 1000], [1920, 1080]]) {
         await page.setViewportSize({ width, height });
         for (const path of ['/shore', '/shore/trips', `/shore/trips/${tripId}`, '/shore/settings', '/shore/notifications']) {
           await goto(base + path);
@@ -134,7 +145,10 @@ async function main() {
     await page.setViewportSize({ width: 375, height: 812 });
     await checkLayout();
     await dialog.getByLabel('Upload QR image').setInputFiles({ name: 'passenger-qr.png', mimeType: 'image/png', buffer: png });
-    await dialog.waitFor({ state: 'hidden' });
+    await dialog.waitFor({ state: 'hidden' }).catch(async error => {
+      console.error({ phase: 'QR image upload', dialog: await dialog.innerText(), errors });
+      throw error;
+    });
     await page.getByRole('status').filter({ hasText: 'QR validated.' }).waitFor().catch(async error => {
       console.error({ errors, scans, saves, url: page.url(), body: (await page.locator('body').innerText()).slice(0, 1400) });
       throw error;
@@ -142,11 +156,14 @@ async function main() {
     if (!live) { assert.equal(scans, 1); assert.equal(saves, 0, 'Decoding never marks attendance'); }
     const member = page.locator('article').filter({ hasText: live ? 'Passenger One' : 'Primary Passenger' });
     await member.getByRole('button', { name: 'Present', exact: true }).click();
+    const totalRow = page.getByRole('region', { name: 'Passenger summary table', exact: true }).getByRole('row').filter({ has: page.getByRole('rowheader', { name: 'Grand Total', exact: true }) });
+    assert.equal(await totalRow.getByRole('cell').last().textContent(), '0', 'Unsaved selection never counts as onboard');
     await page.getByRole('button', { name: 'Confirm Attendance', exact: true }).click();
     const review = page.getByRole('dialog', { name: 'Confirm Group Attendance', exact: true });
     await review.waitFor(); await checkLayout();
     await review.getByRole('button', { name: 'Confirm & Save' }).click();
     await page.getByRole('status').filter({ hasText: 'Passenger attendance saved successfully.' }).waitFor();
+    await page.waitForFunction(() => document.querySelector('[aria-label="Passenger summary table"] tbody tr:last-child td:last-child')?.textContent === '1');
     if (!live) assert.equal(saves, 1, 'Only one attendance update');
     await openScanner();
     await dialog.getByLabel('passenger QR value', { exact: false }).fill(qrValue);
@@ -221,8 +238,19 @@ async function main() {
     await page.getByRole('navigation', { name: 'Shore Officer mobile navigation' }).getByRole('link', { name: 'Settings', exact: true }).click();
     await page.waitForURL(base + '/shore/settings');
     assert.equal(await page.getByRole('navigation', { name: 'Shore Officer mobile navigation' }).count(), 0);
+    if (!live) {
+      await goto(`${base}/shore/trips/${tripId}`);
+      await page.getByRole('button', { name: 'Complete Passenger Verification', exact: true }).click();
+      const finalDialog = page.getByRole('dialog', { name: 'Complete Passenger Verification', exact: true });
+      await finalDialog.getByRole('button', { name: 'Confirm & Save', exact: true }).click();
+      await page.getByRole('status').filter({ hasText: 'Passenger verification finalized successfully.' }).waitFor();
+      const manifestTable = page.getByRole('region', { name: 'Passenger manifest table', exact: true });
+      assert.equal(await manifestTable.getByText('Sri Lanka', { exact: true }).count(), 2, 'Finalization retains nationality details');
+      assert.equal(await manifestTable.getByText('Adult', { exact: true }).count(), 2, 'Finalization retains age details');
+      assert.equal(await page.getByRole('button', { name: 'Complete Passenger Verification', exact: true }).isDisabled(), true);
+    }
     assert.deepEqual(errors, []);
-    console.log(`PASS ${engine}: ${process.env.SHORE_SKIP_LAYOUT ? 'scanner-focused rerun' : 'all 5 Shore pages at 320/375/430/768/1024/1440px'}, QR PNG decode, manual validation/lookup, duplicate guards, simulated camera failures, responsive dialogs/navigation`);
+    console.log(`PASS ${engine}: ${process.env.SHORE_SKIP_LAYOUT ? 'scanner-focused rerun' : 'all 5 Shore pages at 320/375/430/768/1024/1440/1600/1920px'}, QR PNG decode, manual validation/lookup, duplicate guards, simulated camera failures, responsive dialogs/navigation`);
   } finally { await context.close(); await browser.close(); }
 }
 main().catch(error => { console.error(error); process.exitCode = 1; });

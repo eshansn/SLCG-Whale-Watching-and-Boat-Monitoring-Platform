@@ -1,10 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Camera, Search, X } from 'lucide-react';
+import { createPortal } from 'react-dom';
 import { shoreAttendanceApi, type AttendanceManifest, type AttendanceStatus, type PassengerGroup, type PassengerGroupSearch } from './shoreAttendanceApi';
 import PassengerQrScanner from './components/PassengerQrScanner';
 import ShoreDialog from './components/ShoreDialog';
+import { ShoreCountryFlag as CountryFlag } from './ShoreCountryFlag';
+import ShorePassengerSummary from './ShorePassengerSummary';
+import { presentShorePassenger } from './shorePassengerPresentation';
 
-export default function PassengerAttendancePanel({ token, tripId }: { token: string; tripId: string }) {
+export default function PassengerAttendancePanel({ token, tripId, revision, summaryTarget }: { token: string; tripId: string; revision?: object; summaryTarget: HTMLElement | null }) {
   const [manifest, setManifest] = useState<AttendanceManifest>();
   const [group, setGroup] = useState<PassengerGroup>();
   const [statuses, setStatuses] = useState<Record<string, AttendanceStatus>>({});
@@ -17,25 +21,35 @@ export default function PassengerAttendancePanel({ token, tripId }: { token: str
   const [finalize, setFinalize] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [refreshError, setRefreshError] = useState('');
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
   const pending = useRef(false);
   const mounted = useRef(false);
+  const loadVersion = useRef(0);
   const searchInput = useRef<HTMLInputElement>(null);
   const [searchAttempt, setSearchAttempt] = useState(0);
 
   const load = useCallback(async () => {
-    const data = await shoreAttendanceApi.manifest(token, tripId);
-    if (mounted.current) setManifest(data);
+    const version = ++loadVersion.current;
+    try {
+      const data = await shoreAttendanceApi.manifest(token, tripId);
+      if (mounted.current && version === loadVersion.current) { setManifest(data); setRefreshError(''); }
+    } catch (reason) {
+      if (mounted.current && version === loadVersion.current) throw reason;
+    }
   }, [token, tripId]);
   useEffect(() => {
     mounted.current = true;
     let active = true;
-    void shoreAttendanceApi.manifest(token, tripId).then(data => { if (active) setManifest(data); })
-      .catch(reason => { if (active) setError(reason instanceof Error ? reason.message : 'Unable to load attendance.'); })
-      .finally(() => { if (active) setLoading(false); });
-    return () => { active = false; mounted.current = false; };
-  }, [token, tripId]);
+    const refresh = () => { void load()
+      .catch(reason => { if (active) setRefreshError(reason instanceof Error ? reason.message : 'Unable to load attendance.'); })
+      .finally(() => { if (active) setLoading(false); }); };
+    refresh();
+    window.addEventListener('focus', refresh);
+    return () => { active = false; mounted.current = false; window.removeEventListener('focus', refresh); };
+    // useOperations refreshes revision on existing live events and its 10s poll.
+  }, [load, revision]);
   useEffect(() => {
     let active = true;
     const term = query.trim();
@@ -94,7 +108,12 @@ export default function PassengerAttendancePanel({ token, tripId }: { token: str
     pending.current = true; setBusy(true); setError(''); setMessage('');
     try {
       const updated = await shoreAttendanceApi.finalize(token, tripId, manifest.summary.notChecked > 0);
-      if (mounted.current) { setManifest(updated); setFinalize(false); setGroup(undefined); setMessage('Passenger verification finalized successfully.'); }
+      if (mounted.current) {
+        ++loadVersion.current;
+        const details = new Map(manifest.passengers.map(person => [person.passengerId, person]));
+        setManifest({ ...updated, passengers: updated.passengers.map(person => ({ ...details.get(person.passengerId), ...person })) });
+        setFinalize(false); setGroup(undefined); setMessage('Passenger verification finalized successfully.');
+      }
     } catch (reason) { if (mounted.current) setError(reason instanceof Error ? reason.message : 'Unable to finalize attendance.'); }
     finally { pending.current = false; if (mounted.current) setBusy(false); }
   };
@@ -107,8 +126,9 @@ export default function PassengerAttendancePanel({ token, tripId }: { token: str
   const dirty = group?.members.some(member => statuses[member.passengerId] !== member.status) ?? false;
   const locked = Boolean(manifest?.finalizedAtUtc) || !['Scheduled', 'Boarding', 'NeedsReschedule'].includes(manifest?.tripStatus ?? '');
   return <section className="min-w-0 space-y-5" aria-label="Passenger attendance">
+    {summaryTarget && createPortal(<ShorePassengerSummary passengers={manifest?.passengers} loading={loading && !manifest} />, summaryTarget)}
     {loading && <p role="status" className="rounded-xl bg-white p-5 text-sm">Loading passenger attendance…</p>}
-    {error && <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-red-50 p-4 text-sm text-red-700"><span>{error}</span><button type="button" disabled={busy} className="min-h-11 font-semibold underline" onClick={() => { void load().then(() => setError('')).catch(reason => setError(reason instanceof Error ? reason.message : 'Unable to load attendance.')); }}>Refresh attendance</button></div>}
+    {(error || refreshError) && <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-red-50 p-4 text-sm text-red-700"><span>{error || refreshError}</span><button type="button" disabled={busy} className="min-h-11 font-semibold underline" onClick={() => { void load().then(() => setError('')).catch(reason => setRefreshError(reason instanceof Error ? reason.message : 'Unable to load attendance.')); }}>Refresh attendance</button></div>}
     {message && <p role="status" className="rounded-xl bg-emerald-50 p-4 text-sm text-emerald-800">{message}</p>}
     {busy && !scanner && <p role="status" className="text-sm text-slate-500">Processing passenger request…</p>}
     <section className="rounded-xl bg-white p-4 shadow-sm sm:p-6"><div className="flex flex-wrap items-start justify-between gap-4"><div><h2 className="text-xl font-semibold text-[#14223d]">Passenger Attendance</h2><p className="mt-1 text-sm font-semibold text-indigo-700">{summary.present} of {summary.total} passengers are Present</p></div>{manifest?.finalizedAtUtc && <span className="break-words rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700">Finalized by {manifest.finalizedBy}</span>}</div>
@@ -125,7 +145,25 @@ export default function PassengerAttendancePanel({ token, tripId }: { token: str
       {!group.finalized && !locked && <button type="button" disabled={busy || !dirty} onClick={() => setReview(true)} className="mt-5 min-h-11 w-full rounded-lg bg-indigo-600 px-5 py-3 text-sm font-semibold text-white disabled:opacity-40">Confirm Attendance</button>}
     </section>}
     <section className="min-w-0 overflow-hidden rounded-xl bg-white shadow-sm"><div className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-5 sm:px-6"><h2 className="text-lg font-semibold text-[#14223d]">Passenger Manifest</h2><button type="button" disabled={busy || locked || summary.total === 0} onClick={() => setFinalize(true)} className="min-h-11 rounded-lg border border-indigo-600 px-4 py-2 text-xs font-semibold text-indigo-700 disabled:opacity-40">Complete Passenger Verification</button></div>
-      <div className="overflow-x-auto" role="region" aria-label="Passenger manifest table" tabIndex={0}><table className="w-full min-w-[760px] text-left text-xs"><thead className="bg-slate-50 text-slate-500"><tr>{['Passenger', 'Reference', 'Group / Relationship', 'Status', 'Check-in Time'].map(label => <th key={label} className="px-5 py-3">{label}</th>)}</tr></thead><tbody className="divide-y">{manifest?.passengers.map(person => <tr key={person.passengerId}><td className="px-5 py-4 font-semibold">{person.name}</td><td className="px-5 py-4">{person.passengerReference}</td><td className="px-5 py-4">{person.relationship}</td><td className="px-5 py-4"><StatusBadge status={person.status} /></td><td className="px-5 py-4">{person.checkedAtUtc ? new Date(person.checkedAtUtc).toLocaleString() : '–'}</td></tr>)}</tbody></table>{summary.total === 0 && <p className="p-6 text-center text-xs text-slate-400">No passengers registered for this trip.</p>}</div>
+      <div className="overflow-x-auto" role="region" aria-label="Passenger manifest table" tabIndex={0}>
+        <table className="w-full min-w-[960px] text-left text-xs">
+          <thead className="bg-slate-50 text-slate-500"><tr>{['Passenger', 'Nationality', 'Passenger Category', 'Age Category', 'Reference', 'Group / Relationship', 'Status', 'Check-in Time'].map(label => <th scope="col" key={label} className="px-5 py-3">{label}</th>)}</tr></thead>
+          <tbody className="divide-y">{manifest?.passengers.map(person => {
+            const display = presentShorePassenger(person);
+            return <tr key={person.passengerId}>
+              <th scope="row" className="px-5 py-4 text-left font-semibold"><span className="inline-flex items-center gap-2"><CountryFlag countryCode={display.country?.code} /><span>{person.name}</span></span></th>
+              <td className="px-5 py-4">{display.nationality}</td>
+              <td className="px-5 py-4">{display.category}</td>
+              <td className="px-5 py-4">{display.ageLabel}{display.specialNeeds && <span className="mt-1 block text-[10px] text-slate-500">Special needs registration</span>}</td>
+              <td className="px-5 py-4">{person.passengerReference}</td>
+              <td className="px-5 py-4">{person.relationship}</td>
+              <td className="px-5 py-4"><StatusBadge status={person.status} /></td>
+              <td className="px-5 py-4">{person.checkedAtUtc ? new Date(person.checkedAtUtc).toLocaleString() : '?'}</td>
+            </tr>;
+          })}</tbody>
+        </table>
+        {summary.total === 0 && !loading && <p className="p-6 text-center text-xs text-slate-400">No passengers registered for this trip.</p>}
+      </div>
     </section>
     {scanner && <PassengerQrScanner onScan={scan} onClose={() => setScanner(false)} onSearch={() => { setScanner(false); window.setTimeout(() => searchInput.current?.focus(), 0); }} />}
     {review && <ConfirmDialog title="Confirm Group Attendance" text={`${groupPresent} passengers marked Present · ${groupAbsent} marked Not Present.`} warning={groupUnchecked ? `${groupUnchecked} passengers remain Not Yet Checked. Are you sure you want to continue?` : undefined} busy={busy} onBack={() => setReview(false)} onConfirm={() => { void save(); }} />}

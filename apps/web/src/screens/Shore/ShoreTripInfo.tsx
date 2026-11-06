@@ -5,6 +5,7 @@ import { formatTripDate, operationsApi } from "../../operations/operationsApi";
 import { useOperations } from "../../operations/useOperations";
 import PassengerAttendancePanel from "./PassengerAttendancePanel";
 import ShoreDialog from "./components/ShoreDialog";
+import { boatApprovalDepartureMessage, isBoatApprovedForTrips } from "../../operations/boatTripApproval";
 
 const ShoreTripInfo = () => {
   const { tripId } = useParams();
@@ -15,9 +16,11 @@ const ShoreTripInfo = () => {
   const [result, setResult] = useState<"started" | "declined" | null>(null);
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState("");
+  const [summaryTarget, setSummaryTarget] = useState<HTMLDivElement | null>(null);
 
   const decide = async (decision: "started" | "declined") => {
     if (!trip || !token || busy) return;
+    if (decision === "started" && !isBoatApprovedForTrips(boat)) { setActionError(boatApprovalDepartureMessage); return; }
     const override = trip.status === "NeedsReschedule";
     if (decision === "started" && override && !window.confirm("This trip is marked as needing rescheduling. Are you sure you want to override this status and start the trip?")) return;
     const reason = decision === "declined" ? window.prompt("Reason for declining this trip (optional):") : undefined;
@@ -40,10 +43,13 @@ const ShoreTripInfo = () => {
     <div className="grid min-w-0 grid-cols-1 gap-5 xl:grid-cols-[320px_minmax(0,1fr)]">
       <aside className="overflow-hidden rounded-xl bg-white shadow-sm"><BoatImage src={boat?.imageUrl} alt={trip.vesselName} className="h-52 w-full object-cover"/><div className="p-6"><h1 className="text-2xl font-semibold text-[#14223d]">{trip.vesselName}</h1><p className="mt-1 text-xs text-slate-400">{trip.registrationNumber}</p><dl className="mt-6 grid grid-cols-2 gap-x-4 gap-y-4 text-xs"><Detail label="Owner" value={trip.ownerName}/><Detail label="Departure" value={formatTripDate(trip.scheduledDepartureUtc)}/><Detail label="Length" value={`${boat?.lengthMeters ?? 0} M`}/><Detail label="Capacity" value={`${boat?.maximumCapacity ?? trip.passengerCount} Passengers`}/><Detail label="Passengers" value={`${trip.passengerCount}`}/><Detail label="Status" value={trip.status}/></dl></div></aside>
       <div className="grid min-w-0 grid-cols-1 gap-5">
-        {token&&tripId&&<PassengerAttendancePanel key={tripId} token={token} tripId={tripId}/>}
-        <div className="grid min-w-0 grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_270px] xl:grid-cols-1 2xl:grid-cols-[minmax(0,1fr)_270px]">
+        {token&&tripId&&<PassengerAttendancePanel key={tripId} token={token} tripId={tripId} revision={trip} summaryTarget={summaryTarget}/>}
+        <div className="grid min-w-0 grid-cols-1 gap-5">
           <DataCard title={`Crew (${trip.crew.length})`} columns={["Name","NIC","Role","Certified"]} rows={trip.crew.map(member=>[member.name,member.nicNumber||"Not provided",member.position,member.certified?"Yes":"No"])} emptyText="No crew assigned to this trip."/>
-          <section className="rounded-xl bg-white p-6 shadow-sm"><h2 className="text-xl font-semibold text-[#14223d]">Trip departure</h2><p className="mt-3 text-xs leading-5 text-slate-500">Start after passenger confirmation is finalized. Wildlife monitoring does not authorize departure.</p>{trip.status==='NeedsReschedule'&&<p className="mt-3 rounded-lg bg-amber-50 p-3 text-xs font-medium text-amber-800">Starting this trip records a Shore Officer reschedule override.</p>}{!trip.passengerVerificationFinalizedAtUtc&&<p className="mt-3 rounded-lg bg-slate-50 p-3 text-xs text-slate-600">Passenger confirmation has not been finalized.</p>}<div className="mt-6 grid gap-3"><button type="button" disabled={busy||!actionable||!trip.passengerVerificationFinalizedAtUtc} onClick={()=>void decide("started")} className="rounded-md bg-emerald-500 px-4 py-3 text-sm font-semibold text-white disabled:opacity-40">{busy?"Working…":trip.status==='NeedsReschedule'?"Start Anyway":"Start Trip"}</button><button type="button" disabled={busy||!actionable} onClick={()=>void decide("declined")} className="rounded-md bg-red-500 px-4 py-3 text-sm font-semibold text-white disabled:opacity-40">Decline Trip</button></div>{actionError&&<p role="alert" className="mt-3 text-xs font-medium text-red-600">{actionError}</p>}</section>
+          <div className="min-w-0 space-y-5">
+          <div ref={setSummaryTarget} />
+          <section className="rounded-xl bg-white p-6 shadow-sm"><h2 className="text-xl font-semibold text-[#14223d]">Trip departure</h2><p className="mt-3 text-xs leading-5 text-slate-500">Start after passenger confirmation is finalized. Wildlife monitoring does not authorize departure.</p>{trip.status==='NeedsReschedule'&&<p className="mt-3 rounded-lg bg-amber-50 p-3 text-xs font-medium text-amber-800">Starting this trip records a Shore Officer reschedule override.</p>}{!trip.passengerVerificationFinalizedAtUtc&&<p className="mt-3 rounded-lg bg-slate-50 p-3 text-xs text-slate-600">Passenger confirmation has not been finalized.</p>}{actionable&&!isBoatApprovedForTrips(boat)&&<p role="alert" className="mt-3 rounded-lg bg-red-50 p-3 text-xs text-red-700">{boatApprovalDepartureMessage}</p>}<div className="mt-6 grid gap-3"><button type="button" disabled={busy||!actionable||!trip.passengerVerificationFinalizedAtUtc||!isBoatApprovedForTrips(boat)} onClick={()=>void decide("started")} className="rounded-md bg-emerald-500 px-4 py-3 text-sm font-semibold text-white disabled:opacity-40">{busy?"Working…":trip.status==='NeedsReschedule'?"Start Anyway":"Start Trip"}</button><button type="button" disabled={busy||!actionable} onClick={()=>void decide("declined")} className="rounded-md bg-red-500 px-4 py-3 text-sm font-semibold text-white disabled:opacity-40">Decline Trip</button></div>{actionError&&<p role="alert" className="mt-3 text-xs font-medium text-red-600">{actionError}</p>}</section>
+          </div>
         </div>
       </div>
     </div>

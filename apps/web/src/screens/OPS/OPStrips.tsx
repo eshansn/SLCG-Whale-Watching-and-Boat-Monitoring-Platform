@@ -8,6 +8,7 @@ import { useNavigate } from "react-router-dom";
 import { Icon } from "../../components/ui/icon";
 import Navbar from "./components/Navbar";
 import { useOperations } from "../../operations/useOperations";
+import { isBoatApprovedForTrips } from "../../operations/boatTripApproval";
 import { useTripStateClock } from "../../operations/useTripStateClock";
 import { getTripDisplayState, operationsApi, type Trip as OperationTrip, type TripDisplayState } from "../../operations/operationsApi";
 type ApprovalStatus = TripDisplayState;
@@ -111,7 +112,8 @@ const OPStrips = () => {
   const unavailableBoatIds = useMemo(() => new Set(operationTrips
     .filter((trip) => trip.status === "Ongoing" || trip.status === "Boarding")
     .map((trip) => trip.boatId)), [operationTrips]);
-  const availablePatrolBoats = patrolBoats.filter((boat) => !unavailableBoatIds.has(boat.id));
+  const approvedPatrolBoats = patrolBoats.filter(isBoatApprovedForTrips);
+  const availablePatrolBoats = approvedPatrolBoats.filter((boat) => !unavailableBoatIds.has(boat.id));
   const selectedPatrolBoatId = availablePatrolBoats.some((boat) => boat.id === patrolBoatId)
     ? patrolBoatId
     : availablePatrolBoats[0]?.id ?? "";
@@ -360,7 +362,8 @@ const OPStrips = () => {
                 </button>
               </div>
               {patrolError && <p role="alert" className="mt-3 text-xs text-red-600">{patrolError}</p>}
-              {patrolBoats.length > 0 && availablePatrolBoats.length === 0 && <p className="mt-3 text-xs text-amber-700">All SLCG patrol vessels currently have an active trip or patrol.</p>}
+              {patrolBoats.length > 0 && approvedPatrolBoats.length === 0 && <p role="alert" className="mt-3 text-xs text-amber-700">Patrol vessels must receive official approval before starting a patrol.</p>}
+              {approvedPatrolBoats.length > 0 && availablePatrolBoats.length === 0 && <p className="mt-3 text-xs text-amber-700">All SLCG patrol vessels currently have an active trip or patrol.</p>}
             </div>
           )}
 

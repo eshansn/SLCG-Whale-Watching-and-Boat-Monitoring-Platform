@@ -11,7 +11,9 @@ export default function OPSMonitor() {
   const { session } = useAuth();
   useEffect(() => {
     if (!session) return;
-    const loadFleet = () => void loadVessels(session.accessToken);
+    const loadFleet = () => void loadVessels(session.accessToken).catch(error => {
+      console.error('Unable to refresh vessel locations.', error);
+    });
     const reconcile = (change?: OperationsChange) => {
       const state = useDashboardStore.getState();
       const tracking = state.activeTripTracking;

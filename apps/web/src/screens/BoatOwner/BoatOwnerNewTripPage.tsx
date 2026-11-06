@@ -16,6 +16,7 @@ import { useAuth } from "../../auth/useAuth";
 import { useOperations } from "../../operations/useOperations";
 import { operationsApi } from "../../operations/operationsApi";
 import type { OwnerCrew } from "../../operations/operationsApi";
+import { boatApprovalSchedulingMessage, isBoatApprovedForTrips } from "../../operations/boatTripApproval";
 
 import notificationIcon from "../../assets/icons/notification.svg";
 import userIcon from "../../assets/icons/user.svg";
@@ -134,7 +135,10 @@ function BoatOwnerNewTripPage() {
   const selectedCrew = accountId !== undefined && selectedCrewState?.accountId === accountId
     ? selectedCrewState.crewUserIds
     : [];
-  const effectiveSelectedVessel = selectedVessel || boats[0]?.id || "";
+  const eligibleBoats = boats.filter(boat => !boat.isPatrolBoat && isBoatApprovedForTrips(boat));
+  const effectiveSelectedVessel = selectedVessel || eligibleBoats[0]?.id || "";
+  const selectedApprovedBoat = eligibleBoats.find(boat => boat.id === effectiveSelectedVessel);
+  const approvalMessage = !loading && boats.length > 0 && !selectedApprovedBoat ? boatApprovalSchedulingMessage : "";
   const assignedCrew = crew.filter(member => member.assignedBoatId === effectiveSelectedVessel);
 
   useLayoutEffect(() => {
@@ -221,12 +225,16 @@ function BoatOwnerNewTripPage() {
     if (!effectiveSelectedVessel) {
       setTripSubmissionState({
         accountId,
-        statusMessage: "Please select a vessel.",
+        statusMessage: boats.length ? boatApprovalSchedulingMessage : "Please select a vessel.",
         submitting: false,
       });
       return;
     }
 
+    if (!selectedApprovedBoat) {
+      setTripSubmissionState({ accountId, statusMessage: boatApprovalSchedulingMessage, submitting: false });
+      return;
+    }
     if (!tripDateTime) {
       setTripSubmissionState({
         accountId,
@@ -379,6 +387,7 @@ function BoatOwnerNewTripPage() {
           <div className="relative">
             <select
               id="tripVessel"
+              disabled={loading || submitting || !eligibleBoats.length}
               value={effectiveSelectedVessel}
               onChange={(event) => {
                 updateTripForm({ selectedVessel: event.target.value });
@@ -402,7 +411,7 @@ function BoatOwnerNewTripPage() {
               "
             >
               <option value="">{loading ? 'Loading vessels...' : 'Select a vessel'}</option>
-              {boats.map((boat) => <option key={boat.id} value={boat.id}>{boat.name} — {boat.registrationNumber}</option>)}
+              {eligibleBoats.map((boat) => <option key={boat.id} value={boat.id}>{boat.name} — {boat.registrationNumber}</option>)}
             </select>
 
           </div>
@@ -478,7 +487,7 @@ function BoatOwnerNewTripPage() {
           />
         </div>
 
-        {statusMessage && (
+        {(approvalMessage || statusMessage) && (
           <p
             role="status"
             className="
@@ -489,14 +498,14 @@ function BoatOwnerNewTripPage() {
               sm:text-[13px]
             "
           >
-            {statusMessage}
+            {approvalMessage || statusMessage}
           </p>
         )}
 
         {/* Schedule button */}
         <button
           type="submit"
-          disabled={submitting || !boats.length}
+          disabled={submitting || loading || !selectedApprovedBoat}
           className="
             mt-auto min-h-[56px] w-full
             rounded-[10px] bg-[#080d68]
