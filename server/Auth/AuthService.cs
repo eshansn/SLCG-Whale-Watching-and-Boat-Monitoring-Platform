@@ -89,7 +89,7 @@ public sealed class AuthService(
     {
         cancellationToken.ThrowIfCancellationRequested();
         var user = await userManager.FindByEmailAsync(request.Email.Trim());
-        if (user is null)
+        if (user is null || user.AccountDeletedAtUtc is not null)
         {
             return null;
         }

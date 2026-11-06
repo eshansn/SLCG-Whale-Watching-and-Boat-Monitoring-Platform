@@ -6,6 +6,7 @@ public sealed class ApplicationUser : IdentityUser<Guid>
 {
     public string DisplayName { get; set; } = string.Empty;
     public DateTimeOffset? PasswordResetAtUtc { get; set; }
+    public DateTimeOffset? AccountDeletedAtUtc { get; set; }
     public string? NicNumber { get; set; }
     public byte[]? ProfilePhoto { get; set; }
     public string? ProfilePhotoContentType { get; set; }

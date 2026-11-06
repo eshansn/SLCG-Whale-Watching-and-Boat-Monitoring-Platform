@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Identity;
 using System.Security.Claims;
 using WhaleWatching.Api.Domain;
 using WhaleWatching.Api.Auth.Dtos;
+using System.Text.Json.Serialization;
 
 namespace WhaleWatching.Api.Auth;
 
@@ -99,6 +100,22 @@ public sealed class AuthController(IAuthService authService, UserManager<Applica
 
     private string GetClientIp() =>
         HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+
+    [HttpDelete("account")]
+    public async Task<IActionResult> DeleteAccount(DeleteAccountRequest request,
+        [FromServices] AccountDeletionService deletion, [FromServices] AccountSessionRegistry sessions, CancellationToken ct)
+    {
+        if (!string.Equals(request.Confirmation, "confirm", StringComparison.Ordinal))
+            return BadRequest(new { message = "Type exactly confirm, without spaces, to delete your account." });
+        if (!Guid.TryParse(User.FindFirstValue("sub") ?? User.FindFirstValue(ClaimTypes.NameIdentifier), out var userId))
+            return Unauthorized();
+        var conflict = await deletion.DeleteAsync(userId, ct);
+        if (conflict is not null) return Conflict(new { message = conflict });
+        sessions.Revoke(userId);
+        return Ok(new { message = "Your account has been permanently deleted." });
+    }
 }
 
 public sealed record ChangePasswordRequest(string CurrentPassword, string NewPassword);
+[JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
+public sealed record DeleteAccountRequest(string? Confirmation);

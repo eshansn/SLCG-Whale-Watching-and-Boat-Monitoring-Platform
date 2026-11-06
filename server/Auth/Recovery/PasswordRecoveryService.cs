@@ -162,7 +162,7 @@ public sealed class PasswordRecoveryService(
         }, ct);
     }
 
-    private static bool Eligible(ApplicationUser? user) => user is { EmailConfirmed: true, PasswordHash: not null } &&
+    private static bool Eligible(ApplicationUser? user) => user is { AccountDeletedAtUtc: null, EmailConfirmed: true, PasswordHash: not null } &&
         !string.IsNullOrWhiteSpace(user.SecurityStamp) && MailAddress.TryCreate(user.Email, out _);
 
     private async Task<bool> CanSendAsync(string key, DateTimeOffset now, CancellationToken ct) =>

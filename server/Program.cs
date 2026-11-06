@@ -19,6 +19,9 @@ using WhaleWatching.Api.Health;
 using WhaleWatching.Api.Operations;
 using WhaleWatching.Api.Realtime;
 using WhaleWatching.Api.Complaints;
+using WhaleWatching.Api.Errors;
+using WhaleWatching.Api.Contact;
+using WhaleWatching.Api.Support;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -150,12 +153,20 @@ builder.Services.AddRateLimiter(options =>
                 QueueLimit = 0,
                 AutoReplenishment = true
             }));
+    options.AddPolicy("contact", httpContext => RateLimitPartition.GetFixedWindowLimiter(
+        httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown", _ => new FixedWindowRateLimiterOptions
+        { PermitLimit = 3, Window = TimeSpan.FromMinutes(1), QueueLimit = 0, AutoReplenishment = true }));
+    options.AddPolicy("support", httpContext => RateLimitPartition.GetFixedWindowLimiter(
+        httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown", _ => new FixedWindowRateLimiterOptions
+        { PermitLimit = 5, Window = TimeSpan.FromHours(1), QueueLimit = 0, AutoReplenishment = true }));
 });
 
 builder.Services.AddHealthChecks()
     .AddCheck<DatabaseHealthCheck>("sqlserver", tags: ["ready"]);
 
 builder.Services.AddControllers();
+builder.Services.AddExceptionHandler<ApiExceptionHandler>();
+builder.Services.AddProblemDetails();
 builder.Services.AddSignalR();
 builder.Services.AddMemoryCache();
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
@@ -199,7 +210,14 @@ builder.Services.AddHostedService<TripLifecycleMonitor>();
 builder.Services.AddHostedService<TrackMyCarSyncWorker>();
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<AccountDeletionService>();
+builder.Services.AddSingleton<AccountSessionRegistry>();
 builder.Services.AddPasswordRecovery(builder.Configuration);
+builder.Services.AddOptions<ContactOptions>().Bind(builder.Configuration.GetSection("Contact"))
+    .ValidateDataAnnotations().ValidateOnStart();
+builder.Services.AddScoped<IContactEmailSender, GmailContactEmailSender>();
+builder.Services.AddScoped<SupportNotificationDispatcher>();
+builder.Services.AddHostedService<SupportNotificationWorker>();
 builder.Services.AddScoped<IdentitySeeder>();
 builder.Services.AddScoped<ComplaintAccess>();
 builder.Services.AddScoped<ComplaintWorkflow>();
@@ -209,6 +227,7 @@ var app = builder.Build();
 await ApplyDatabaseMigrationsAsync(app.Services);
 
 app.UseForwardedHeaders();
+app.UseExceptionHandler();
 app.UseRateLimiter();
 app.UseCors("clients");
 app.UseAuthentication();

@@ -188,8 +188,7 @@ public sealed class RecordsController(
         if (await db.Boats.AnyAsync(boat => boat.OwnerId == id, ct))
             return Conflict(new { message = "This owner cannot be deleted while active boats are registered to the account." });
 
-        db.OwnerCrewMemberships.RemoveRange(await db.OwnerCrewMemberships
-            .Where(membership => membership.OwnerId == id).ToListAsync(ct));
+        await AccountRetention.ReleaseOwnerMembershipsAsync(db, id, ct);
         await ArchiveRoleAsync(owner, PortalRoles.BoatOwner, ct);
         await db.SaveChangesAsync(ct);
         await hub.Clients.All.SendAsync("operationsChanged", new { entity = "owner", id, deleted = true }, ct);
@@ -205,15 +204,7 @@ public sealed class RecordsController(
                 assignment.Trip.Status == TripStatus.Ongoing, ct))
             return Conflict(new { message = "A crew member assigned to an ongoing trip cannot be deleted." });
 
-        var assignments = await db.CrewAssignments.Where(assignment => assignment.CrewUserId == id).ToListAsync(ct);
-        foreach (var assignment in assignments) assignment.IsActive = false;
-        db.OwnerCrewMemberships.RemoveRange(await db.OwnerCrewMemberships
-            .Where(membership => membership.CrewUserId == id).ToListAsync(ct));
-        db.TripCrewAssignments.RemoveRange(await db.TripCrewAssignments
-            .Where(assignment => assignment.CrewUserId == id &&
-                (assignment.Trip.Status == TripStatus.Scheduled || assignment.Trip.Status == TripStatus.Boarding ||
-                 assignment.Trip.Status == TripStatus.NeedsReschedule))
-            .ToListAsync(ct));
+        await AccountRetention.ReleaseCrewAssignmentsAsync(db, id, ct);
         crew.IsCrewCertified = false;
         await ArchiveRoleAsync(crew, PortalRoles.BoatCrew, ct);
         await db.SaveChangesAsync(ct);

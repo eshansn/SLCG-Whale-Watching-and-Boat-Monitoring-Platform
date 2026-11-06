@@ -60,7 +60,7 @@ public sealed class JwtTokenService(
                 return null;
             }
 
-            if (!existing.IsActive(now) ||
+            if (existing.User.AccountDeletedAtUtc is not null || !existing.IsActive(now) ||
                 !string.Equals(existing.SecurityStamp, existing.User.SecurityStamp,
                     StringComparison.Ordinal))
             {

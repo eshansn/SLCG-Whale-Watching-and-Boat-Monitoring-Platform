@@ -9,6 +9,8 @@
 
   <ItemGroup>
     <PackageReference Include="MailKit" Version="4.17.0" />
+    <!-- Override MimeKit's transitive 8.0.1 dependency with the compatible security patch. -->
+    <PackageReference Include="System.Security.Cryptography.Pkcs" Version="8.0.2" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.11" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.11" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.11">

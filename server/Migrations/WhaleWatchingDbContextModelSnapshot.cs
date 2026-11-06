@@ -162,6 +162,9 @@ namespace WhaleWatching.Api.Migrations
                     b.Property<int>("AccessFailedCount")
                         .HasColumnType("int");
 
+                    b.Property<DateTimeOffset?>("AccountDeletedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
                     b.Property<string>("Bio")
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)");
@@ -1238,6 +1241,72 @@ namespace WhaleWatching.Api.Migrations
                     b.ToTable("SosEvents");
                 });
 
+            modelBuilder.Entity("WhaleWatching.Api.Domain.SupportRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("FullName")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("nvarchar(160)");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<DateTimeOffset>("NextNotificationAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<int>("NotificationAttempts")
+                        .HasColumnType("int");
+
+                    b.Property<Guid?>("NotificationLeaseId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("NotificationLeaseUntilUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset?>("NotifiedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Portal")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("nvarchar(160)");
+
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("NotifiedAtUtc", "NextNotificationAtUtc");
+
+                    b.ToTable("SupportRequests");
+                });
+
             modelBuilder.Entity("WhaleWatching.Api.Domain.Trip", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2018,6 +2087,14 @@ namespace WhaleWatching.Api.Migrations
                         .IsRequired();
 
                     b.Navigation("Trip");
+                });
+
+            modelBuilder.Entity("WhaleWatching.Api.Domain.SupportRequest", b =>
+                {
+                    b.HasOne("WhaleWatching.Api.Domain.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.SetNull);
                 });
 
             modelBuilder.Entity("WhaleWatching.Api.Domain.Trip", b =>
