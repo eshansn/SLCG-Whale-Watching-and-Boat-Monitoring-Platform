@@ -93,7 +93,7 @@ public sealed class PassengerAttendanceController(WhaleWatchingDbContext db,
         var parsed = new Dictionary<Guid, PassengerAttendanceStatus>();
         foreach (var item in request.Items)
         {
-            if (!Enum.TryParse<PassengerAttendanceStatus>(item.Status, true, out var status))
+            if (!Enum.TryParse<PassengerAttendanceStatus>(item.Status, true, out var status) || !Enum.IsDefined(status))
                 return BadRequest(new { message = "Attendance status must be NotChecked, Present, or NotPresent." });
             parsed[item.PassengerId] = status;
         }

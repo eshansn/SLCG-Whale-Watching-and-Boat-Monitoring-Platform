@@ -172,6 +172,7 @@ public sealed class PassengerTripController(WhaleWatchingDbContext db, GpsTracke
             PassengerId = passenger.Id, PrimaryPassengerId = passenger.Id, RegisteredAtUtc = DateTimeOffset.UtcNow });
         trip.PassengerCount++;
         if (string.Equals(passenger.AgeCategory, "child", StringComparison.OrdinalIgnoreCase)) trip.ChildrenCount++;
+        if (string.Equals(passenger.AgeCategory, "specialneeds", StringComparison.OrdinalIgnoreCase)) trip.SpecialNeedsCount++;
         trip.UpdatedAtUtc = DateTimeOffset.UtcNow;
         var session = CreateSession(passenger.Id, trip.Id, trip.ScheduledDepartureUtc); db.PassengerSessions.Add(session.Entity);
         await db.SaveChangesAsync(ct); await transaction.CommitAsync(ct);
@@ -196,7 +197,16 @@ public sealed class PassengerTripController(WhaleWatchingDbContext db, GpsTracke
             return Conflict(new { message = "This trip is no longer accepting passenger registrations." });
         var lookup = Normalize(request.Identifier);
         var passenger = await db.PassengerProfiles.SingleOrDefaultAsync(x =>
-            x.NormalizedIdentificationNumber == lookup || x.NormalizedPhoneNumber == lookup, ct);
+            x.NormalizedIdentificationNumber == lookup, ct);
+        if (passenger is null)
+        {
+            // Family members can share a phone number. Never choose somebody's identity arbitrarily.
+            var matches = await db.PassengerProfiles.Where(x => x.NormalizedPhoneNumber == lookup)
+                .Take(2).ToListAsync(ct);
+            if (matches.Count > 1)
+                return Conflict(new { message = "More than one passenger uses this phone number. Enter your NIC or passport number." });
+            passenger = matches.SingleOrDefault();
+        }
         if (passenger is null) return NotFound(new { message = "No passenger was found for that NIC, passport, or phone number." });
 
         var alreadyJoined = await db.TripPassengers.AnyAsync(x => x.TripId == trip.Id && x.PassengerId == passenger.Id, ct);
@@ -210,6 +220,7 @@ public sealed class PassengerTripController(WhaleWatchingDbContext db, GpsTracke
                 PassengerId = passenger.Id, PrimaryPassengerId = passenger.Id, RegisteredAtUtc = DateTimeOffset.UtcNow });
             trip.PassengerCount++;
             if (string.Equals(passenger.AgeCategory, "child", StringComparison.OrdinalIgnoreCase)) trip.ChildrenCount++;
+            if (string.Equals(passenger.AgeCategory, "specialneeds", StringComparison.OrdinalIgnoreCase)) trip.SpecialNeedsCount++;
             trip.UpdatedAtUtc = DateTimeOffset.UtcNow;
         }
         passenger.PersonalQrToken ??= CreatePersonalQrToken();

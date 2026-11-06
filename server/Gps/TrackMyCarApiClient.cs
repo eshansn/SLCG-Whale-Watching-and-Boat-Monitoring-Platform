@@ -25,16 +25,26 @@ public sealed class TrackMyCarApiClient(HttpClient httpClient, IOptions<TrackMyC
 
         try
         {
+            using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            deadline.CancelAfter(TimeSpan.FromSeconds(_options.RequestTimeoutSeconds));
             using var request = new HttpRequestMessage(HttpMethod.Get, requestUri);
             using var response = await httpClient.SendAsync(request,
-                HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+                HttpCompletionOption.ResponseHeadersRead, deadline.Token);
             if (!response.IsSuccessStatusCode)
                 throw new GpsProviderException(CategoryFor(response.StatusCode));
 
-            await using var body = await response.Content.ReadAsStreamAsync(cancellationToken);
-            var document = await JsonDocument.ParseAsync(body, cancellationToken: cancellationToken);
-            ThrowForProviderError(document.RootElement);
-            return document;
+            await using var body = await response.Content.ReadAsStreamAsync(deadline.Token);
+            var document = await JsonDocument.ParseAsync(body, cancellationToken: deadline.Token);
+            try
+            {
+                ThrowForProviderError(document.RootElement);
+                return document;
+            }
+            catch
+            {
+                document.Dispose();
+                throw;
+            }
         }
         catch (GpsProviderException)
         {

@@ -30,7 +30,8 @@ public sealed class StaffController(UserManager<ApplicationUser> users) : Contro
         var result = new List<StaffDto>();
         foreach (var user in records)
         {
-            var role = (await users.GetRolesAsync(user)).FirstOrDefault(permittedRoles.Contains);
+            var roles = await users.GetRolesAsync(user);
+            var role = CanManage(roles) ? roles.FirstOrDefault(permittedRoles.Contains) : null;
             if (role is not null) result.Add(ToDto(user, role));
         }
         return Ok(result);
@@ -68,7 +69,8 @@ public sealed class StaffController(UserManager<ApplicationUser> users) : Contro
     {
         var user = await users.FindByIdAsync(id.ToString());
         if (user is null) return NotFound();
-        var role = (await users.GetRolesAsync(user)).FirstOrDefault(PermittedRoles.Contains);
+        var roles = await users.GetRolesAsync(user);
+        var role = CanManage(roles) ? roles.FirstOrDefault(PermittedRoles.Contains) : null;
         return role is null ? NotFound() : Ok(ToDto(user, role));
     }
 
@@ -79,6 +81,7 @@ public sealed class StaffController(UserManager<ApplicationUser> users) : Contro
         var user = await users.FindByIdAsync(id.ToString());
         if (user is null) return NotFound();
         var currentStaffRoles = (await users.GetRolesAsync(user)).Where(StaffRoles.Contains).ToArray();
+        if (currentStaffRoles.Length == 0) return NotFound();
         if (!User.IsInRole(PortalRoles.Admin) && currentStaffRoles.Any(x => !WildlifeManagedRoles.Contains(x)))
             return Forbid();
 
@@ -118,8 +121,7 @@ public sealed class StaffController(UserManager<ApplicationUser> users) : Contro
     {
         var user = await users.FindByIdAsync(id.ToString());
         if (user is null) return NotFound();
-        var role = (await users.GetRolesAsync(user)).FirstOrDefault(PermittedRoles.Contains);
-        if (role is null) return Forbid();
+        if (!CanManage(await users.GetRolesAsync(user))) return Forbid();
         var token = await users.GeneratePasswordResetTokenAsync(user);
         var result = await users.ResetPasswordAsync(user, token, request.TemporaryPassword);
         return result.Succeeded ? Ok(new { message = "Temporary password set successfully." }) : IdentityValidation(result);
@@ -132,13 +134,15 @@ public sealed class StaffController(UserManager<ApplicationUser> users) : Contro
         if (id == currentId) return Conflict(new { message = "You cannot delete your own active account." });
         var user = await users.FindByIdAsync(id.ToString());
         if (user is null) return NotFound();
-        var role = (await users.GetRolesAsync(user)).FirstOrDefault(PermittedRoles.Contains);
-        if (role is null) return Forbid();
+        if (!CanManage(await users.GetRolesAsync(user))) return Forbid();
         var result = await users.DeleteAsync(user);
         return result.Succeeded ? NoContent() : IdentityValidation(result);
     }
 
     private string[] PermittedRoles => User.IsInRole(PortalRoles.Admin) ? StaffRoles : WildlifeManagedRoles;
+
+    private bool CanManage(IList<string> roles) => roles.Any(PermittedRoles.Contains) &&
+        (User.IsInRole(PortalRoles.Admin) || !roles.Any(role => StaffRoles.Contains(role) && !WildlifeManagedRoles.Contains(role)));
 
     private BadRequestObjectResult IdentityValidation(IdentityResult result) =>
         BadRequest(new { message = string.Join(" ", result.Errors.Select(x => x.Description)) });

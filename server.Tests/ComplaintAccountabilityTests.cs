@@ -649,8 +649,14 @@ public sealed partial class ComplaintAccountabilityTests
     {
         public bool FailNextSave { get; set; }
         public bool FailCertificateSave { get; set; }
+        public bool FailSupportSave { get; set; }
+        public bool FailAccountDeletionSave { get; set; }
         public override ValueTask<InterceptionResult<int>> SavingChangesAsync(DbContextEventData eventData, InterceptionResult<int> result, CancellationToken cancellationToken = default)
         {
+            if (FailAccountDeletionSave && eventData.Context!.ChangeTracker.Entries<ApplicationUser>().Any(e => e.State == EntityState.Modified && e.Entity.AccountDeletedAtUtc != null))
+            { FailAccountDeletionSave = false; throw new InvalidOperationException("Simulated account deletion failure"); }
+            if (FailSupportSave && eventData.Context!.ChangeTracker.Entries<SupportRequest>().Any(e => e.State == EntityState.Added))
+            { FailSupportSave = false; throw new InvalidOperationException("Simulated support storage failure"); }
             if (FailCertificateSave && eventData.Context!.ChangeTracker.Entries<CrewCertificate>().Any(e => e.State == EntityState.Added))
             { FailCertificateSave = false; throw new InvalidOperationException("Simulated certificate storage failure"); }
             return ValueTask.FromResult(result);
@@ -674,7 +680,7 @@ public sealed partial class ComplaintAccountabilityTests
         public Guid PassengerId { get; private set; }
         public static string Connection() => new SqlConnectionStringBuilder(Environment.GetEnvironmentVariable("WWMS_TEST_SQL_CONNECTION"))
             { InitialCatalog = $"WWMS_ComplaintTests_{Guid.NewGuid():N}" }.ConnectionString;
-        public static async Task<Harness> CreateAsync()
+        public static async Task<Harness> CreateAsync(int supportLimit = 100, bool validateAccessTokens = false)
         {
             var connection = Connection();
             var db = new WhaleWatchingDbContext(new DbContextOptionsBuilder<WhaleWatchingDbContext>().UseSqlServer(connection).Options);
@@ -692,8 +698,13 @@ public sealed partial class ComplaintAccountabilityTests
                 { Issuer = "WWMS.Test", Audience = "WWMS.Test", SigningKey = SigningKey }));
             builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
             builder.Services.AddScoped<IAuthService, AuthService>();
-            builder.Services.AddRateLimiter(o => o.AddFixedWindowLimiter("auth", limiter =>
-                { limiter.PermitLimit = 100; limiter.Window = TimeSpan.FromMinutes(1); }));
+            builder.Services.AddScoped<AccountDeletionService>();
+            builder.Services.AddSingleton<AccountSessionRegistry>();
+            builder.Services.AddRateLimiter(o => {
+                o.RejectionStatusCode = 429;
+                o.AddFixedWindowLimiter("auth", limiter => { limiter.PermitLimit = 100; limiter.Window = TimeSpan.FromMinutes(1); });
+                o.AddFixedWindowLimiter("support", limiter => { limiter.PermitLimit = supportLimit; limiter.Window = TimeSpan.FromHours(1); });
+            });
             builder.Services.AddScoped<ComplaintAccess>(); builder.Services.AddScoped<ComplaintWorkflow>();
             builder.Services.AddOptions<TrackMyCarOptions>(); builder.Services.AddMemoryCache();
             builder.Services.AddHttpClient<TrackMyCarApiClient>(); builder.Services.AddScoped<IGpsProvider, TrackMyCarGpsProvider>();
@@ -707,7 +718,7 @@ public sealed partial class ComplaintAccountabilityTests
                 o.MapInboundClaims = false;
                 o.TokenValidationParameters = new TokenValidationParameters { ValidateIssuer = false, ValidateAudience = false,
                     IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(SigningKey)), ValidateIssuerSigningKey = true, RoleClaimType = "role" };
-                o.Events = new JwtBearerEvents { OnMessageReceived = context =>
+                o.Events = new JwtBearerEvents { OnTokenValidated = context => validateAccessTokens ? AccessTokenSecurity.ValidateAsync(context) : Task.CompletedTask, OnMessageReceived = context =>
                 {
                     if (context.HttpContext.Request.Path.StartsWithSegments("/hubs/operations")) context.Token = context.Request.Query["access_token"];
                     return Task.CompletedTask;
@@ -758,7 +769,7 @@ public sealed partial class ComplaintAccountabilityTests
         public static async Task<(PassengerProfile, Trip)> SeedPassengerAndTrips(WhaleWatchingDbContext db, ApplicationUser? existingOwner = null)
         {
             var owner = existingOwner ?? new ApplicationUser { Id = Guid.NewGuid(), DisplayName = "Test operator" };
-            var boat = new Boat { Id = Guid.NewGuid(), Owner = owner, Name = "Test boat", RegistrationNumber = Guid.NewGuid().ToString(), RegistrationDate = new DateOnly(2026, 1, 1) };
+            var boat = new Boat { Id = Guid.NewGuid(), Owner = owner, Name = "Test boat", RegistrationNumber = Guid.NewGuid().ToString(), RegistrationDate = new DateOnly(2026, 1, 1), Approval = ApprovalStatus.Approved };
             var passenger = new PassengerProfile { Id = Guid.NewGuid(), Name = "Passenger One", IdentificationNumber = "MONITOR-ID-1", NormalizedIdentificationNumber = "MONITOR-ID-1", PhoneNumber = "0701234567", NormalizedPhoneNumber = "0701234567", PassengerType = "Local", CountryCode = "LK", CreatedAtUtc = DateTimeOffset.UtcNow };
             db.PassengerProfiles.AddRange(passenger,
                 new PassengerProfile { Id = Guid.NewGuid(), Name = "Passenger Two", NormalizedIdentificationNumber = "MONITOR-ID-2", CreatedAtUtc = DateTimeOffset.UtcNow },

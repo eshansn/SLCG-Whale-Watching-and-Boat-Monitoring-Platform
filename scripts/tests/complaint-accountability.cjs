@@ -94,7 +94,10 @@ async function main() {
     await sltda.waitForURL(url => url.pathname === '/sltda/passengers');
     await sltda.locator('h1').filter({ hasText: 'Passenger monitoring' }).waitFor();
     assert(new URL(sltda.url()).searchParams.has('from'));
-    await sltda.getByRole('link', { name: 'Passenger One', exact: true }).click();
+    // SLTDA name links also expose the existing country flag's accessible label.
+    const passengerLink = sltda.getByRole('link', { name: /Passenger One$/ });
+    assert.equal(await passengerLink.getAttribute('href'), `/sltda/passengers/${passengerId}`);
+    await passengerLink.click();
     await sltda.getByRole('heading', { name: 'Trip & registration history' }).waitFor();
     await sltda.getByText('Completed', { exact: true }).waitFor();
     await sltda.getByRole('link', { name: new RegExp(`^WWMS-${complaintId}$`, 'i') }).click();
@@ -113,7 +116,8 @@ async function main() {
     await sltda.getByLabel('Forwarding note (optional)').fill('Browser referral for safety investigation');
     await sltda.getByRole('button', { name: 'Confirm forwarding' }).click();
     await sltda.getByRole('heading', { name: 'Authority assignments' }).waitFor();
-    await sltda.locator('aside').getByText('SLCG', { exact: true }).first().waitFor();
+    // Wait for persisted assignments, rather than the already-visible receiving checkbox.
+    await sltda.locator('aside strong').filter({ hasText: /^SLCG$/ }).first().waitFor();
     assert.equal(await sltda.getByRole('checkbox', { name: 'SLCG', exact: true }).count(), 0);
     assert.equal(await sltda.locator('aside strong').filter({ hasText: /^SLCG$/ }).count(), 2);
     assert.equal(await sltda.locator('aside strong').filter({ hasText: /^(Admin|OPS)$/ }).count(), 0);

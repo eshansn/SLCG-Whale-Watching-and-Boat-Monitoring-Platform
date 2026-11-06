@@ -607,7 +607,8 @@ public sealed class OperationsController(WhaleWatchingDbContext db, IHubContext<
     [Authorize(Roles = $"{PortalRoles.Admin},{PortalRoles.Wildlife}")]
     public async Task<ActionResult> UpdateBoatApproval(Guid id, ApprovalRequest request, CancellationToken ct)
     {
-        if (!Enum.TryParse<ApprovalStatus>(request.Approval, true, out var approval) || approval == ApprovalStatus.Pending)
+        if (!Enum.TryParse<ApprovalStatus>(request.Approval, true, out var approval) ||
+            approval is not (ApprovalStatus.Approved or ApprovalStatus.Rejected))
             return ValidationProblem("Approval must be Approved or Rejected.");
         var boat = await db.Boats.FindAsync([id], ct); if (boat is null) return NotFound();
         if (User.IsInRole(PortalRoles.Wildlife) && !User.IsInRole(PortalRoles.Admin))
@@ -767,16 +768,23 @@ public sealed class OperationsController(WhaleWatchingDbContext db, IHubContext<
     {
         if (request.ScheduledDepartureUtc <= DateTimeOffset.UtcNow)
             return ValidationProblem("Scheduled departure must be in the future.");
+        if (request.ChildrenCount + request.SpecialNeedsCount > request.PassengerCount)
+            return ValidationProblem("Children and special-needs counts cannot exceed the total passenger count.");
         var selectedCrewIds = request.CrewUserIds?.Distinct().ToArray() ?? [];
         var usesBoatCrew = selectedCrewIds.Length == 0;
         var strategy = db.Database.CreateExecutionStrategy();
         return await strategy.ExecuteAsync<ActionResult>(async () =>
         {
+            db.ChangeTracker.Clear();
             await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
             var boat = await db.Boats.SingleOrDefaultAsync(x => x.Id == request.BoatId && x.OwnerId == UserId, ct);
             if (boat is null) return Forbid();
             if (boat.IsPatrolBoat)
                 return Conflict(new { message = "Patrol vessels are managed through the OPS patrol workflow." });
+            if (!BoatTripApproval.IsApproved(boat))
+                return Conflict(new { message = BoatTripApproval.SchedulingMessage });
+            if (request.PassengerCount > boat.MaximumCapacity)
+                return Conflict(new { message = "Passenger count exceeds this boat's maximum capacity." });
 
             var crewIds = selectedCrewIds;
             if (usesBoatCrew)
@@ -799,6 +807,11 @@ public sealed class OperationsController(WhaleWatchingDbContext db, IHubContext<
                     crewIds.Contains(x.CrewUserId) && x.CrewUser.IsCrewCertified, ct);
                 if (validCrewCount != crewIds.Length)
                     return ValidationProblem("Every selected crew member must be certified and belong to your crew.");
+                if (await db.TripCrewAssignments.AnyAsync(x => crewIds.Contains(x.CrewUserId) &&
+                        x.Trip.ScheduledDepartureUtc == request.ScheduledDepartureUtc &&
+                        (x.Trip.Status == TripStatus.Scheduled || x.Trip.Status == TripStatus.Boarding ||
+                         x.Trip.Status == TripStatus.NeedsReschedule || x.Trip.Status == TripStatus.Ongoing), ct))
+                    return Conflict(new { message = "A selected crew member is assigned to another trip at this time." });
             }
 
             var trip = new Trip { Id = Guid.NewGuid(), BoatId = request.BoatId,
@@ -835,35 +848,43 @@ public sealed class OperationsController(WhaleWatchingDbContext db, IHubContext<
     public async Task<ActionResult<IReadOnlyList<TripCrewDto>>> UpdateTripCrew(Guid id,
         UpdateTripCrewRequest request, CancellationToken ct)
     {
-        var crewIds = request.CrewUserIds.Distinct().ToArray();
-        if (crewIds.Length == 0) return ValidationProblem("Select at least one crew member.");
-        var trip = await db.Trips.Include(x => x.Boat).Include(x => x.CrewAssignments)
-            .SingleOrDefaultAsync(x => x.Id == id && x.Boat.OwnerId == UserId, ct);
-        if (trip is null) return NotFound();
-        if (!TripWorkflowRules.CanReschedule(trip.Status))
-            return Conflict(new { message = "Crew can only be changed before a trip starts." });
-        var crew = await db.OwnerCrewMemberships.Where(x => x.OwnerId == UserId &&
-                crewIds.Contains(x.CrewUserId) && x.CrewUser.IsCrewCertified)
-            .Select(x => new { x.CrewUserId, x.CrewUser.DisplayName, x.CrewUser.Email,
-                Position = x.CrewUser.CrewType ?? "Crew Member", x.CrewUser.NicNumber,
-                x.CrewUser.IsCrewCertified }).ToListAsync(ct);
-        if (crew.Count != crewIds.Length)
-            return ValidationProblem("Every selected crew member must be certified and belong to your crew.");
-        if (!crew.Any(x => x.Position.Contains("Coxswain", StringComparison.OrdinalIgnoreCase)))
-            return ValidationProblem("The trip crew must include a certified coxswain.");
-        var unavailable = await db.TripCrewAssignments.AnyAsync(x => x.TripId != id &&
-            crewIds.Contains(x.CrewUserId) && x.Trip.ScheduledDepartureUtc == trip.ScheduledDepartureUtc &&
-            (x.Trip.Status == TripStatus.Scheduled || x.Trip.Status == TripStatus.Boarding ||
-             x.Trip.Status == TripStatus.NeedsReschedule || x.Trip.Status == TripStatus.Ongoing), ct);
-        if (unavailable) return Conflict(new { message = "A selected crew member is assigned to another trip at this time." });
-        db.TripCrewAssignments.RemoveRange(trip.CrewAssignments);
-        db.TripCrewAssignments.AddRange(crew.Select(x => new TripCrewAssignment { Id = Guid.NewGuid(),
-            TripId = id, CrewUserId = x.CrewUserId, Position = x.Position, Source = "TripOverride" }));
-        trip.UpdatedAtUtc = DateTimeOffset.UtcNow;
-        await db.SaveChangesAsync(ct);
-        await hub.Clients.All.SendAsync("operationsChanged", new { entity = "tripCrew", id }, ct);
-        return Ok(crew.Select(x => new TripCrewDto(x.CrewUserId, x.DisplayName, x.Email!,
-            x.Position, x.NicNumber, x.IsCrewCertified)).ToList());
+        return await db.Database.CreateExecutionStrategy().ExecuteAsync<ActionResult<IReadOnlyList<TripCrewDto>>>(async () =>
+        {
+            db.ChangeTracker.Clear();
+            await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
+            var crewIds = request.CrewUserIds.Distinct().ToArray();
+            if (crewIds.Length == 0) return ValidationProblem("Select at least one crew member.");
+            var trip = await db.Trips.Include(x => x.Boat).Include(x => x.CrewAssignments)
+                .SingleOrDefaultAsync(x => x.Id == id && x.Boat.OwnerId == UserId, ct);
+            if (trip is null) return NotFound();
+            if (!TripWorkflowRules.CanReschedule(trip.Status))
+                return Conflict(new { message = "Crew can only be changed before a trip starts." });
+            if (!BoatTripApproval.IsApproved(trip.Boat))
+                return Conflict(new { message = BoatTripApproval.SchedulingMessage });
+            var crew = await db.OwnerCrewMemberships.Where(x => x.OwnerId == UserId &&
+                    crewIds.Contains(x.CrewUserId) && x.CrewUser.IsCrewCertified)
+                .Select(x => new { x.CrewUserId, x.CrewUser.DisplayName, x.CrewUser.Email,
+                    Position = x.CrewUser.CrewType ?? "Crew Member", x.CrewUser.NicNumber,
+                    x.CrewUser.IsCrewCertified }).ToListAsync(ct);
+            if (crew.Count != crewIds.Length)
+                return ValidationProblem("Every selected crew member must be certified and belong to your crew.");
+            if (!crew.Any(x => x.Position.Contains("Coxswain", StringComparison.OrdinalIgnoreCase)))
+                return ValidationProblem("The trip crew must include a certified coxswain.");
+            var unavailable = await db.TripCrewAssignments.AnyAsync(x => x.TripId != id &&
+                crewIds.Contains(x.CrewUserId) && x.Trip.ScheduledDepartureUtc == trip.ScheduledDepartureUtc &&
+                (x.Trip.Status == TripStatus.Scheduled || x.Trip.Status == TripStatus.Boarding ||
+                 x.Trip.Status == TripStatus.NeedsReschedule || x.Trip.Status == TripStatus.Ongoing), ct);
+            if (unavailable) return Conflict(new { message = "A selected crew member is assigned to another trip at this time." });
+            db.TripCrewAssignments.RemoveRange(trip.CrewAssignments);
+            db.TripCrewAssignments.AddRange(crew.Select(x => new TripCrewAssignment { Id = Guid.NewGuid(),
+                TripId = id, CrewUserId = x.CrewUserId, Position = x.Position, Source = "TripOverride" }));
+            trip.UpdatedAtUtc = DateTimeOffset.UtcNow;
+            await db.SaveChangesAsync(ct);
+            await transaction.CommitAsync(ct);
+            await hub.Clients.All.SendAsync("operationsChanged", new { entity = "tripCrew", id }, ct);
+            return Ok(crew.Select(x => new TripCrewDto(x.CrewUserId, x.DisplayName, x.Email!,
+                x.Position, x.NicNumber, x.IsCrewCertified)).ToList());
+        });
     }
 
     [HttpPost("patrol-trips/start")]
@@ -874,9 +895,12 @@ public sealed class OperationsController(WhaleWatchingDbContext db, IHubContext<
         var strategy = db.Database.CreateExecutionStrategy();
         var result = await strategy.ExecuteAsync<ActionResult<StartPatrolResult>>(async () =>
         {
+            db.ChangeTracker.Clear();
             await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
             var boat = await db.Boats.SingleOrDefaultAsync(x => x.Id == request.BoatId && x.IsPatrolBoat, ct);
             if (boat is null) return NotFound(new { message = "The selected SLCG patrol vessel was not found." });
+            if (!BoatTripApproval.IsApproved(boat))
+                return Conflict(new { message = BoatTripApproval.DepartureMessage });
             if (string.IsNullOrWhiteSpace(boat.GpsDeviceId))
                 return Conflict(new { message = "A GPS tracker must be assigned before this patrol can start." });
 
@@ -914,72 +938,96 @@ public sealed class OperationsController(WhaleWatchingDbContext db, IHubContext<
     [Authorize(Policy = PortalPolicies.BoatOwner)]
     public async Task<ActionResult> RescheduleTrip(Guid id, RescheduleTripRequest request, CancellationToken ct)
     {
-        var now = DateTimeOffset.UtcNow;
-        if (request.ScheduledDepartureUtc <= now)
-            return ValidationProblem("The new scheduled departure must be in the future.");
+        return await db.Database.CreateExecutionStrategy().ExecuteAsync<ActionResult>(async () =>
+        {
+            db.ChangeTracker.Clear();
+            await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
+            var now = DateTimeOffset.UtcNow;
+            if (request.ScheduledDepartureUtc <= now)
+                return ValidationProblem("The new scheduled departure must be in the future.");
 
-        var trip = await db.Trips.Include(x => x.Boat).Include(x => x.CrewAssignments)
-            .SingleOrDefaultAsync(x => x.Id == id && x.Boat.OwnerId == UserId, ct);
-        if (trip is null) return NotFound();
-        if (!TripWorkflowRules.CanReschedule(trip.Status))
-            return Conflict(new { message = "Only a scheduled trip can be rescheduled." });
+            var trip = await db.Trips.Include(x => x.Boat).Include(x => x.CrewAssignments)
+                .SingleOrDefaultAsync(x => x.Id == id && x.Boat.OwnerId == UserId, ct);
+            if (trip is null) return NotFound();
+            if (!TripWorkflowRules.CanReschedule(trip.Status))
+                return Conflict(new { message = "Only a scheduled trip can be rescheduled." });
+            if (!BoatTripApproval.IsApproved(trip.Boat))
+                return Conflict(new { message = BoatTripApproval.SchedulingMessage });
 
-        var crewIds = trip.CrewAssignments.Select(x => x.CrewUserId).ToArray();
-        var crewUnavailable = crewIds.Length > 0 && await db.TripCrewAssignments.AnyAsync(x =>
-            x.TripId != id && crewIds.Contains(x.CrewUserId) &&
-            x.Trip.ScheduledDepartureUtc == request.ScheduledDepartureUtc &&
-            (x.Trip.Status == TripStatus.Scheduled || x.Trip.Status == TripStatus.Boarding ||
-             x.Trip.Status == TripStatus.NeedsReschedule || x.Trip.Status == TripStatus.Ongoing), ct);
-        if (crewUnavailable)
-            return Conflict(new { message = "A selected crew member is already assigned to another trip at the new date and time." });
+            var crewIds = trip.CrewAssignments.Select(x => x.CrewUserId).ToArray();
+            var crewUnavailable = crewIds.Length > 0 && await db.TripCrewAssignments.AnyAsync(x =>
+                x.TripId != id && crewIds.Contains(x.CrewUserId) &&
+                x.Trip.ScheduledDepartureUtc == request.ScheduledDepartureUtc &&
+                (x.Trip.Status == TripStatus.Scheduled || x.Trip.Status == TripStatus.Boarding ||
+                 x.Trip.Status == TripStatus.NeedsReschedule || x.Trip.Status == TripStatus.Ongoing), ct);
+            if (crewUnavailable)
+                return Conflict(new { message = "A selected crew member is already assigned to another trip at the new date and time." });
 
-        trip.ScheduledDepartureUtc = request.ScheduledDepartureUtc;
-        if (trip.Status == TripStatus.NeedsReschedule) trip.Status = TripStatus.Scheduled;
-        trip.UpdatedAtUtc = now;
+            trip.ScheduledDepartureUtc = request.ScheduledDepartureUtc;
+            if (trip.Status == TripStatus.NeedsReschedule) trip.Status = TripStatus.Scheduled;
+            trip.UpdatedAtUtc = now;
 
-        // Keep the same trip, invitation QR and passengers. Existing passenger sessions are extended so
-        // passengers who already joined can return to their portal after the trip is rescheduled.
-        var sessionExpiry = PassengerSessionPolicy.GetExpiry(request.ScheduledDepartureUtc, now);
-        var sessions = await db.PassengerSessions.Where(x => x.TripId == id).ToListAsync(ct);
-        foreach (var session in sessions)
-            if (session.ExpiresAtUtc < sessionExpiry) session.ExpiresAtUtc = sessionExpiry;
+            // Keep the same trip, invitation QR and passengers. Existing passenger sessions are extended so
+            // passengers who already joined can return to their portal after the trip is rescheduled.
+            var sessionExpiry = PassengerSessionPolicy.GetExpiry(request.ScheduledDepartureUtc, now);
+            var sessions = await db.PassengerSessions.Where(x => x.TripId == id).ToListAsync(ct);
+            foreach (var session in sessions)
+                if (session.ExpiresAtUtc < sessionExpiry) session.ExpiresAtUtc = sessionExpiry;
 
-        await db.SaveChangesAsync(ct);
-        await hub.Clients.All.SendAsync("operationsChanged", new { entity = "trip", id }, ct);
-        return NoContent();
+            await db.SaveChangesAsync(ct);
+            await transaction.CommitAsync(ct);
+            await hub.Clients.All.SendAsync("operationsChanged", new { entity = "trip", id }, ct);
+            return NoContent();
+        });
     }
 
     [HttpPost("trips/{id:guid}/start")]
     [Authorize(Roles = $"{PortalRoles.ShoreCrew},{PortalRoles.Admin}")]
     public async Task<ActionResult> StartTrip(Guid id, StartTripRequest request, CancellationToken ct)
     {
-        var trip = await db.Trips.SingleOrDefaultAsync(x => x.Id == id, ct);
-        if (trip is null) return NotFound();
-        if (trip.Type == TripType.Patrol) return Conflict(new { message = "Patrol trips use the OPS patrol workflow." });
-        if (!TripWorkflowRules.CanStart(trip.Status))
-            return Conflict(new { message = $"A {trip.Status} trip cannot be started." });
-        if (trip.PassengerVerificationFinalizedAtUtc is null)
-            return Conflict(new { message = "Passenger confirmation must be finalized before the trip can start." });
-        var isOverride = trip.Status == TripStatus.NeedsReschedule;
-        if (isOverride && !request.ConfirmRescheduleOverride)
-            return Conflict(new { message = "Confirm the Needs Reschedule override before starting this trip." });
-        var now = DateTimeOffset.UtcNow;
-        trip.Status = TripStatus.Ongoing;
-        trip.ActualDepartureUtc = now;
-        trip.StartedByUserId = UserId;
-        trip.StartedByRole = User.IsInRole(PortalRoles.ShoreCrew)
-            ? PortalRoles.ShoreCrew : PortalRoles.Admin;
-        trip.UpdatedAtUtc = now;
-        if (isOverride)
+        var strategy = db.Database.CreateExecutionStrategy();
+        var startedWithOverride = false;
+        var result = await strategy.ExecuteAsync<ActionResult>(async () =>
         {
-            trip.RescheduleOverride = true;
-            trip.RescheduleOverrideByUserId = UserId;
-            trip.RescheduleOverrideAtUtc = now;
-            trip.RescheduleOverrideReason = request.OverrideReason?.Trim();
-        }
-        await db.SaveChangesAsync(ct);
-        await hub.Clients.All.SendAsync("operationsChanged", new { entity = isOverride ? "tripStartedWithOverride" : "tripStarted", id }, ct);
-        return NoContent();
+            // Serialize the availability check and lifecycle write; clear tracked state on a SQL retry.
+            db.ChangeTracker.Clear();
+            await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
+            var trip = await db.Trips.Include(x => x.Boat).SingleOrDefaultAsync(x => x.Id == id, ct);
+            if (trip is null) return NotFound();
+            if (trip.Type == TripType.Patrol) return Conflict(new { message = "Patrol trips use the OPS patrol workflow." });
+            if (!TripWorkflowRules.CanStart(trip.Status))
+                return Conflict(new { message = $"A {trip.Status} trip cannot be started." });
+            if (!BoatTripApproval.IsApproved(trip.Boat))
+                return Conflict(new { message = BoatTripApproval.DepartureMessage });
+            if (trip.PassengerVerificationFinalizedAtUtc is null)
+                return Conflict(new { message = "Passenger confirmation must be finalized before the trip can start." });
+            if (await db.Trips.AnyAsync(x => x.BoatId == trip.BoatId && x.Id != id && x.Status == TripStatus.Ongoing, ct))
+                return Conflict(new { message = "This boat already has an ongoing trip. End that trip before starting another." });
+            var isOverride = trip.Status == TripStatus.NeedsReschedule;
+            if (isOverride && !request.ConfirmRescheduleOverride)
+                return Conflict(new { message = "Confirm the Needs Reschedule override before starting this trip." });
+            var now = DateTimeOffset.UtcNow;
+            trip.Status = TripStatus.Ongoing;
+            trip.ActualDepartureUtc = now;
+            trip.StartedByUserId = UserId;
+            trip.StartedByRole = User.IsInRole(PortalRoles.ShoreCrew)
+                ? PortalRoles.ShoreCrew : PortalRoles.Admin;
+            trip.UpdatedAtUtc = now;
+            if (isOverride)
+            {
+                trip.RescheduleOverride = true;
+                trip.RescheduleOverrideByUserId = UserId;
+                trip.RescheduleOverrideAtUtc = now;
+                trip.RescheduleOverrideReason = request.OverrideReason?.Trim();
+            }
+            await db.SaveChangesAsync(ct);
+            await transaction.CommitAsync(ct);
+            startedWithOverride = isOverride;
+            return NoContent();
+        });
+        if (result is NoContentResult)
+            await hub.Clients.All.SendAsync("operationsChanged", new { entity = startedWithOverride ? "tripStartedWithOverride" : "tripStarted", id }, ct);
+        return result;
     }
 
     [HttpPost("trips/{id:guid}/decline")]
@@ -1071,36 +1119,45 @@ public sealed class OperationsController(WhaleWatchingDbContext db, IHubContext<
     [Authorize(Roles = $"{PortalRoles.BoatOwner},{PortalRoles.BoatCrew},{PortalRoles.Ops},{PortalRoles.Admin}")]
     public async Task<ActionResult> UpdateStatus(Guid id, StatusRequest request, CancellationToken ct)
     {
-        if (!Enum.TryParse<TripStatus>(request.Status, true, out var status) || !Enum.IsDefined(status))
-            return ValidationProblem("Invalid status.");
-        var trip = await db.Trips.Include(x => x.Boat).Include(x => x.CrewAssignments)
-            .SingleOrDefaultAsync(x => x.Id == id, ct);
-        if (trip is null) return NotFound();
-        if (trip.Type == TripType.Patrol && !User.IsInRole(PortalRoles.Ops)) return Forbid();
-        if (trip.Type != TripType.Patrol)
+        return await db.Database.CreateExecutionStrategy().ExecuteAsync<ActionResult>(async () =>
         {
-            var canCancel = status == TripStatus.Cancelled &&
-                ((User.IsInRole(PortalRoles.BoatOwner) && trip.Boat.OwnerId == UserId) ||
-                 (User.IsInRole(PortalRoles.BoatCrew) && trip.CrewAssignments.Any(x => x.CrewUserId == UserId)) ||
-                 User.IsInRole(PortalRoles.Admin) || User.IsInRole(PortalRoles.Ops));
-            if (!canCancel)
-                return Conflict(new { message = "Tourist trip lifecycle changes must use the dedicated start, decline, reschedule, and end actions." });
-        }
-        if (!CanTransitionTripStatus(trip.Status, status))
-            return Conflict(new { message = $"Trip status cannot change from {trip.Status} to {status}." });
-        if (trip.Status == status) return NoContent();
-        var now = DateTimeOffset.UtcNow;
-        trip.Status = status; trip.UpdatedAtUtc = now;
-        if (status == TripStatus.Ongoing) trip.ActualDepartureUtc ??= now;
-        if (status == TripStatus.Completed) trip.ActualArrivalUtc ??= now;
-        if (status is TripStatus.Completed or TripStatus.Cancelled)
-        {
-            var activeSosAlerts = await db.SosEvents
-                .Where(x => x.TripId == id && x.ResolvedAtUtc == null).ToListAsync(ct);
-            foreach (var alert in activeSosAlerts) alert.ResolvedAtUtc = now;
-        }
-        await db.SaveChangesAsync(ct); await hub.Clients.All.SendAsync("operationsChanged", new { entity = "trip", id }, ct);
-        return NoContent();
+            db.ChangeTracker.Clear();
+            await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
+            if (!Enum.TryParse<TripStatus>(request.Status, true, out var status) || !Enum.IsDefined(status))
+                return ValidationProblem("Invalid status.");
+            var trip = await db.Trips.Include(x => x.Boat).Include(x => x.CrewAssignments)
+                .SingleOrDefaultAsync(x => x.Id == id, ct);
+            if (trip is null) return NotFound();
+            if (trip.Type == TripType.Patrol && !User.IsInRole(PortalRoles.Ops)) return Forbid();
+            if (trip.Type != TripType.Patrol)
+            {
+                var canCancel = status == TripStatus.Cancelled &&
+                    ((User.IsInRole(PortalRoles.BoatOwner) && trip.Boat.OwnerId == UserId) ||
+                     (User.IsInRole(PortalRoles.BoatCrew) && trip.CrewAssignments.Any(x => x.CrewUserId == UserId)) ||
+                     User.IsInRole(PortalRoles.Admin) || User.IsInRole(PortalRoles.Ops));
+                if (!canCancel)
+                    return Conflict(new { message = "Tourist trip lifecycle changes must use the dedicated start, decline, reschedule, and end actions." });
+            }
+            if (!CanTransitionTripStatus(trip.Status, status))
+                return Conflict(new { message = $"Trip status cannot change from {trip.Status} to {status}." });
+            if (trip.Status == status) return NoContent();
+            if ((status is TripStatus.Scheduled or TripStatus.Boarding or TripStatus.Ongoing or TripStatus.NeedsReschedule) &&
+                !BoatTripApproval.IsApproved(trip.Boat))
+                return Conflict(new { message = status == TripStatus.Ongoing ? BoatTripApproval.DepartureMessage : BoatTripApproval.SchedulingMessage });
+            var now = DateTimeOffset.UtcNow;
+            trip.Status = status; trip.UpdatedAtUtc = now;
+            if (status == TripStatus.Ongoing) trip.ActualDepartureUtc ??= now;
+            if (status == TripStatus.Completed) trip.ActualArrivalUtc ??= now;
+            if (status is TripStatus.Completed or TripStatus.Cancelled)
+            {
+                var activeSosAlerts = await db.SosEvents
+                    .Where(x => x.TripId == id && x.ResolvedAtUtc == null).ToListAsync(ct);
+                foreach (var alert in activeSosAlerts) alert.ResolvedAtUtc = now;
+            }
+            await db.SaveChangesAsync(ct);
+            await transaction.CommitAsync(ct); await hub.Clients.All.SendAsync("operationsChanged", new { entity = "trip", id }, ct);
+            return NoContent();
+        });
     }
 
     private static bool CanTransitionTripStatus(TripStatus current, TripStatus next) =>
@@ -1204,8 +1261,10 @@ public sealed record CreateBoatRequest(
     [Range(typeof(decimal), "0", "9999.99")] decimal MaximumSpeedKnots = 0,
     [Range(0, 100000)] int LifeJacketCount = 0,
     [StringLength(128)] string? GpsDeviceId = null);
-public sealed record CreateTripRequest(Guid BoatId, DateTimeOffset ScheduledDepartureUtc, string Route,
-    int PassengerCount, IReadOnlyList<Guid> CrewUserIds, int ChildrenCount = 0, int SpecialNeedsCount = 0);
+public sealed record CreateTripRequest(Guid BoatId, DateTimeOffset ScheduledDepartureUtc,
+    [Required, StringLength(300)] string Route,
+    [Range(0, 100000)] int PassengerCount, IReadOnlyList<Guid> CrewUserIds,
+    [Range(0, 100000)] int ChildrenCount = 0, [Range(0, 100000)] int SpecialNeedsCount = 0);
 public sealed record UpdateTripCrewRequest([MinLength(1)] IReadOnlyList<Guid> CrewUserIds);
 public sealed record RescheduleTripRequest(DateTimeOffset ScheduledDepartureUtc);
 public sealed record StartTripRequest(bool ConfirmRescheduleOverride = false,

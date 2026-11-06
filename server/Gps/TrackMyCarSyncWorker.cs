@@ -1,5 +1,8 @@
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using WhaleWatching.Api.Auth;
+using WhaleWatching.Api.Data;
 using WhaleWatching.Api.Operations;
 using WhaleWatching.Api.Realtime;
 
@@ -48,12 +51,15 @@ public sealed class TrackMyCarSyncWorker(
             var ingestor = scope.ServiceProvider.GetRequiredService<GpsTelemetryIngestor>();
             var result = await ingestor.IngestAsync(batch.Locations, receivedAtUtc, cancellationToken);
             var tripTracking = scope.ServiceProvider.GetRequiredService<TripTrackingService>();
+            var db = scope.ServiceProvider.GetRequiredService<WhaleWatchingDbContext>();
 
             foreach (var accepted in result.Accepted)
             {
                 var telemetry = accepted.Telemetry;
+                var recipients = await GpsRecipientsAsync(db, accepted.BoatId, cancellationToken);
+                if (recipients.Length == 0) continue;
                 var activeTrip = await tripTracking.GetActiveForBoatAsync(accepted.BoatId, cancellationToken);
-                await hub.Clients.All.SendAsync("gpsTelemetryUpdated", new
+                await hub.Clients.Groups(recipients).SendAsync("gpsTelemetryUpdated", new
                 {
                     boatId = accepted.BoatId,
                     latitude = telemetry.Latitude,
@@ -100,5 +106,23 @@ public sealed class TrackMyCarSyncWorker(
             syncState.Failed("internal-error");
             logger.LogError("TrackMyCar GPS synchronization failed. Category: internal-error.");
         }
+    }
+
+    private static async Task<string[]> GpsRecipientsAsync(WhaleWatchingDbContext db, Guid boatId, CancellationToken ct)
+    {
+        // Match OperationsController.ScopeBoats, including its owner-before-crew precedence.
+        // Resolve membership at send time so reassignment/role changes affect existing hub connections.
+        var ownerRoles = db.Roles.Where(x => x.Name == PortalRoles.BoatOwner).Select(x => x.Id);
+        var crewRoles = db.Roles.Where(x => x.Name == PortalRoles.BoatCrew).Select(x => x.Id);
+        string[] fleetRoles = [PortalRoles.Admin, PortalRoles.Wildlife, PortalRoles.Ops, PortalRoles.ShoreCrew];
+        var fleetRoleIds = db.Roles.Where(x => fleetRoles.Contains(x.Name!)).Select(x => x.Id);
+        var ids = await db.Users.AsNoTracking().Where(user => db.Boats.Any(boat => boat.Id == boatId) &&
+            (db.UserRoles.Any(role => role.UserId == user.Id && ownerRoles.Contains(role.RoleId))
+                ? db.Boats.Any(boat => boat.Id == boatId && boat.OwnerId == user.Id)
+                : db.UserRoles.Any(role => role.UserId == user.Id && crewRoles.Contains(role.RoleId))
+                    ? db.TripCrewAssignments.Any(assignment => assignment.Trip.BoatId == boatId && assignment.CrewUserId == user.Id)
+                    : db.UserRoles.Any(role => role.UserId == user.Id && fleetRoleIds.Contains(role.RoleId))))
+            .Select(user => user.Id).ToArrayAsync(ct);
+        return ids.Select(id => $"user:{id}").ToArray();
     }
 }

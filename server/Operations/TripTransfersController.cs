@@ -53,12 +53,12 @@ public sealed class TripTransfersController(WhaleWatchingDbContext db, IHubConte
         if (term.Length < 2) return Ok(Array.Empty<TransferBoatDto>());
         if (term.Length > 100) return BadRequest(new { message = "The boat search is too long." });
         var normalized = term.ToUpperInvariant();
-        return Ok(await db.Boats.AsNoTracking().Where(x => x.Approval == ApprovalStatus.Approved &&
+        return Ok(await db.Boats.AsNoTracking().Where(BoatTripApproval.Eligible).Where(x =>
                 (x.Name.ToUpper().Contains(normalized) || x.RegistrationNumber.ToUpper().Contains(normalized) ||
                  x.Id.ToString().Contains(term)))
             .OrderBy(x => x.Name).ThenBy(x => x.RegistrationNumber).Take(10)
             .Select(x => new TransferBoatDto(x.Id, x.Name, x.RegistrationNumber,
-                x.Approval.ToString(), x.OwnerId, x.Owner.DisplayName)).ToListAsync(ct));
+                ApprovalStatus.Approved.ToString(), x.OwnerId, x.Owner.DisplayName)).ToListAsync(ct));
     }
 
     [HttpGet("destination-boats/{boatId:guid}/trips")]
@@ -69,7 +69,7 @@ public sealed class TripTransfersController(WhaleWatchingDbContext db, IHubConte
         if (!await db.Trips.AnyAsync(x => x.Id == sourceTripId && x.Boat.OwnerId == UserId &&
                 (x.Status == TripStatus.Scheduled || x.Status == TripStatus.Boarding || x.Status == TripStatus.NeedsReschedule), ct))
             return NotFound(new { message = "The source trip is not available for transfer." });
-        var boatEligible = await db.Boats.AnyAsync(x => x.Id == boatId && x.Approval == ApprovalStatus.Approved, ct);
+        var boatEligible = await db.Boats.Where(BoatTripApproval.Eligible).AnyAsync(x => x.Id == boatId, ct);
         if (!boatEligible) return NotFound(new { message = "The selected destination boat is not registered and approved." });
         return Ok(await db.Trips.AsNoTracking().Where(x => x.BoatId == boatId && x.Id != sourceTripId &&
                 (x.Status == TripStatus.Scheduled || x.Status == TripStatus.Boarding || x.Status == TripStatus.NeedsReschedule))
@@ -94,6 +94,7 @@ public sealed class TripTransfersController(WhaleWatchingDbContext db, IHubConte
         var strategy = db.Database.CreateExecutionStrategy();
         return await strategy.ExecuteAsync<ActionResult<TransferResultDto>>(async () =>
         {
+            db.ChangeTracker.Clear();
             await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
             var duplicate = await db.TripTransfers.AsNoTracking().SingleOrDefaultAsync(x =>
                 x.InitiatedByUserId == UserId && x.ClientRequestId == request.ClientRequestId, ct);
@@ -113,8 +114,10 @@ public sealed class TripTransfersController(WhaleWatchingDbContext db, IHubConte
             if (source is null || destination is null) return NotFound(new { message = "The source or destination trip no longer exists." });
             if (source.Boat.OwnerId != UserId) return Forbid();
             if (!Eligible(source.Status) || !Eligible(destination.Status)) return Conflict(new { message = "Both trips must still be scheduled or boarding." });
-            if (destination.Boat.Approval != ApprovalStatus.Approved &&
-                destination.Boat.WildlifeApproval != ApprovalStatus.Approved)
+            if (request.PassengerIds.Count > 0 &&
+                (source.PassengerVerificationFinalizedAtUtc is not null || destination.PassengerVerificationFinalizedAtUtc is not null))
+                return Conflict(new { message = "Passengers cannot be transferred after either trip's shore verification has been finalized." });
+            if (!BoatTripApproval.IsApproved(destination.Boat))
                 return Conflict(new { message = "The destination boat has not been approved by Administration or the Wildlife Authority." });
             var sourcePassengerCount = await db.TripPassengers.CountAsync(x => x.TripId == source.Id, ct);
             var destinationPassengerCount = await db.TripPassengers.CountAsync(x => x.TripId == destination.Id, ct);
@@ -125,6 +128,14 @@ public sealed class TripTransfersController(WhaleWatchingDbContext db, IHubConte
             var passengerRows = await db.TripPassengers.Include(x => x.Passenger).Where(x =>
                 x.TripId == source.Id && passengerIds.Contains(x.PassengerId)).ToListAsync(ct);
             if (passengerRows.Count != passengerIds.Length) return Conflict(new { message = "One or more selected passengers are no longer assigned to the source trip." });
+            var primaryIds = passengerRows.Select(x => x.PrimaryPassengerId).Distinct().ToArray();
+            if (await db.TripPassengers.AnyAsync(x => x.TripId == source.Id &&
+                    primaryIds.Contains(x.PrimaryPassengerId) && !passengerIds.Contains(x.PassengerId), ct) ||
+                primaryIds.Any(id => !passengerIds.Contains(id)))
+                return Conflict(new { message = "Select every member of each passenger group, including its primary passenger, so their QR code remains valid on the destination trip." });
+            if (await db.TripPassengerAttendances.AnyAsync(x => x.TripPassenger.TripId == source.Id &&
+                    passengerIds.Contains(x.TripPassenger.PassengerId), ct))
+                return Conflict(new { message = "Passengers with shore attendance history cannot be transferred to another trip." });
             var duplicatePassenger = await db.TripPassengers.AnyAsync(x => passengerIds.Contains(x.PassengerId) &&
                 x.TripId != source.Id && (x.Trip.Status == TripStatus.Scheduled || x.Trip.Status == TripStatus.Boarding || x.Trip.Status == TripStatus.NeedsReschedule || x.Trip.Status == TripStatus.Ongoing), ct);
             if (duplicatePassenger) return Conflict(new { message = "A selected passenger is already assigned to another active trip." });
@@ -154,6 +165,8 @@ public sealed class TripTransfersController(WhaleWatchingDbContext db, IHubConte
             destination.PassengerCount = destinationPassengerCount + passengerRows.Count;
             var children = passengerRows.Count(x => string.Equals(x.Passenger.AgeCategory, "child", StringComparison.OrdinalIgnoreCase));
             source.ChildrenCount = Math.Max(0, source.ChildrenCount - children); destination.ChildrenCount += children;
+            var specialNeeds = passengerRows.Count(x => string.Equals(x.Passenger.AgeCategory, "specialneeds", StringComparison.OrdinalIgnoreCase));
+            source.SpecialNeedsCount = Math.Max(0, source.SpecialNeedsCount - specialNeeds); destination.SpecialNeedsCount += specialNeeds;
             source.UpdatedAtUtc = destination.UpdatedAtUtc = DateTimeOffset.UtcNow;
 
             var transfer = new TripTransfer { Id = Guid.NewGuid(), ClientRequestId = request.ClientRequestId,
