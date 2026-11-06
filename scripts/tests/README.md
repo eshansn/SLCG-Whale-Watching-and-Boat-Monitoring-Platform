@@ -1,5 +1,66 @@
 # Boat image regression checks
 
+## Public website ocean journey
+
+Run `node scripts/tests/public-ocean.cjs` with Vite running and `PLAYWRIGHT_MODULE`
+configured. Chromium uses installed Edge; `PLAYWRIGHT_ENGINE=webkit` selects WebKit.
+The default widths are 320, 375, 430, 768, 1024, 1440 and 1920px. An optional
+`WWMS_PUBLIC_BASELINE` JSON capture checks preservation of the pre-change visible
+copy, Gallery image sources/order, footer targets and form fields.
+
+The suite checks four sections, independent 3D swimming during forward/reverse scroll, control/photo protection,
+overflow/layout stability, every anchor, Gallery hover, Contact fixtures, reduced
+motion, free idle locomotion, route cleanup and the unchanged auth whale.
+It sends no real email. See [PUBLIC_OCEAN_IMPLEMENTATION.md](../../PUBLIC_OCEAN_IMPLEMENTATION.md)
+for exact commands, real API/SQL regressions, screenshots and implementation details.
+
+## System audit (2026-11-04)
+
+See [SYSTEM_AUDIT_REPORT.md](../../SYSTEM_AUDIT_REPORT.md) for findings, verification,
+production blockers, and exact .NET 8/SQL/browser commands. The audit adds:
+
+- `server.Tests/SystemAuditTests.cs`: disposable SQL regressions for GPS audiences,
+  manifest/group transfers, privileged staff, concurrent departures and scheduling.
+- `GpsAuditTests.cs`: provider body deadlines and cancellation.
+- `ApiExceptionHandlerTests.cs`: generic errors without response secrets or stacks.
+- `ContactTests.cs` and `contact.cjs`: the real public form/API with fake SMTP,
+  fixed-recipient message construction, validation, rate limiting and failures.
+  `contact.cjs` must run through its xUnit harness; it never sends actual email.
+- `audit-fleet.cjs`: delayed snapshots and out-of-order live GPS updates through Vite.
+- `audit-runtime.cjs`: read-only probes of a running API, default port 8080.
+- `audit-readonly.sql`: metadata and aggregate integrity checks; no data changes.
+
+The Contact destination is `Contact:RecipientEmail` in the backend configuration.
+It shares the existing `PasswordRecovery:Smtp` Gmail settings, independently of the
+recovery enabled flag. SMTP secrets remain server-side. Gmail authentication can be
+checked without sending mail using `node scripts/check-recovery-smtp.cjs`.
+
+## Stabilization regressions
+
+With Vite running and `PLAYWRIGHT_MODULE` configured, run
+`node scripts/tests/session-races.cjs` and `node scripts/tests/stabilization-ui.cjs`.
+These Edge/Chromium fixtures exercise the real source modules and never change real
+accounts: delayed authentication after logout/new login, shared refresh rotation,
+stale crew queries, reachable mobile crew actions, and transfer destination races.
+The six SQL integration tests in `server.Tests/StabilizationTests.cs` use the
+existing disposable database harness. See [STABILIZATION_REPORT.md](../../STABILIZATION_REPORT.md)
+for exact commands, results, dependency audits and remaining verification limits.
+
+## Deep Ocean owner and crew dashboards
+
+Run `node scripts/tests/ocean-dashboards.cjs` with the web dev server available.
+`WWMS_WEB_URL` defaults to `http://localhost:5173`; configure `PLAYWRIGHT_MODULE`
+for your installed Playwright and `PLAYWRIGHT_ENGINE=chromium` or `webkit`.
+Set `WWMS_DASHBOARD_SCREENSHOTS` to save desktop/mobile screenshots.
+
+The browser fixture checks the restored original layouts, actual login whale SVG
+and animation reuse, decoration clear of text and controls, original actions and
+menus, notifications routing, SignalR updates, loading/error/empty states, seven
+viewport widths, reduced motion, and unchanged styling on other crew screens.
+Fixtures never replace production data sources or write to the running database.
+Chromium uses the installed Edge channel; WebKit must be installed separately.
+See [DASHBOARD_UI_IMPLEMENTATION.md](../../DASHBOARD_UI_IMPLEMENTATION.md) for results.
+
 ## Shore QR scanning and mobile layouts
 
 With Vite running, run `node scripts/tests/shore-qr.cjs`. Set `PLAYWRIGHT_MODULE`
@@ -134,3 +195,36 @@ Use the same SQL/browser environment variables documented above, with either
 upload certificates or approve accounts in the running deployment.
 See [CREW_CERTIFICATE_IMPLEMENTATION.md](../../CREW_CERTIFICATE_IMPLEMENTATION.md)
 for the server test inventory and read-only staff audit command.
+
+## Living public whale
+
+`whale-motion.cjs` verifies seeded free exploration without content/obstacle inputs,
+bounded steering, depth and delayed spine deformation.
+`whale-autonomy.cjs` checks stationary exploration without masks/obstacles,
+live head/body/tail response, navbar styling, all sections and responsive resizing.
+`whale-visible-content.cjs` compares actual composited pixels to verify the whale
+remains visible behind Home/About text, the Gallery caption and Contact heading.
+`whale-free-swim.cjs` verifies zero whale scroll listeners, independent motion during
+forward/reverse/fast scrolling, Home/About overlay absence and initial visible pixels,
+preserved backgrounds and responsive resizing. `public-ocean.cjs`
+checks responsive content preservation, four sections, reverse scrolling, Gallery,
+navigation, Contact fixtures, reduced motion and scene cleanup. `living-whale.cjs`
+verifies real WebGL swimming/perspective, actual animal pixels, visibility,
+context loss, missing-WebGL fallback and constrained-device quality. Use the existing
+Playwright variables above; both Chromium/Edge and WebKit are supported.
+
+See [PUBLIC_OCEAN_IMPLEMENTATION.md](../../PUBLIC_OCEAN_IMPLEMENTATION.md) for commands,
+the optional content baseline, recording options and verification limits. No real
+email is sent by these scripts.
+
+## Support Center
+
+`SupportTests.cs` covers durable requests, validation/spam limits, idempotency,
+notification retries/leases and the real SQL migration. Its browser test launches
+`support-center.cjs` against a disposable API/Identity/SQL instance and checks all
+eleven web portal help/return paths, 17 accordions, responsive form validation,
+real acceptance, network/server failures and lost-response retries. Set
+`WWMS_TEST_SQL_CONNECTION`, `WWMS_BROWSER_WEB_ROOT` and `PLAYWRIGHT_MODULE`; select
+Chromium or WebKit with `PLAYWRIGHT_ENGINE`. Browser-harness mail is captured.
+See [SUPPORT_CENTER_IMPLEMENTATION.md](../../SUPPORT_CENTER_IMPLEMENTATION.md)
+for configuration, database changes and the separate live SMTP verification.
