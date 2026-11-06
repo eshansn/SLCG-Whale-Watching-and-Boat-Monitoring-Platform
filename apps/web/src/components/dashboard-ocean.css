@@ -1,0 +1,172 @@
+/* Visual polish only. Each dashboard retains its own layout and navigation. */
+.ocean-polish {
+  --dashboard-ink: #eafbff;
+  --dashboard-muted: #8ca9b9;
+  position: relative;
+  isolation: isolate;
+  color: var(--dashboard-ink);
+  background: radial-gradient(ellipse at 85% 5%, #07598538, transparent 45%),
+    radial-gradient(ellipse at 10% 40%, #062b4055, transparent 55%),
+    linear-gradient(145deg, #041726, #020912 75%);
+}
+.ocean-polish::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  box-shadow: inset 0 0 150px #02091266;
+}
+.ocean-polish::after {
+  content: '';
+  position: absolute;
+  top: 75px;
+  left: 10%;
+  width: 80%;
+  height: 300px;
+  z-index: -1;
+  pointer-events: none;
+  opacity: .16;
+  background: radial-gradient(circle at 8% 20%, #8af5ff 1px, transparent 2px),
+    radial-gradient(circle at 28% 70%, #8af5ff 1px, transparent 2px),
+    radial-gradient(circle at 62% 30%, #8af5ff 1px, transparent 2px),
+    radial-gradient(circle at 90% 80%, #8af5ff 1px, transparent 2px);
+  animation: ocean-auth-drift 24s ease-in-out infinite alternate;
+}
+.ocean-polish .ocean-polish-card {
+  background: linear-gradient(145deg, #062b4070, #041726ed);
+  border-color: #8ca9b92e;
+  box-shadow: inset 0 0 0 1px #8ca9b92a, 0 10px 30px #00000024;
+  transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease;
+}
+.ocean-polish button {
+  transition: background-color .2s ease, box-shadow .2s ease, transform .2s ease;
+}
+.ocean-polish button:focus-visible {
+  outline: 2px solid #8af5ff;
+  outline-offset: 4px;
+  --tw-ring-color: transparent;
+  --tw-ring-offset-color: #041726;
+}
+.ocean-polish button:active:not(:disabled) { transform: translateY(1px); }
+.ocean-polish button:disabled { opacity: .5; cursor: not-allowed; }
+.ocean-polish :is(.text-slate-400, .text-slate-500, .text-gray-500) { color: var(--dashboard-muted); }
+.ocean-polish :is(.text-red-600, .text-amber-600) { color: #fda4af; }
+.ocean-polish .text-amber-600 { color: #fcd68a; }
+.ocean-polish .text-blue-500 { color: #8af5ff; }
+.ocean-polish .bg-emerald-50 { background: #065f464d; color: #80eac1; }
+.ocean-polish .bg-amber-50 { background: #78350f4d; color: #fcd68a; }
+.ocean-polish .bg-blue-50 { background: #07598555; color: #8af5ff; }
+
+/* The login component supplies the SVG, line drawing, halo and float animation. */
+.ocean-polish :is(.owner-dashboard-whale, .crew-dashboard-whale) { pointer-events: none; }
+.ocean-polish .ocean-auth-whale { width: 100%; height: auto; margin: 0; }
+.ocean-polish .ocean-auth-whale-svg { filter: drop-shadow(0 0 6px #35e6f740); }
+
+/* Original owner hero, boat grid and ongoing-trip panel. */
+.owner-ocean-dashboard .owner-dashboard-hero { background: transparent; }
+.owner-ocean-dashboard .owner-dashboard-whale {
+  position: absolute;
+  width: 210px;
+  top: -1px;
+  left: calc(50% - 105px);
+  opacity: .7;
+}
+.owner-ocean-dashboard :is(h1, h2, aside button) { color: var(--dashboard-ink); }
+.owner-ocean-dashboard .owner-dashboard-welcome { right: 16px; }
+.owner-ocean-dashboard .owner-dashboard-welcome > div { min-width: 0; }
+.owner-ocean-dashboard .owner-dashboard-welcome h1 { overflow-wrap: anywhere; }
+.owner-ocean-dashboard .owner-dashboard-welcome p { color: var(--dashboard-muted); }
+.owner-ocean-dashboard .owner-dashboard-welcome > img {
+  flex-shrink: 0;
+  border-color: #8af5ff66;
+  background: #8ca9b9;
+  box-shadow: 0 0 22px #35e6f71a;
+}
+.owner-ocean-dashboard header button { color: #8af5ff; background: #062b4055; }
+.owner-ocean-dashboard :is(header button img, aside nav img, .owner-dashboard-trips img) {
+  filter: brightness(0) invert(1);
+  opacity: .85;
+}
+.owner-ocean-dashboard .owner-dashboard-content { padding-top: 16px; }
+.owner-ocean-dashboard [aria-label="My boats"] article > div:first-child {
+  /* Retain the two columns while letting their contents fit at every breakpoint. */
+  grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr);
+}
+.owner-ocean-dashboard [aria-label="My boats"] article p { overflow-wrap: anywhere; }
+.owner-ocean-dashboard [aria-label="My boats"] article .mt-3.flex { align-items: baseline; }
+.owner-ocean-dashboard [aria-label="My boats"] article .mt-3.flex > span:first-child { flex-shrink: 0; }
+.owner-ocean-dashboard .owner-dashboard-content button:not(.rounded-full),
+.crew-ocean-dashboard .crew-dashboard-content article > button {
+  color: #020912;
+  background: linear-gradient(120deg, #8af5ff, #35c8dd);
+  box-shadow: 0 4px 18px #35e6f714;
+}
+.owner-ocean-dashboard .owner-dashboard-content button:not(.rounded-full) img { filter: brightness(0); }
+.owner-ocean-dashboard .owner-dashboard-content > section.relative {
+  background: linear-gradient(145deg, #062b40, #041726);
+  border-color: #35e6f733;
+}
+.owner-ocean-dashboard .owner-dashboard-trips button { background: #07598566; }
+.owner-ocean-dashboard aside,
+.crew-ocean-dashboard aside { background: #041726; color: var(--dashboard-ink); }
+.owner-ocean-dashboard aside button:hover,
+.crew-ocean-dashboard aside nav button:hover { background: #07598555; }
+
+/* Original compact crew dashboard; other CrewLayout screens keep their styling. */
+.crew-ocean-dashboard > header { background: #041726e8; border-color: #8ca9b92a; }
+.crew-ocean-dashboard > header button { background: #062b40; border-color: #8ca9b933; color: #8af5ff; }
+.crew-ocean-dashboard .crew-dashboard-whale {
+  position: absolute;
+  top: -8px;
+  left: calc(50% - 75px);
+  z-index: 31;
+  width: 150px;
+  opacity: .8;
+}
+.crew-ocean-dashboard .crew-dashboard-welcome > :first-child {
+  flex-shrink: 0;
+  background: linear-gradient(145deg, #075985, #062b40);
+  color: #8af5ff;
+  --tw-ring-color: #8af5ff44;
+}
+.crew-ocean-dashboard .crew-dashboard-welcome > div:last-child { min-width: 0; }
+.crew-ocean-dashboard h1 { overflow-wrap: anywhere; }
+.crew-ocean-dashboard .crew-dashboard-content > button,
+.crew-ocean-dashboard .crew-dashboard-content > div.relative {
+  background: linear-gradient(125deg, #075985, #062b40 65%, #041726);
+  box-shadow: inset 0 0 0 1px #35e6f72e, 0 12px 30px #00000030;
+}
+.crew-ocean-dashboard article > .grid { grid-template-columns: minmax(0, 1fr) 118px; }
+.crew-ocean-dashboard article > .grid > div:first-child { min-width: 0; }
+.crew-ocean-dashboard article .bg-gradient-to-br { background: linear-gradient(135deg, #062b40, #041726); }
+.crew-ocean-dashboard .text-blue-300 { color: #8ca9b9; }
+.crew-ocean-dashboard :is(.bg-white.text-slate-500, .bg-red-50.text-red-600) {
+  background: #041726;
+  border-color: #8ca9b92e;
+}
+.crew-ocean-dashboard aside nav button { color: #c5dce7; }
+.crew-ocean-dashboard aside nav button > span:first-child { background: #062b40; color: #8af5ff; }
+.crew-ocean-dashboard aside > div:first-child { background: linear-gradient(135deg, #062b40, #041726); }
+
+@media (min-width: 640px) {
+  .owner-ocean-dashboard .owner-dashboard-whale { width: 300px; left: auto; right: 10%; top: 3px; }
+  .crew-ocean-dashboard article > .grid { grid-template-columns: minmax(0, 1fr) 150px; }
+}
+@media (min-width: 1024px) {
+  .owner-ocean-dashboard .owner-dashboard-whale { width: 460px; right: 9%; top: -10px; }
+}
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .ocean-polish .ocean-polish-card:hover {
+    transform: translateY(-2px);
+    border-color: #35e6f74d;
+    box-shadow: inset 0 0 0 1px #35e6f73d, 0 14px 32px #00000038;
+  }
+  .ocean-polish button:hover { box-shadow: 0 0 20px #35e6f725; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ocean-polish *, .ocean-polish *::before, .ocean-polish *::after,
+  .ocean-polish::before, .ocean-polish::after { animation: none !important; transition: none !important; }
+  .ocean-polish .ocean-auth-whale-outline, .ocean-polish .ocean-auth-whale-detail { stroke-dashoffset: 0; }
+  .ocean-polish .ocean-polish-card:hover, .ocean-polish button:active { transform: none; }
+}

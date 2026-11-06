@@ -1,4 +1,7 @@
 import BoatImage from "../../components/BoatImage";
+import { OceanWhale } from '../../components/auth/OceanScene';
+import '../../components/auth/ocean-auth.css';
+import '../../components/dashboard-ocean.css';
 import { useEffect, useMemo, useState } from 'react';
 import { CalendarDays, CircleAlert, Clock3, Ship } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -39,8 +42,8 @@ export default function BoatCrewDashboard() {
   const ongoing = sorted.find(trip => trip.status === 'Ongoing');
   const upcoming = sorted.filter(trip => !['Ongoing', 'Completed', 'Cancelled'].includes(trip.status));
 
-  return <CrewLayout>{loading ? <div className="mx-auto max-w-2xl px-4 py-8"><State>Loading assignments…</State></div> : error ? <div className="mx-auto max-w-2xl px-4 py-8"><State tone="error">{error}</State></div> : <div className="mx-auto w-full max-w-2xl px-4 pb-10 pt-3 sm:px-6 sm:pt-5">
-    <section className="mb-5 flex items-center gap-3 rounded-2xl border border-white/80 bg-white/75 p-3 shadow-[0_8px_25px_rgba(15,23,42,.06)] backdrop-blur">
+  return <CrewLayout className="ocean-polish crew-ocean-dashboard"><div className="crew-dashboard-whale" aria-hidden="true"><OceanWhale /></div>{loading ? <div className="mx-auto max-w-2xl px-4 py-8"><State>Loading assignments…</State></div> : error ? <div className="mx-auto max-w-2xl px-4 py-8"><State tone="error">{error}</State></div> : <div className="crew-dashboard-content mx-auto w-full max-w-2xl px-4 pb-10 pt-3 sm:px-6 sm:pt-5">
+    <section className="ocean-polish-card crew-dashboard-welcome mb-5 flex items-center gap-3 rounded-2xl border border-white/80 bg-white/75 p-3 shadow-[0_8px_25px_rgba(15,23,42,.06)] backdrop-blur">
       {photo ? <img src={photo} className="h-16 w-16 rounded-2xl object-cover ring-2 ring-blue-100" alt="Profile"/> : <div className="grid h-16 w-16 place-items-center rounded-2xl bg-gradient-to-br from-blue-100 to-slate-100 text-xl font-bold text-[#162d54]">{profile?.displayName.charAt(0) ?? 'C'}</div>}
       <div>
         <p className="text-[9px] font-medium uppercase tracking-[.14em] text-slate-400">Welcome back</p>
@@ -66,7 +69,7 @@ export default function BoatCrewDashboard() {
     {upcoming.length === 0 ? <State>No upcoming trips assigned.</State> : <div className="space-y-3">{upcoming.map(trip => {
       const boat = boats.find(candidate => candidate.id === trip.boatId);
       const departure = new Date(trip.scheduledDepartureUtc);
-      return <article key={trip.id} className="rounded-[20px] border border-slate-200/80 bg-white p-3 shadow-[0_8px_24px_rgba(15,23,42,.08)] transition hover:-translate-y-0.5 hover:shadow-[0_12px_28px_rgba(15,23,42,.11)]">
+      return <article key={trip.id} className="ocean-polish-card rounded-[20px] border border-slate-200/80 bg-white p-3 shadow-[0_8px_24px_rgba(15,23,42,.08)] transition hover:-translate-y-0.5 hover:shadow-[0_12px_28px_rgba(15,23,42,.11)]">
         <div className="grid grid-cols-[1fr_118px] gap-3 sm:grid-cols-[1fr_150px]">
           <div>
             <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Boat</p>

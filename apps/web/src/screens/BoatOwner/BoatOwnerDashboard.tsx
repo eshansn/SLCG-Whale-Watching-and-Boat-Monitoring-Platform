@@ -1,4 +1,7 @@
 import BoatImage from "../../components/BoatImage";
+import { OceanWhale } from "../../components/auth/OceanScene";
+import "../../components/auth/ocean-auth.css";
+import "../../components/dashboard-ocean.css";
 import {
   useEffect,
   useState,
@@ -47,7 +50,7 @@ function EmptyActionPanel({
   const ActionIcon=kind==="trip"?CalendarPlus:Ship;
   const actionLabel=kind==="trip"?"Schedule Trip":"Register Boat";
   return (
-    <section className={`relative flex min-h-[270px] w-full flex-col items-start justify-center overflow-hidden rounded-[24px] border border-blue-300/20 bg-gradient-to-br from-[#101d3b] via-[#162d54] to-${kind==="trip"?'[#24558b]':'[#16738a]'} px-7 py-8 text-left shadow-[0_18px_45px_rgba(22,45,84,.22)] sm:px-9 sm:py-10 xl:min-h-[300px] ${className}`}>
+    <section className={`ocean-polish-card relative flex min-h-[270px] w-full flex-col items-start justify-center overflow-hidden rounded-[24px] border border-blue-300/20 bg-gradient-to-br from-[#101d3b] via-[#162d54] to-${kind==="trip"?'[#24558b]':'[#16738a]'} px-7 py-8 text-left shadow-[0_18px_45px_rgba(22,45,84,.22)] sm:px-9 sm:py-10 xl:min-h-[300px] ${className}`}>
       <span className="mb-5 grid h-12 w-12 place-items-center rounded-2xl bg-white/12 text-white ring-1 ring-white/20"><ActionIcon size={25}/></span>
       <h2 className="text-[22px] font-semibold text-white sm:text-[26px]">{title}</h2>
       <p className="mt-2 max-w-sm text-[13px] font-normal leading-6 text-white/75 sm:text-[14px]">{description}</p>
@@ -148,41 +151,18 @@ function BoatOwnerDashboard() {
   };
 
   return (
-   <main className="boat-owner-page min-h-dvh w-full overflow-x-hidden bg-white text-black">
+   <main className="boat-owner-page ocean-polish owner-ocean-dashboard min-h-dvh w-full overflow-x-hidden bg-white text-black">
       {/* Hero section */}
       <header
         className="
-          relative min-h-[220px] w-full overflow-hidden
+          owner-dashboard-hero relative min-h-[220px] w-full overflow-hidden
           bg-white
           sm:min-h-[290px]
           lg:min-h-[380px]
           xl:min-h-[420px]
         "
       >
-        <img
-          src="/BG2.png"
-          alt=""
-          aria-hidden="true"
-          className="
-            absolute inset-0 h-full w-full object-cover
-            object-[62%_center]
-            sm:object-[60%_35%]
-            lg:object-[70%_32%]
-            xl:object-[72%_30%]
-          "
-        />
-
-        {/* Bottom gradient */}
-        <div
-          aria-hidden="true"
-          className="
-            absolute inset-0
-            bg-gradient-to-b
-            from-white/5
-            via-white/5
-            to-white
-          "
-        />
+        <div className="owner-dashboard-whale" aria-hidden="true"><OceanWhale /></div>
 
         {/* Notification and menu buttons */}
         <div
@@ -247,7 +227,7 @@ function BoatOwnerDashboard() {
         {/* Owner information */}
         <div
           className="
-            absolute bottom-10 left-4 z-10
+            owner-dashboard-welcome absolute bottom-10 left-4 z-10
             flex items-center gap-3
             sm:bottom-14 sm:left-8 sm:gap-4
             lg:bottom-16 lg:left-12 lg:gap-5
@@ -309,7 +289,7 @@ function BoatOwnerDashboard() {
       {/* Dashboard content */}
       <div
         className="
-          w-full px-4 pb-8
+          owner-dashboard-content w-full px-4 pb-8
           sm:px-6 sm:pb-10
           lg:grid
           lg:grid-cols-[minmax(0,2fr)_minmax(300px,1fr)]
@@ -343,7 +323,7 @@ function BoatOwnerDashboard() {
             <article
               key={boat.id}
               className="
-                w-full overflow-hidden
+                ocean-polish-card w-full overflow-hidden
                 rounded-[22px] bg-white p-3
                 shadow-[0_6px_9px_rgba(0,0,0,0.22)]
                 sm:p-4
@@ -450,7 +430,7 @@ function BoatOwnerDashboard() {
         ) : (
           <section
             className="
-            mt-5 w-full rounded-[24px]
+            ocean-polish-card owner-dashboard-trips mt-5 w-full rounded-[24px]
             bg-white px-6 py-7
             shadow-[0_6px_12px_rgba(0,0,0,0.15)]
             sm:px-8 sm:py-8
