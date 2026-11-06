@@ -1,26 +1,10 @@
-import { createContext, useContext, useEffect, useState } from "react";
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import type { ApprovalStatus, BoatRecord, CrewRecord, OwnerRecord } from "./adminData";
 import { useAuth } from "../../auth/useAuth";
 import { connectOperations, operationsApi } from "../../operations/operationsApi";
-
-interface RecordsState { boats: BoatRecord[]; crew: CrewRecord[]; owners: OwnerRecord[] }
-interface RecordsContextValue extends RecordsState {
-  loading: boolean;
-  error?: string;
-  reload: () => void;
-  updateBoat: (id: string, values: Partial<BoatRecord>) => Promise<void>;
-  updateCrew: (id: string, values: Partial<CrewRecord>) => Promise<void>;
-  updateOwner: (id: string, values: Partial<OwnerRecord>) => Promise<void>;
-  setBoatApproval: (id: string, status: ApprovalStatus, reason?: string) => Promise<void>;
-  setCrewApproval: (id: string, status: ApprovalStatus, reason?: string) => Promise<void>;
-  deleteBoat: (id: string) => Promise<void>;
-  deleteCrew: (id: string) => Promise<void>;
-  deleteOwner: (id: string) => Promise<void>;
-}
+import { AdminRecordsContext as Context, type RecordsState, type RecordsContextValue } from "./adminRecordsStore";
 
 const initial: RecordsState = { boats: [], crew: [], owners: [] };
-const Context = createContext<RecordsContextValue | null>(null);
 
 export function AdminRecordsProvider({ children }: { children: ReactNode }) {
   const { session } = useAuth();
@@ -187,8 +171,3 @@ function parseMeasurement(value: unknown): number {
   return Number.parseFloat(String(value).replace(",", "."));
 }
 
-export function useAdminRecords() {
-  const value = useContext(Context);
-  if (!value) throw new Error("Admin records provider is missing");
-  return value;
-}

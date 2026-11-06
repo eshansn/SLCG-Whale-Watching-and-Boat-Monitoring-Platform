@@ -56,8 +56,9 @@ interface DashboardState {
 }
 
 let trackingRequestSequence = 0;
+let fleetRequestSequence = 0;
 
-export const useDashboardStore = create<DashboardState>((set) => ({
+export const useDashboardStore = create<DashboardState>((set, get) => ({
   activeVesselId: null,
   vessels: [],
   routeHistory: null,
@@ -114,7 +115,9 @@ export const useDashboardStore = create<DashboardState>((set) => ({
     trackingRequestKey: null,
   }),
   applyGpsTelemetry: (update) => set((state) => {
-    const vessels = state.vessels.map((vessel) => vessel.id === update.boatId ? {
+    const vessels = state.vessels.map((vessel) => vessel.id === update.boatId &&
+      Number.isFinite(Date.parse(update.recordedAtUtc)) &&
+      Date.parse(update.recordedAtUtc) >= (Date.parse(vessel.coordinatesRecordedAtUtc ?? '') || 0) ? {
       ...vessel,
       lat: update.latitude,
       lon: update.longitude,
@@ -158,11 +161,25 @@ export const useDashboardStore = create<DashboardState>((set) => ({
     };
   }),
   loadVessels: async (token) => {
+    const request = ++fleetRequestSequence;
     const records = await operationsApi.vesselMap(token);
-    set({ vessels: records.filter((record) => record.latitude != null && record.longitude != null).map((record) => ({
-      ...record, regNo: record.registrationNumber, lat: record.latitude!, lon: record.longitude!,
-      heading: record.headingDegrees ?? 0, color: record.activeTripId ? '#10B981' : '#64748B',
-      status: record.activeTripId ? 'active' : 'idle',
-    })) });
+    if (request !== fleetRequestSequence) return;
+    const current = new Map(get().vessels.map(vessel => [vessel.id, vessel]));
+    set({ vessels: records.filter((record) => record.latitude != null && record.longitude != null).map((record) => {
+      const latest = current.get(record.id);
+      const newerGps = latest && (Date.parse(latest.coordinatesRecordedAtUtc ?? '') || 0) >
+        (Date.parse(record.coordinatesRecordedAtUtc ?? '') || 0) ? {
+          lat: latest.lat, lon: latest.lon, heading: latest.heading,
+          cruisingSpeedKnots: latest.cruisingSpeedKnots, altitudeMeters: latest.altitudeMeters,
+          coordinatesRecordedAtUtc: latest.coordinatesRecordedAtUtc,
+          coordinatesReceivedAtUtc: latest.coordinatesReceivedAtUtc, trackerStatus: latest.trackerStatus,
+        } : {};
+      return {
+        ...record, regNo: record.registrationNumber, lat: record.latitude!, lon: record.longitude!,
+        heading: record.headingDegrees ?? 0, color: record.activeTripId ? '#10B981' : '#64748B',
+        status: record.activeTripId ? 'active' as const : 'idle' as const,
+        ...newerGps,
+      };
+    }) });
   },
 }));

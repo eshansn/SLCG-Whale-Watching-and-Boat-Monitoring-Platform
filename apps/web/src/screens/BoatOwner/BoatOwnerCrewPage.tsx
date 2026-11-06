@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { ArrowLeft, Info, Trash2, UserPlus, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { connectOperations, operationsApi, type Boat, type CrewSuggestion, type OwnerCrew } from "../../operations/operationsApi";
@@ -12,22 +12,37 @@ export default function BoatOwnerCrewPage() {
   const [boats, setBoats] = useState<Boat[]>([]);
   const [selected, setSelected] = useState<OwnerCrew>();
   const [email, setEmail] = useState("");
-  const [suggestions, setSuggestions] = useState<CrewSuggestion[]>([]);
+  const [suggestionResult, setSuggestionResult] = useState<{ token: string; query: string; items: CrewSuggestion[] }>();
+  const suggestions = suggestionResult && suggestionResult.token === token && suggestionResult.query === email.trim()
+    ? suggestionResult.items : [];
+  const currentToken = useRef(token);
+  const loadVersion = useRef(0);
   const [status, setStatus] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  const load = useCallback(async () => {
-    if (!token) return;
-    try { const [crew, ownerBoats] = await Promise.all([operationsApi.ownerCrew(token), operationsApi.boats(token)]); setMembers(crew); setBoats(ownerBoats.filter(boat=>!boat.isPatrolBoat)); }
-    catch (error) { setStatus(error instanceof Error ? error.message : "Unable to load crew."); }
+  useEffect(() => {
+    currentToken.current = token;
+    return () => { currentToken.current = undefined; };
+  }, [token]);
+
+  const load = useCallback(() => {
+    if (!token || token !== currentToken.current) return Promise.resolve();
+    const version = ++loadVersion.current;
+    const isCurrent = () => version === loadVersion.current && token === currentToken.current;
+    return Promise.all([operationsApi.ownerCrew(token), operationsApi.boats(token)])
+      .then(([crew, ownerBoats]) => { if (isCurrent()) { setMembers(crew); setBoats(ownerBoats.filter(boat=>!boat.isPatrolBoat)); } })
+      .catch((error) => { if (isCurrent()) setStatus(error instanceof Error ? error.message : "Unable to load crew."); });
   }, [token]);
 
   useEffect(() => { void load(); if(!token)return; return connectOperations(token,()=>void load()); }, [load,token]);
   useEffect(() => {
-    if (!token || email.trim().length < 2) { setSuggestions([]); return; }
-    const timer = window.setTimeout(() => operationsApi.searchOwnerCrew(token, email)
-      .then(setSuggestions).catch(() => setSuggestions([])), 250);
-    return () => window.clearTimeout(timer);
+    const query = email.trim();
+    if (!token || query.length < 2) return;
+    let active = true;
+    const timer = window.setTimeout(() => operationsApi.searchOwnerCrew(token, query)
+      .then(items => { if (active) setSuggestionResult({ token, query, items }); })
+      .catch(() => { if (active) setSuggestionResult({ token, query, items: [] }); }), 250);
+    return () => { active = false; window.clearTimeout(timer); };
   }, [email, token]);
 
   const addMember = async (event: FormEvent) => {
@@ -35,7 +50,7 @@ export default function BoatOwnerCrewPage() {
     try {
       setSubmitting(true); setStatus("");
       await operationsApi.addOwnerCrew(token, email);
-      setEmail(""); setSuggestions([]); await load(); setStatus("Certified crew member added successfully.");
+      setEmail(""); setSuggestionResult(undefined); await load(); setStatus("Certified crew member added successfully.");
     } catch (error) { setStatus(error instanceof Error ? error.message : "Unable to add crew member."); }
     finally { setSubmitting(false); }
   };
@@ -59,7 +74,7 @@ export default function BoatOwnerCrewPage() {
         <h1 className="text-xl font-semibold sm:text-2xl">My Crew</h1>
       </header>
 
-      <section className="mt-7 overflow-hidden rounded-xl border border-slate-200" aria-label="Current crew members">
+      <section className="mt-7 overflow-x-auto rounded-xl border border-slate-200" aria-label="Current crew members">
         <div className="grid grid-cols-[minmax(110px,1fr)_minmax(100px,1fr)_minmax(150px,1.5fr)_80px] gap-2 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase text-slate-500">
           <span>Name</span><span>Type</span><span>Assigned boat</span><span className="text-center">Actions</span>
         </div>
@@ -79,7 +94,7 @@ export default function BoatOwnerCrewPage() {
         <div className="relative">
           <input type="email" required value={email} onChange={(event) => setEmail(event.target.value)} placeholder="Enter certified crew member email" autoComplete="off" className="min-h-12 w-full rounded-lg bg-white px-4 text-sm text-slate-900 outline-none" />
           {suggestions.length > 0 && <div className="absolute left-0 right-0 top-full z-20 mt-1 overflow-hidden rounded-lg border border-slate-200 bg-white text-slate-900 shadow-xl">
-            {suggestions.map((suggestion) => <button key={suggestion.crewUserId} type="button" onClick={() => { setEmail(suggestion.email); setSuggestions([]); }} className="flex w-full items-center justify-between gap-4 border-b border-slate-100 px-4 py-3 text-left last:border-0 hover:bg-slate-50"><span><span className="block text-sm font-medium">{suggestion.name}</span><span className="block text-xs text-slate-500">{suggestion.email}</span></span><span className="text-xs text-slate-500">{suggestion.position}</span></button>)}
+            {suggestions.map((suggestion) => <button key={suggestion.crewUserId} type="button" onClick={() => { setEmail(suggestion.email); setSuggestionResult(undefined); }} className="flex w-full items-center justify-between gap-4 border-b border-slate-100 px-4 py-3 text-left last:border-0 hover:bg-slate-50"><span><span className="block text-sm font-medium">{suggestion.name}</span><span className="block text-xs text-slate-500">{suggestion.email}</span></span><span className="text-xs text-slate-500">{suggestion.position}</span></button>)}
           </div>}
         </div>
         <button type="submit" disabled={submitting} className="mt-4 flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-white px-5 text-sm font-semibold text-[#162d54] disabled:opacity-50"><UserPlus size={18}/>{submitting ? 'Adding...' : 'Add Member'}</button>

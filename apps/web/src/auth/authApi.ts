@@ -3,6 +3,8 @@ import type { AuthResponse, AuthSession, LoginCredentials, PortalRole } from './
 import { apiFetch } from '../api/httpClient';
 
 let restorePromise: Promise<AuthSession | null> | null = null;
+let sessionVersion = 0;
+let refreshRequest: { token: string; version: number; promise: Promise<AuthSession | null> } | null = null;
 
 interface JwtPayload {
   sub?: string;
@@ -89,9 +91,13 @@ function toSession(response: AuthResponse): AuthSession {
 }
 
 export async function login(credentials: LoginCredentials): Promise<AuthSession> {
+  const version = sessionVersion;
   const response = await post<AuthResponse>('/api/auth/login', credentials);
+  const nextSession = toSession(response);
+  if (version !== sessionVersion) throw new AuthApiError('Sign-in was cancelled. Please try again.', 409);
+  sessionVersion++;
   setRefreshToken(response.refreshToken);
-  return toSession(response);
+  return nextSession;
 }
 
 export interface PublicRegistration {
@@ -120,17 +126,40 @@ export async function changePassword(accessToken:string,currentPassword:string,n
   return post<{message:string}>('/api/auth/change-password',{currentPassword,newPassword},accessToken);
 }
 
-export async function refreshSession(): Promise<AuthSession | null> {
-  const refreshToken = getRefreshToken();
-  if (!refreshToken) return null;
+export async function deleteMyAccount(accessToken: string, confirmation: string): Promise<void> {
+  const response = await apiFetch('/api/auth/account', {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+    body: JSON.stringify({ confirmation }),
+  });
+  if (response.status === 401) throw new AuthApiError('Your session has expired. Sign in again before deleting your account.', 401);
+  if (!response.ok) throw new AuthApiError(await getErrorMessage(response), response.status);
+}
 
+export function refreshSession(): Promise<AuthSession | null> {
+  const refreshToken = getRefreshToken();
+  if (!refreshToken) return Promise.resolve(null);
+  const version = sessionVersion;
+  if (refreshRequest?.token === refreshToken && refreshRequest.version === version) return refreshRequest.promise;
+  const request = { token: refreshToken, version, promise: Promise.resolve<AuthSession | null>(null) };
+  request.promise = performRefresh(refreshToken, version).finally(() => {
+    if (refreshRequest === request) refreshRequest = null;
+  });
+  refreshRequest = request;
+  return request.promise;
+}
+
+async function performRefresh(refreshToken: string, version: number): Promise<AuthSession | null> {
+  const isCurrent = () => version === sessionVersion && getRefreshToken() === refreshToken;
   try {
     const response = await post<AuthResponse>('/api/auth/refresh', { refreshToken });
+    if (!isCurrent()) return null;
+    const nextSession = toSession(response);
     setRefreshToken(response.refreshToken);
-    return toSession(response);
+    return nextSession;
   } catch (error) {
     if (error instanceof AuthApiError && error.status === 401) {
-      clearRefreshToken();
+      if (isCurrent()) clearRefreshToken();
       return null;
     }
 
@@ -154,5 +183,8 @@ export function restoreSession(): Promise<AuthSession | null> {
 }
 
 export function clearSession(): void {
+  sessionVersion++;
+  restorePromise = null;
+  refreshRequest = null;
   clearRefreshToken();
 }

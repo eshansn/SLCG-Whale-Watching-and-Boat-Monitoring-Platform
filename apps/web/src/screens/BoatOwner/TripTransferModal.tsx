@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowRightLeft, Search, X } from "lucide-react";
 import {
   operationsApi,
@@ -42,6 +42,9 @@ export default function TripTransferModal({ token, sourceTripId, onClose, onComp
   const [confirming, setConfirming] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const destinationRequest = useRef(0);
+
+  useEffect(() => () => { destinationRequest.current++; }, [token, sourceTripId]);
 
   useEffect(() => {
     let active = true;
@@ -53,11 +56,7 @@ export default function TripTransferModal({ token, sourceTripId, onClose, onComp
 
   useEffect(() => {
     const query = boatQuery.trim();
-    if (selectedBoat || query.length < 2) {
-      setBoatResults([]);
-      setSearchingBoats(false);
-      return;
-    }
+    if (selectedBoat || query.length < 2) return;
     let active = true;
     const timer = window.setTimeout(() => {
       setSearchingBoats(true);
@@ -70,27 +69,32 @@ export default function TripTransferModal({ token, sourceTripId, onClose, onComp
   }, [boatQuery, selectedBoat, sourceTripId, token]);
 
   const selectBoat = async (boat: TransferBoat) => {
+    const request = ++destinationRequest.current;
     setSelectedBoat(boat);
     setBoatQuery(`${boat.name} · ${boat.registrationNumber}`);
     setBoatResults([]);
+    setSearchingBoats(false);
     setDestinationId("");
     setDestinationTrips([]);
     try {
       setLoadingTrips(true);
       setError("");
-      setDestinationTrips(await operationsApi.transferBoatTrips(token, sourceTripId, boat.id));
+      const trips = await operationsApi.transferBoatTrips(token, sourceTripId, boat.id);
+      if (request === destinationRequest.current) setDestinationTrips(trips);
     } catch (tripError) {
-      setError(tripError instanceof Error ? tripError.message : "Unable to load destination trips.");
+      if (request === destinationRequest.current) setError(tripError instanceof Error ? tripError.message : "Unable to load destination trips.");
     } finally {
-      setLoadingTrips(false);
+      if (request === destinationRequest.current) setLoadingTrips(false);
     }
   };
 
   const changeBoat = () => {
+    destinationRequest.current++;
     setSelectedBoat(undefined);
     setBoatQuery("");
     setDestinationTrips([]);
     setDestinationId("");
+    setLoadingTrips(false);
     setError("");
   };
 
@@ -165,7 +169,7 @@ export default function TripTransferModal({ token, sourceTripId, onClose, onComp
           <label className="relative mt-3 block">
             <span className="sr-only">Search Destination Boat</span>
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            <input value={boatQuery} disabled={Boolean(selectedBoat)} onChange={(event) => { setBoatQuery(event.target.value); setBoatResults([]); setError(""); }}
+            <input value={boatQuery} disabled={Boolean(selectedBoat)} onChange={(event) => { setBoatQuery(event.target.value); setBoatResults([]); setSearchingBoats(false); setError(""); }}
               placeholder="Search boat name, registration number, or boat ID..."
               className="h-12 w-full rounded-xl border border-slate-200 pl-10 pr-4 text-sm outline-none focus:border-[#162d54] disabled:bg-slate-50" />
           </label>

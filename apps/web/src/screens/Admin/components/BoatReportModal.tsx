@@ -267,7 +267,7 @@ async function createBoatReportPdf({
   await field('NIC', owner?.nic);
   await field('Email', owner?.email);
   await field('Phone', owner?.phone);
-  await field('Address / profile', owner?.address);
+  await field('Bio', owner?.address);
   await field('Owner record ID', owner?.apiId ?? owner?.id);
 
   await subsection(`Crew under owner (${crew.length})`);
