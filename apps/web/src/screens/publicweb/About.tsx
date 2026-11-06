@@ -2,27 +2,14 @@ export default function About() {
   return (
     <section 
       id="about"
-      className="relative w-full bg-white overflow-hidden"
+      className="public-about relative w-full overflow-hidden"
       style={{ fontFamily: "'Montserrat', sans-serif" }}
     >
-      {/* Desktop Background & Fade Overlay
-        Hidden on mobile. Displays the image on the right with a soft white gradient fade from the left.
-      */}
-      <div className="hidden md:block absolute inset-0 w-full h-full">
-        {/* Background Image - Replace '/about-bg.jpg' with your actual image path */}
-        <div 
-          className="absolute inset-0 bg-cover bg-center lg:bg-right" 
-          style={{ backgroundImage: 'url("/about.jpg")' }}
-        ></div>
-        {/* The Fade Gradient */}
-        <div className="absolute inset-0 bg-gradient-to-r from-white via-white/95 to-transparent w-[75%] lg:w-[90%]"></div>
-      </div>
-
       {/* Content Container */}
       <div className="relative z-10 flex flex-col md:flex-row w-full max-w-[1600px] mx-auto">
         
         {/* Text Area - Displays on top for mobile, left side for desktop */}
-        <div className="w-full md:w-[65%] lg:w-[55%] px-6 py-12 md:px-16 md:py-32">
+        <div className="public-about-copy w-full md:w-[65%] lg:w-[55%] px-6 py-12 md:px-16 md:py-32">
           <h2 className="text-[#0B213E] text-3xl md:text-5xl font-bold mb-8 md:mb-10 tracking-wide">
             About US
           </h2>
@@ -41,16 +28,10 @@ export default function About() {
           </div>
         </div>
 
-        {/* Mobile Image Area 
-          Hidden on desktop. Displays below the text on mobile with padding and rounded edges.
-        */}
+        {/* Keep the mobile illustration space as water for the shared travelling whale. */}
         <div className="w-full px-6 pb-12 md:hidden">
-          {/* Padding wrapper for the image */}
-          <div className="w-full p-2 bg-white rounded-3xl">
-            <div 
-              className="w-full h-[300px] sm:h-[400px] rounded-3xl bg-cover bg-center shadow-lg"
-              style={{ backgroundImage: 'url("/about.jpg")' }}
-            ></div>
+          <div className="w-full p-2 rounded-3xl">
+            <div className="public-about-water w-full rounded-3xl" aria-hidden="true" />
           </div>
         </div>
 

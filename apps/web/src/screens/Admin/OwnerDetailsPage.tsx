@@ -43,7 +43,7 @@ export default function OwnerDetailsPage() {
       <section className="rounded-2xl bg-white p-7 shadow-sm">
         <h1 className="text-2xl font-semibold">{owner.name}</h1>
         <p className="text-sm text-slate-400">Boat owner</p>
-        <div className="mt-7 space-y-5">{[['NIC', owner.nic], ['Email', owner.email], ['Phone', owner.phone], ['Address', owner.address]].map(([label, value]) => <div key={label}><p className="text-xs uppercase text-slate-400">{label}</p><p className="font-medium">{value}</p></div>)}</div>
+        <div className="mt-7 space-y-5">{[['NIC', owner.nic], ['Email', owner.email], ['Phone', owner.phone], ['Bio', owner.address]].map(([label, value]) => <div key={label}><p className="text-xs uppercase text-slate-400">{label}</p><p className="font-medium">{value}</p></div>)}</div>
       </section>
       <section className="rounded-2xl bg-white p-7 shadow-sm">
         <h2 className="text-lg font-semibold">Registered boats ({boats.length})</h2>
@@ -51,7 +51,7 @@ export default function OwnerDetailsPage() {
       </section>
     </div>
     {editing && (
-      <EditRecordModal title="owner" fields={[{key:'name',label:'Full name'},{key:'nic',label:'NIC'},{key:'email',label:'Email',type:'email'},{key:'phone',label:'Phone'},{key:'address',label:'Address'}]} initial={owner} onClose={() => setEditing(false)} onSave={async (values) => { try { await records.updateOwner(owner.id, values); setEditing(false); } catch (reason) { alert(reason instanceof Error ? reason.message : 'The boat owner could not be updated.'); } }}/>
+      <EditRecordModal title="owner" fields={[{key:'name',label:'Full name'},{key:'nic',label:'NIC'},{key:'email',label:'Email',type:'email'},{key:'phone',label:'Phone'},{key:'address',label:'Bio'}]} initial={owner} onClose={() => setEditing(false)} onSave={async (values) => { try { await records.updateOwner(owner.id, values); setEditing(false); } catch (reason) { alert(reason instanceof Error ? reason.message : 'The boat owner could not be updated.'); } }}/>
     )}
   </main>;
 }

@@ -1,5 +1,7 @@
 import { ChevronRight, RefreshCw } from "lucide-react";
 import { useState } from "react";
+import { Link } from "react-router-dom";
+import { supportUrl } from "../../support/supportNavigation";
 
 import { useAuth } from "../../auth/useAuth";
 import { operationsApi } from "../../operations/operationsApi";
@@ -103,8 +105,8 @@ export default function ShoreSettings() {
               className={`text-slate-400 ${refreshing ? "animate-spin" : ""}`}
             />
           </button>
-          <a
-            href="mailto:support@wwms.test"
+          <Link
+            to={supportUrl('/shore/settings')}
             className="flex items-center justify-between py-5"
           >
             <span>
@@ -112,11 +114,11 @@ export default function ShoreSettings() {
                 Need Help?
               </span>
               <span className="mt-1 block text-xs text-slate-400">
-                Contact support@wwms.test
+                Contact our support center
               </span>
             </span>
             <ChevronRight size={18} className="text-slate-400" />
-          </a>
+          </Link>
         </div>
 
         {message && (

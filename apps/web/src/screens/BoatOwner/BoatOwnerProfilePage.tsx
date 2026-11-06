@@ -16,8 +16,6 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../auth/useAuth";
 import { ownerProfileApi } from "../../profiles/ownerProfileApi";
 
-import groupIcon from "../../assets/icons/group.svg";
-import infoIcon from "../../assets/icons/info.svg";
 import notificationIcon from "../../assets/icons/notification.svg";
 import userIcon from "../../assets/icons/user.svg";
 import vesselIcon from "../../assets/icons/vessel.svg";

@@ -155,8 +155,13 @@ export default function ColorBends({
   const pointerTargetRef = useRef<THREE.Vector2>(new THREE.Vector2(0, 0));
   const pointerCurrentRef = useRef<THREE.Vector2>(new THREE.Vector2(0, 0));
   const pointerSmoothRef = useRef<number>(8);
+  // GPU resources initialize once; the effect below applies subsequent prop changes.
+  const initialSettings = useRef({ speed, transparent, scale, frequency, warpStrength,
+    mouseInfluence, parallax, noise, iterations, intensity, bandWidth });
 
   useEffect(() => {
+    const { speed, transparent, scale, frequency, warpStrength, mouseInfluence,
+      parallax, noise, iterations, intensity, bandWidth } = initialSettings.current;
     const container = containerRef.current!;
     const scene = new THREE.Scene();
     const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
@@ -199,7 +204,7 @@ export default function ColorBends({
       alpha: true
     });
     rendererRef.current = renderer;
-    (renderer as any).outputColorSpace = (THREE as any).SRGBColorSpace;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.setClearColor(0x000000, transparent ? 0 : 1);
     renderer.domElement.style.width = '100%';

@@ -10,7 +10,7 @@ export default function Gallery() {
   return (
     <section 
       id="gallery"
-      className="w-full min-h-screen bg-white py-16 md:pt-28 md:pb-12 px-4 md:px-16 flex flex-col items-center justify-center"
+      className="public-gallery w-full min-h-screen py-16 md:pb-12 px-4 md:px-16 flex flex-col items-center justify-center"
       style={{ fontFamily: "'Montserrat', sans-serif" }}
     >
       {/* Container Adjustment:
@@ -44,7 +44,7 @@ export default function Gallery() {
         </div>
 
         {/* Caption Text */}
-        <div className="max-w-2xl text-center">
+        <div className="public-gallery-caption max-w-2xl text-center">
           <p className="text-[#0B213E] text-sm md:text-lg font-bold leading-relaxed">
             A Glimpse Into The World Of Whale Watching, Where Technology Meets The Ocean. Browse
             Through Moments That Celebrate Adventure, Connectivity, And The Natural Beauty That

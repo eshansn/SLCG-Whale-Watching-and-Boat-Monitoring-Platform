@@ -11,6 +11,11 @@ import Contact from './screens/publicweb/Contact';
 import Footer from './screens/publicweb/Footer';
 import Gallery from './screens/publicweb/Gallery';
 import Hero from './screens/publicweb/Hero';
+import MobileAppComingSoon from './screens/publicweb/MobileAppComingSoon';
+import AccountSettings from './account/AccountSettings';
+import { PORTAL_ROLES } from './auth/types';
+import SupportCenter from './support/SupportCenter';
+import PortalSupportLink from './support/PortalSupportLink';
 import Login from './screens/publicweb/Login';
 import PasswordRecovery from './screens/publicweb/PasswordRecovery';
 import SignUp from './screens/publicweb/SignUp';
@@ -80,6 +85,7 @@ import BoatOwnerTripInfoPage from './screens/BoatOwner/BoatOwnerTripInfoPage';
 import BoatOwnerNewTripPage from './screens/BoatOwner/BoatOwnerNewTripPage';
 import BoatOwnerSettingsPage from './screens/BoatOwner/BoatOwnerSettingsPage';
 import PortalNotificationsPage from './screens/Notifications/PortalNotificationsPage';
+import PublicOceanJourney from './screens/publicweb/PublicOceanJourney';
 
 const OPS_ROLES = ['OPS'] as const;
 const ADMIN_ROLES = ['Admin'] as const;
@@ -93,7 +99,8 @@ const CREW_ROLES = ['BoatCrew'] as const;
 
 function PublicLandingPage() {
   return (
-    <>
+    <div className="public-ocean-site">
+      <PublicOceanJourney />
       <Navbar />
       <main>
         <Hero />
@@ -102,7 +109,7 @@ function PublicLandingPage() {
         <Contact />
       </main>
       <Footer />
-    </>
+    </div>
   );
 }
 
@@ -196,6 +203,9 @@ export default function App() {
         <div className="min-h-screen bg-slate-900 font-sans">
           <Routes>
             <Route path="/" element={<PublicLandingPage />} />
+            <Route path="/mobile-app" element={<MobileAppComingSoon />} />
+            <Route path="/support" element={<SupportCenter />} />
+            <Route path="/account" element={<ProtectedRoute allowedRoles={[...PORTAL_ROLES]}><AccountSettings /></ProtectedRoute>} />
             <Route element={<OceanAuthLayout />}>
               <Route path="/auth" element={<AuthLanding />} />
               <Route path="/login" element={<Login />} />
@@ -327,6 +337,7 @@ export default function App() {
             />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
+          <PortalSupportLink />
         </div>
         </AdminRecordsProvider>
       </AuthProvider>

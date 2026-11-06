@@ -39,8 +39,7 @@
 .ocean-auth-visual p { max-width: 310px; color: var(--ocean-auth-muted); font-size: 12px; line-height: 1.9; }
 .ocean-auth-visual-caption { margin-top: 36px; display: flex; align-items: center; gap: 8px; color: #8ca9b97f; font-size: 9px; letter-spacing: .12em; text-transform: uppercase; }
 .ocean-auth-visual-caption span { width: 4px; height: 4px; border-radius: 50%; background: #35e6f788; }
-.ocean-auth-panel { position: relative; min-width: 0; padding: 31px; border: 1px solid #8ca9b91e; border-radius: 22px; background: linear-gradient(150deg, #062b403b, #041320cf); box-shadow: 0 18px 70px #00000024; backdrop-filter: blur(10px); transition: border-color .3s ease; }
-.ocean-auth-panel::before { content: ''; position: absolute; height: 1px; top: -1px; left: 22%; right: 22%; background: linear-gradient(90deg, transparent, #35e6f755, transparent); }
+.ocean-auth-panel { position: relative; min-width: 0; padding: 32px; }
 .ocean-auth-panel-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 29px; }
 .ocean-auth-security-label { display: flex; align-items: center; gap: 7px; color: #8af5ffb3; font-size: 9px; letter-spacing: .14em; text-transform: uppercase; }
 .ocean-auth-steps { display: flex; gap: 5px; }
@@ -73,14 +72,14 @@
 .ocean-auth-forgot { display: flex; justify-content: flex-end; margin-top: -16px; margin-bottom: -8px; }
 .ocean-auth-selected-role { display: flex; align-items: center; gap: 7px; color: #8af5ff; font-size: 10px; margin: -7px 0 0; }
 .ocean-auth-role-options, .ocean-auth-entry-actions { display: flex; flex-direction: column; gap: 13px; }
-.ocean-auth-role { display: flex; align-items: center; gap: 15px; width: 100%; min-width: 0; padding: 19px 16px; border: 1px solid #496879; border-radius: 10px; background: #02091266; color: #cfe6ef; text-align: left; cursor: pointer; transition: border-color .2s, background .2s, transform .2s; }
+.ocean-auth-role { display: flex; align-items: center; gap: 15px; width: 100%; min-width: 0; padding: 19px 16px; border: 1px solid #496879; border-radius: 10px; background: transparent; color: #cfe6ef; text-align: left; cursor: pointer; transition: border-color .2s, transform .2s; }
 .ocean-auth-role span { min-width: 0; flex: 1; }
 .ocean-auth-role strong { display: block; color: #eafbff; font-size: 13px; font-weight: 500; }
 .ocean-auth-role small { display: block; margin-top: 7px; font-size: 10px; line-height: 1.8; color: #8ca9b9; }
 .ocean-auth-role-icon { color: #8af5ff; flex: 0 0 auto; }
 .ocean-auth-role > svg:last-child { color: #8ca9b9; flex: 0 0 auto; }
 .ocean-auth-role:active { transform: translateY(1px); }
-.ocean-auth-secondary { display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 48px; padding: 12px 15px; border: 1px solid #496879; border-radius: 9px; background: #02091266; color: #cfe6ef; font-size: 12px; font-weight: 500; text-decoration: none; transition: border-color .2s, background .2s; }
+.ocean-auth-secondary { display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 48px; padding: 12px 15px; border: 1px solid #496879; border-radius: 9px; background: transparent; color: #cfe6ef; font-size: 12px; font-weight: 500; text-decoration: none; transition: border-color .2s; }
 .ocean-auth-primary { display: flex; justify-content: center; align-items: center; gap: 10px; min-height: 48px; width: 100%; padding: 12px 15px; border: 1px solid #35e6f780; border-radius: 9px; background: #35e6f7; color: #032230; font: inherit; font-size: 12px; font-weight: 650; text-decoration: none; cursor: pointer; transition: background .2s, box-shadow .2s, transform .2s; }
 .ocean-auth-primary:active:not(:disabled) { transform: translateY(1px); }
 .ocean-auth-primary:disabled { cursor: not-allowed; background: #35e6f78a; border-color: transparent; color: #032230; }
@@ -90,9 +89,9 @@
 .ocean-auth-link { display: inline-flex; justify-content: center; align-items: center; gap: 7px; min-height: 44px; color: #9bb5c4; font: inherit; font-size: 11px; background: none; border: 0; cursor: pointer; text-decoration: none; transition: color .2s; }
 .ocean-auth-link:disabled { opacity: .45; cursor: not-allowed; }
 .ocean-auth-panel-note { display: flex; justify-content: center; gap: 6px; align-items: center; margin: 19px 0 0; padding-top: 20px; border-top: 1px solid #8ca9b919; color: #7999ab; font-size: 9px; }
-.ocean-auth-error, .ocean-auth-notice { padding: 11px 13px; border-radius: 8px; font-size: 11px; line-height: 1.75; overflow-wrap: anywhere; }
-.ocean-auth-error { color: #ffd2cc; background: #a64d4214; border: 1px solid #edaaa02e; }
-.ocean-auth-notice { color: #b0e7ee; background: #35e6f708; border: 1px solid #35e6f71f; }
+.ocean-auth-error, .ocean-auth-notice { padding: 12px 14px; font-size: 11px; line-height: 1.75; overflow-wrap: anywhere; }
+.ocean-auth-error { color: #ffd2cc; }
+.ocean-auth-notice { color: #b0e7ee; }
 .ocean-auth-error:empty { display: none; }
 .ocean-auth-account-hint { display: inline-block; color: #b6d8e8; font-size: 12px; margin-top: 8px; overflow-wrap: anywhere; }
 .ocean-auth-otp { border: 0; padding: 0; margin: 0; min-width: 0; }
@@ -120,17 +119,16 @@
 .ocean-auth-success-copy { margin-bottom: 28px; }
 .ocean-auth-footer { width: min(1200px, 100%); margin: auto; display: flex; justify-content: space-between; gap: 16px; padding: 0 40px 28px; color: #718e9e; font-size: 9px; line-height: 1.8; }
 @media (hover: hover) and (pointer: fine) {
-  .ocean-auth-panel:hover { border-color: #8af5ff3d; }
   .ocean-auth-primary:hover:not(:disabled) { background: #8af5ff; box-shadow: 0 0 25px #35e6f715; }
   .ocean-auth-link:hover, .ocean-auth-visibility:hover { color: #eafbff; }
-  .ocean-auth-role:hover, .ocean-auth-secondary:hover { border-color: #8af5ff; background: #062b4066; }
+  .ocean-auth-role:hover, .ocean-auth-secondary:hover { border-color: #8af5ff; }
   .ocean-auth-account-nav a:hover { color: #eafbff; }
 }
 @media (max-width: 900px) {
   .ocean-auth-content { gap: 25px; grid-template-columns: minmax(0, 1fr) minmax(0, 410px); padding-inline: 28px; }
   .ocean-auth-header { padding-inline: 28px; }
   .ocean-auth-visual h2 { font-size: 25px; }
-  .ocean-auth-panel { padding: 27px; }
+  .ocean-auth-panel { padding: 28px; }
   .ocean-auth-visual-caption { font-size: 8px; letter-spacing: .06em; }
 }
 @media (max-width: 700px) {
@@ -141,7 +139,7 @@
   .ocean-auth-visual { padding: 0; }
   .ocean-auth-visual-label, .ocean-auth-visual h2, .ocean-auth-visual p, .ocean-auth-visual-caption { display: none; }
   .ocean-auth-whale { width: 270px; max-width: 100%; height: 143px; margin: 0 auto; }
-  .ocean-auth-panel { padding: 26px; border-radius: 18px; }
+  .ocean-auth-panel { padding: 27px; }
   .ocean-auth-panel-top { margin-bottom: 25px; }
   .ocean-auth-heading { font-size: 27px; }
   .ocean-auth-description { font-size: 12px; }
@@ -153,7 +151,7 @@
   .ocean-auth-footer span:last-child { display: none; }
 }
 @media (max-width: 359px) {
-  .ocean-auth-panel { padding: 22px 18px; }
+  .ocean-auth-panel { padding: 23px 19px; }
   .ocean-auth-heading { font-size: 25px; }
   .ocean-auth-brand { gap: 11px; }
   .ocean-auth-brand span { padding-left: 11px; font-size: 7px; }

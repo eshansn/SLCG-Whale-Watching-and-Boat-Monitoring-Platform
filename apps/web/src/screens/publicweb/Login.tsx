@@ -1,4 +1,4 @@
-import { useRef, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { AuthApiError } from '../../auth/authApi';
 import { useAuth } from '../../auth/useAuth';
@@ -10,6 +10,8 @@ import AuthButton from '../../components/auth/AuthButton';
 const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const [accountDeleted] = useState(() => sessionStorage.getItem('wwms-account-deleted') === 'true');
+  useEffect(() => { sessionStorage.removeItem('wwms-account-deleted'); }, []);
   const { login } = useAuth();
   const pending = useRef(false);
   const [email, setEmail] = useState('');
@@ -98,6 +100,7 @@ const Login = () => {
       <p className="ocean-auth-step-number">Your operations, connected</p>
       <h1 id="login-title" tabIndex={-1} className="ocean-auth-heading">Welcome back.</h1>
       <p className="ocean-auth-description">Your ocean operations, one connection away.</p>
+      {(accountDeleted || (location.state as { accountDeleted?: boolean } | null)?.accountDeleted) && <p role="status" className="mb-4 text-sm text-emerald-300">Your account has been permanently deleted. You have been signed out.</p>}
       <form className="ocean-auth-form" onSubmit={handleLogin} aria-busy={isSubmitting}>
         <AuthField id="login-email" name="email" label="Email address" icon={Mail} type="email" autoComplete="username" required maxLength={256}
           value={email} disabled={isSubmitting} placeholder="you@example.com" aria-describedby={error ? 'login-error' : undefined}

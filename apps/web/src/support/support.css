@@ -1,0 +1,8 @@
+.support-center label { display: block; margin-bottom: 9px; color: #cfe6ef; font-size: 13px; }
+.support-center :is(input, select, textarea) { width: 100%; min-width: 0; border: 1px solid #496879; border-radius: 9px; padding: 12px; background: transparent; color: #eafbff; font: inherit; font-size: 14px; }
+.support-center select option { background: #041726; color: #eafbff; }
+.support-center :is(input, select, textarea)[aria-invalid="true"] { border-color: #e9a6a0; }
+.support-center :is(button, a, input, select, textarea):focus-visible { outline: 2px solid #8af5ff; outline-offset: 4px; }
+.support-center :is(input, select, textarea):disabled { opacity: .65; }
+.support-honeypot { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+@media (max-width: 700px) { .support-center :is(input, select, textarea) { font-size: 16px; } }
