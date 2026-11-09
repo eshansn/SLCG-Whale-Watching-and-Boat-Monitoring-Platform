@@ -1,22 +1,56 @@
 # Whale Watching and Boat Monitoring Platform
 
-The public Home/About/Gallery/Contact ocean theme and independently swimming 3D whale are
-documented in [PUBLIC_OCEAN_IMPLEMENTATION.md](PUBLIC_OCEAN_IMPLEMENTATION.md).
+Platform for whale watching trips, boat and GPS monitoring, passenger attendance,
+crew management, wildlife reporting, and complaints.
 
-The 2026-11-04 audit, confirmed fixes, database checks, Gmail Contact integration,
-regression results and remaining production blockers are in [SYSTEM_AUDIT_REPORT.md](SYSTEM_AUDIT_REPORT.md).
+- `apps/web`: React, TypeScript, and Vite web application.
+- `apps/mobile`: Flutter mobile application.
+- `server`: ASP.NET Core 8 API and Entity Framework migrations.
+- `server.Tests` and `scripts/tests`: backend and browser regression checks.
 
-Confirmed stability/security fixes, regression results and verification limits are documented in [STABILIZATION_REPORT.md](STABILIZATION_REPORT.md).
+## Local setup
 
-SLTDA monitoring, complaint accountability, rollout instructions, APIs and verification results are documented in [SLTDA_IMPLEMENTATION.md](SLTDA_IMPLEMENTATION.md).
+Use Docker with Compose for SQL Server and the API, Node.js 22.12 or later for
+the web application, and Flutter for the mobile application. Running the API
+or backend tests outside Docker also requires the .NET 8 SDK and runtime.
 
-Email OTP password recovery, Gmail setup, migration instructions and security testing are documented in [PASSWORD_RECOVERY_IMPLEMENTATION.md](PASSWORD_RECOVERY_IMPLEMENTATION.md).
+Copy `.env.example` to `.env` if a local environment file does not already
+exist. Replace the example database password, JWT signing key, and initial
+account credentials before starting the services:
 
-The shared deep-ocean Login, Sign Up and recovery UI is documented in [AUTHENTICATION_UI_IMPLEMENTATION.md](AUTHENTICATION_UI_IMPLEMENTATION.md).
+```powershell
+docker compose up -d --build
+```
 
-Mandatory crew certificates, server approval enforcement, testing and the legacy approval audit are documented in [CREW_CERTIFICATE_IMPLEMENTATION.md](CREW_CERTIFICATE_IMPLEMENTATION.md).
+The API applies database migrations on startup and listens on port 8080 by
+default. Keep `DevelopmentMockData__Enabled=false` for real-user testing.
+Configure SMTP settings in `.env` before enabling email password recovery.
 
-The Boat Owner and Boat Crew dashboards retain their original layouts with Deep Ocean visual styling. Changes and verification are documented in [DASHBOARD_UI_IMPLEMENTATION.md](DASHBOARD_UI_IMPLEMENTATION.md).
+Start the web application in a separate terminal:
+
+```powershell
+cd apps/web
+npm ci
+npm run dev
+```
+
+Use the URL printed by Vite. Its development proxy forwards `/api` and `/hubs`
+to the local API. For a deployed API on a separate origin, configure
+`VITE_API_BASE_URL` using `apps/web/.env.example`.
+
+For mobile development, run `flutter pub get` in `apps/mobile`, then use
+`flutter run --dart-define=API_BASE_URL=https://your-api-host`. The API address
+must be reachable from the target device.
+
+## Build and checks
+
+Run `npm run build` and `npm run lint` from `apps/web`. From the repository root,
+run `dotnet test server.Tests/WhaleWatching.Api.Tests.csproj`. SQL and browser
+integration tests require their configured test services and skip when those
+prerequisites are absent. Run `flutter test` from `apps/mobile` for mobile tests.
+
+The offline development database cleanup procedure is documented in
+[scripts/maintenance/README.md](scripts/maintenance/README.md).
 
 ## TrackMyCar GPS configuration
 

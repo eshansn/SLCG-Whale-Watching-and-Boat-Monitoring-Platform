@@ -22,3 +22,8 @@ server/secrets.json
 /.tools/
 **/node_modules/
 **/dist/
+
+# Keep development reports and notes local; track essential project guides only.
+*.md
+!/README.md
+!/scripts/maintenance/README.md
