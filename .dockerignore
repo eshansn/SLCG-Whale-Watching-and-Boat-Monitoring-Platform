@@ -4,6 +4,8 @@
 wwms-gps-transfer
 wwms-maintenance
 .vs
+.runlogs
+.tools
 **/bin
 **/obj
 apps/web

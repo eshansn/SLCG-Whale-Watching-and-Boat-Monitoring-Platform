@@ -6,3 +6,19 @@
 .vs/
 server/appsettings.Local.json
 server/secrets.json
+
+# Local diagnostics and generated verification artifacts
+/.runlogs/
+/wwms-maintenance/
+/wwms-gps-transfer/
+*.log
+*.tsbuildinfo
+**/TestResults/
+**/test-results/
+**/playwright-report/
+**/coverage/
+
+# Dependency and build caches
+/.tools/
+**/node_modules/
+**/dist/
