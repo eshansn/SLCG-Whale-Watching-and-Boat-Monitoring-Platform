@@ -1,6 +1,15 @@
 .git
 .gitignore
 .env
+.env.*
+env
+**/.env
+**/.env.*
+**/*.env
+**/*.env.*
+server/appsettings.Development.json
+server/appsettings.Local.json
+server/secrets.json
 wwms-gps-transfer
 wwms-maintenance
 .vs

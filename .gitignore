@@ -1,10 +1,16 @@
 .env
+.env.*
+*.env
+*.env.*
+/env
+env.*
 **/bin/
 **/obj/
 *.user
 *.suo
 .vs/
 server/appsettings.Local.json
+server/appsettings.Development.json
 server/secrets.json
 
 # Local diagnostics and generated verification artifacts

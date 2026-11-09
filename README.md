@@ -14,9 +14,14 @@ Use Docker with Compose for SQL Server and the API, Node.js 22.12 or later for
 the web application, and Flutter for the mobile application. Running the API
 or backend tests outside Docker also requires the .NET 8 SDK and runtime.
 
-Copy `.env.example` to `.env` if a local environment file does not already
-exist. Replace the example database password, JWT signing key, and initial
-account credentials before starting the services:
+Create a local `.env` file if one does not already exist. Set
+`MSSQL_SA_PASSWORD` to a strong database password and `JWT_SIGNING_KEY` to at
+least 32 random bytes. Configure your own `INITIAL_*_EMAIL` and
+`INITIAL_*_PASSWORD` values for the authority accounts listed in
+`docker-compose.yml` before starting the services. Keep environment files and
+development credentials outside Git.
+
+Start the services:
 
 ```powershell
 docker compose up -d --build
@@ -36,7 +41,7 @@ npm run dev
 
 Use the URL printed by Vite. Its development proxy forwards `/api` and `/hubs`
 to the local API. For a deployed API on a separate origin, configure
-`VITE_API_BASE_URL` using `apps/web/.env.example`.
+`VITE_API_BASE_URL` in a local `apps/web/.env` file.
 
 For mobile development, run `flutter pub get` in `apps/mobile`, then use
 `flutter run --dart-define=API_BASE_URL=https://your-api-host`. The API address
