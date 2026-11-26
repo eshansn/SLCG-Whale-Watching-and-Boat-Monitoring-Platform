@@ -10,9 +10,10 @@ crew management, wildlife reporting, and complaints.
 
 ## Local setup
 
-Use Docker with Compose for SQL Server and the API, Node.js 22.12 or later for
-the web application, and Flutter for the mobile application. Running the API
-or backend tests outside Docker also requires the .NET 8 SDK and runtime.
+Use Docker Desktop with Linux containers and Compose for SQL Server, the API,
+and the web application. Node.js 22.12 or later is needed for frontend development
+outside Docker, and Flutter for the mobile application. Running the API or backend
+tests outside Docker also requires the .NET 8 SDK and runtime.
 
 Create a local `.env` file if one does not already exist. Set
 `MSSQL_SA_PASSWORD` to a strong database password and `JWT_SIGNING_KEY` to at
@@ -24,16 +25,33 @@ development credentials outside Git.
 Start the services:
 
 ```powershell
-docker compose up -d --build
+docker compose up -d --build --wait --wait-timeout 180
+docker compose ps
 ```
 
-The API applies database migrations on startup and listens on port 8080 by
-default. Keep `DevelopmentMockData__Enabled=false` for real-user testing.
-Configure SMTP settings in `.env` before enabling email password recovery.
+Open http://localhost:5173 once all three services are healthy. `WEB_PORT` and
+`API_PORT` in `.env` override the default web and API ports. The frontend serves
+the built app and proxies `/api` and `/hubs` (including WebSockets) to the API.
+Refreshing a portal URL also works. SQL Server data remains in its Docker volume.
 
-Start the web application in a separate terminal:
+The API applies database migrations on startup. Keep
+`DevelopmentMockData__Enabled=false` for real-user testing. Configure SMTP
+settings in `.env` before enabling email password recovery.
+
+Start the system using Compose from this repository, including when using Docker
+Desktop. Starting the API image on its own does not supply its database connection,
+signing key, network, or startup dependencies. If startup fails, inspect
+`docker compose logs --tail 100` and `docker compose ps -a`. The API health check
+uses `/health/ready` to verify database access before starting the frontend.
+Stop the system with `docker compose stop`; start it again with the command above.
+
+For frontend development with live reload, run just SQL Server and the API in
+Docker, then start Vite in a separate terminal. Stop the Compose frontend first
+to free its port:
 
 ```powershell
+docker compose stop web
+docker compose up -d --build --wait sqlserver api
 cd apps/web
 npm ci
 npm run dev
@@ -53,6 +71,13 @@ Run `npm run build` and `npm run lint` from `apps/web`. From the repository root
 run `dotnet test server.Tests/WhaleWatching.Api.Tests.csproj`. SQL and browser
 integration tests require their configured test services and skip when those
 prerequisites are absent. Run `flutter test` from `apps/mobile` for mobile tests.
+
+With Compose running and Node.js installed, run `node scripts/tests/docker-smoke.cjs`
+to check the built frontend, portal URL refreshes, assets, database readiness and
+API/realtime proxy access control. Set `WWMS_WEB_URL` for a custom web port. Optional
+`WWMS_TEST_EMAIL` and `WWMS_TEST_PASSWORD` for an operations account also check real
+login, data access and a SignalR WebSocket handshake. Set `PLAYWRIGHT_MODULE` to an
+installed Playwright module to include a browser rendering check.
 
 The offline development database cleanup procedure is documented in
 [scripts/maintenance/README.md](scripts/maintenance/README.md).

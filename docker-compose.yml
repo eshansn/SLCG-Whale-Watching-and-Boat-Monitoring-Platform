@@ -79,12 +79,36 @@ services:
       test:
         - CMD-SHELL
         - >-
-          curl --fail --silent http://localhost:8080/health/live > /dev/null
+          curl --fail --silent http://localhost:8080/health/ready > /dev/null
           || exit 1
       interval: 15s
       timeout: 5s
       retries: 5
       start_period: 20s
+    restart: unless-stopped
+
+  web:
+    container_name: whale-watching-web
+    build:
+      context: .
+      dockerfile: docker/web.dockerfile
+    ports:
+      - "${WEB_PORT:-5173}:8080"
+    networks:
+      - backend
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          wget --quiet --output-document=/dev/null http://127.0.0.1:8080/
+          && wget --quiet --output-document=/dev/null http://127.0.0.1:8080/health/ready
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     restart: unless-stopped
 
 networks:

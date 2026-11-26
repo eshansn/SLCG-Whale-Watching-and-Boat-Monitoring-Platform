@@ -35,7 +35,7 @@ public sealed partial class ComplaintAccountabilityTests
         trip.PassengerCount = specifications.Length;
         await test.Db.SaveChangesAsync(); test.Db.ChangeTracker.Clear();
         var connection = new SqlConnectionStringBuilder(test.Db.Database.GetConnectionString());
-        Assert.True(connection.IntegratedSecurity, "Browser fixture mutation requires the disposable integrated-auth SQL test target.");
+        Assert.Matches("^WWMS_ComplaintTests_[a-fA-F0-9]{32}$", connection.InitialCatalog);
         var info = new ProcessStartInfo("node") { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true };
         info.WorkingDirectory = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../"));
         info.ArgumentList.Add("scripts/tests/shore-passenger-summary.cjs");
@@ -43,6 +43,11 @@ public sealed partial class ComplaintAccountabilityTests
         info.Environment["WWMS_SHORE_TRIP_ID"] = trip.Id.ToString();
         info.Environment["WWMS_FIXTURE_DATABASE"] = connection.InitialCatalog;
         info.Environment["WWMS_FIXTURE_SERVER"] = connection.DataSource;
+        if (!connection.IntegratedSecurity)
+        {
+            info.Environment["WWMS_FIXTURE_SQL_USER"] = connection.UserID;
+            info.Environment["SQLCMDPASSWORD"] = connection.Password;
+        }
         info.Environment["WWMS_FIXTURE_PASSENGERS"] = System.Text.Json.JsonSerializer.Serialize(fixtureIds);
         using var process = Process.Start(info)!;
         var output = process.StandardOutput.ReadToEndAsync(); var errors = process.StandardError.ReadToEndAsync();

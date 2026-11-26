@@ -77,11 +77,11 @@ public sealed partial class ComplaintAccountabilityTests
         Assert.Equal(HttpStatusCode.Conflict, (await test.Send(PortalRoles.ShoreCrew, HttpMethod.Put, savePath, new { items })).StatusCode);
     }
 
-    private static async Task<(Trip, PassengerProfile, string)> SeedShoreGroup(Harness test)
+    private static async Task<(Trip, PassengerProfile, string)> SeedShoreGroup(Harness test, string? qrToken = null)
     {
         var trip = await test.Db.Trips.SingleAsync(t => t.Status == TripStatus.Scheduled);
         var primary = await test.Db.PassengerProfiles.SingleAsync(p => p.Id == test.PassengerId);
-        primary.PersonalQrToken = Convert.ToHexString(RandomNumberGenerator.GetBytes(20));
+        primary.PersonalQrToken = qrToken ?? Convert.ToHexString(RandomNumberGenerator.GetBytes(20));
         var companion = await test.Db.PassengerProfiles.SingleAsync(p => p.Name == "Passenger Two");
         test.Db.TripPassengers.Add(new TripPassenger { Id = Guid.NewGuid(), TripId = trip.Id, PassengerId = companion.Id,
             PrimaryPassengerId = primary.Id, RegisteredAtUtc = DateTimeOffset.UtcNow });
@@ -93,7 +93,9 @@ public sealed partial class ComplaintAccountabilityTests
     public async Task Browser_LiveShoreQrUploadAndConfirmedAttendance()
     {
         await using var test = await Harness.CreateAsync();
-        var (trip, _, qr) = await SeedShoreGroup(test);
+        // This valid QR pattern fails ZXing's finder detection at the exported
+        // 480px size, exercising the image reader's pure-module fallback.
+        var (trip, _, qr) = await SeedShoreGroup(test, "B400F1616325F2C659B3CBA769BFE5685FB22711");
         var script = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../scripts/tests/shore-qr.cjs"));
         var info = new ProcessStartInfo("node") { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true };
         info.ArgumentList.Add(script); info.ArgumentList.Add("--live");

@@ -10,7 +10,10 @@ const ids=JSON.parse(process.env.WWMS_FIXTURE_PASSENGERS);
 const output='.runlogs/shore-passenger-summary';
 if(!/^WWMS_ComplaintTests_[a-f0-9]{32}$/i.test(database)||new URL(base).hostname!=='127.0.0.1')throw Error('Only disposable local fixture databases are permitted');
 if(!/^[a-f0-9-]{36}$/i.test(trip)||Object.values(ids).some(id=>!/^[a-f0-9-]{36}$/i.test(id)))throw Error('Unexpected fixture IDs');
-function sql(text){execFileSync('sqlcmd',['-S',process.env.WWMS_FIXTURE_SERVER,'-E','-C','-b','-d',database,'-Q','SET QUOTED_IDENTIFIER ON; SET ANSI_NULLS ON; SET ANSI_PADDING ON; SET ANSI_WARNINGS ON; SET ARITHABORT ON; SET CONCAT_NULL_YIELDS_NULL ON; SET NUMERIC_ROUNDABORT OFF; SET XACT_ABORT ON; '+text],{encoding:'utf8'});}
+function sql(text){
+ const auth=process.env.WWMS_FIXTURE_SQL_USER?['-U',process.env.WWMS_FIXTURE_SQL_USER]:['-E'];
+ execFileSync('sqlcmd',['-S',process.env.WWMS_FIXTURE_SERVER,...auth,'-C','-b','-d',database,'-Q','SET QUOTED_IDENTIFIER ON; SET ANSI_NULLS ON; SET ANSI_PADDING ON; SET ANSI_WARNINGS ON; SET ARITHABORT ON; SET CONCAT_NULL_YIELDS_NULL ON; SET NUMERIC_ROUNDABORT OFF; SET XACT_ABORT ON; '+text],{encoding:'utf8'});
+}
 async function expectRow(page,label,values){
  const row=page.getByRole('region',{name:'Passenger summary table',exact:true}).getByRole('row').filter({has:page.getByRole('rowheader',{name:label,exact:true})});
  await page.waitForFunction(({label,values})=>{

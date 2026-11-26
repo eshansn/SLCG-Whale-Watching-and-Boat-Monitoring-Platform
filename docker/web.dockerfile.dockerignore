@@ -1,0 +1,16 @@
+# Only send the frontend sources and its container configuration to the builder.
+**
+!apps/
+!apps/web/
+!apps/web/**
+!docker/
+!docker/web.dockerfile
+!docker/web.conf
+**/node_modules
+**/dist
+**/.env
+**/.env.*
+**/*.env
+**/*.env.*
+**/*.log
+**/*.tsbuildinfo

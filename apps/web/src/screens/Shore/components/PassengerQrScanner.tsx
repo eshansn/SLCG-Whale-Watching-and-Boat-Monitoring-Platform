@@ -118,8 +118,19 @@ export default function PassengerQrScanner({ onScan, onClose, onSearch }: {
     setPhase('image'); setMessage('Reading QR image…');
     const url = URL.createObjectURL(file); imageUrl.current = url;
     try {
-      const { BrowserQRCodeReader } = await import('@zxing/browser');
-      const result = await new BrowserQRCodeReader().decodeFromImageUrl(url);
+      const [{ BrowserQRCodeReader }, { DecodeHintType }] = await Promise.all([
+        import('@zxing/browser'), import('@zxing/library'),
+      ]);
+      const reader = new BrowserQRCodeReader();
+      let result;
+      try { result = await reader.decodeFromImageUrl(url); }
+      catch {
+        // Finder detection can reject valid, axis-aligned QR exports for certain
+        // patterns. Pure decoding reads their modules directly; photos still use
+        // the normal perspective-aware detector above.
+        reader.hints = new Map([[DecodeHintType.PURE_BARCODE, true]]);
+        result = await reader.decodeFromImageUrl(url);
+      }
       if (mounted.current && attempt === generation.current) await verify(result.getText());
     } catch {
       if (mounted.current && attempt === generation.current) { setPhase('error'); setMessage('No readable QR code was found. Choose a clear PNG or JPEG showing the entire QR code, or use passenger search.'); }
